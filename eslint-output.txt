@@ -1,0 +1,32 @@
+﻿
+C:\Users\Murtaza\Documents\AntiGravity\xOS\dist-electron\main.js
+   97:9    error  Empty block statement     no-empty
+  101:9    error  Empty block statement     no-empty
+  105:9    error  Empty block statement     no-empty
+  109:9    error  Empty block statement     no-empty
+  113:9    error  Empty block statement     no-empty
+  117:9    error  Empty block statement     no-empty
+  121:9    error  Empty block statement     no-empty
+  126:1    error  'process' is not defined  no-undef
+  127:11   error  'process' is not defined  no-undef
+  127:55   error  'process' is not defined  no-undef
+  127:106  error  'process' is not defined  no-undef
+  128:1    error  'process' is not defined  no-undef
+  128:38   error  'process' is not defined  no-undef
+  134:18   error  'process' is not defined  no-undef
+  154:3    error  'process' is not defined  no-undef
+  160:3    error  'process' is not defined  no-undef
+
+C:\Users\Murtaza\Documents\AntiGravity\xOS\src\api.ts
+  47:75  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  48:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  49:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Murtaza\Documents\AntiGravity\xOS\src\components\RepeatingTaskItem.tsx
+  20:11  warning  The 'todayDate' object construction makes the dependencies of useMemo Hook (at line 55) change on every render. To fix this, wrap the initialization of 'todayDate' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+C:\Users\Murtaza\Documents\AntiGravity\xOS\src\store.ts
+  115:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+Γ£û 21 problems (20 errors, 1 warning)
+

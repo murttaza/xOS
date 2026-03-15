@@ -1,0 +1,331 @@
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Task, Subtask, Note } from "@/types";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon, Plus, X, TimerOff } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { api } from "@/api";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+interface TaskDialogProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onSubmit: (task: Omit<Task, "id"> | Task) => void;
+    initialTask?: Task | null;
+}
+
+import { useStore } from "@/store";
+
+export function TaskDialog({ open, onOpenChange, onSubmit, initialTask }: TaskDialogProps) {
+    const stats = useStore(state => state.stats);
+    const [title, setTitle] = useState("");
+    const [description, setDescription] = useState("");
+    const [difficulty, setDifficulty] = useState(1);
+    const [statTarget, setStatTarget] = useState<string[]>(["Fitness"]);
+    const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+    const [newSubtask, setNewSubtask] = useState("");
+    const [date, setDate] = useState<Date | undefined>(undefined);
+    const [isUntimed, setIsUntimed] = useState(false);
+    const [existingLabels, setExistingLabels] = useState<string[]>([]);
+    const [allNotes, setAllNotes] = useState<Note[]>([]);
+    const [noteId, setNoteId] = useState<number | null>(null);
+    const [time, setTime] = useState<string>("");
+
+    useEffect(() => {
+        api.searchNotes("").then(notes => setAllNotes(notes));
+    }, []);
+
+    useEffect(() => {
+        if (initialTask) {
+            setTitle(initialTask.title);
+            setDescription(initialTask.description);
+            setDifficulty(initialTask.difficulty);
+            setStatTarget(initialTask.statTarget || ["Fitness"]);
+            setSubtasks(initialTask.subtasks || []);
+            setExistingLabels(initialTask.labels || []);
+            setIsUntimed(initialTask.labels?.includes("untimed") || false);
+            if (initialTask.dueDate) {
+                const parsedDate = new Date(initialTask.dueDate);
+                if (!isNaN(parsedDate.getTime())) {
+                    setDate(parsedDate);
+                } else {
+                    setDate(undefined);
+                }
+            } else {
+                setDate(undefined);
+            }
+            setNoteId(initialTask.noteId || null);
+            setTime(initialTask.time || "");
+        } else {
+            setTitle("");
+            setDescription("");
+            setDifficulty(1);
+            setStatTarget(["Fitness"]);
+            setSubtasks([]);
+            setDate(undefined);
+            setIsUntimed(false);
+            setExistingLabels([]);
+            setNoteId(null);
+            setTime("");
+        }
+    }, [initialTask, open]);
+
+    const handleSubmit = () => {
+        // Construct labels: keep existing ones but filter out "untimed", then add it back if isUntimed is true
+        const otherLabels = existingLabels.filter(l => l !== "untimed");
+        const finalLabels = isUntimed ? [...otherLabels, "untimed"] : otherLabels;
+
+        onSubmit({
+            ...(initialTask ? { id: initialTask.id, isComplete: initialTask.isComplete } : { isComplete: 0 }),
+            title,
+            description,
+            difficulty,
+            statTarget,
+            dueDate: date ? format(date, "yyyy-MM-dd") : "",
+            labels: finalLabels,
+            subtasks,
+            noteId,
+            time
+        } as Task);
+        onOpenChange(false);
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-[500px] bg-black/80 backdrop-blur-xl border-white/10 text-white shadow-2xl">
+                <DialogHeader>
+                    <DialogTitle className="text-xl font-light tracking-wide text-white/90">
+                        {initialTask ? "Edit Task" : "New Task"}
+                    </DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-6 py-4">
+                    {/* Title */}
+                    <div className="grid gap-2">
+                        <Label htmlFor="title" className="text-xs font-medium text-white/60 uppercase tracking-wider">
+                            Title
+                        </Label>
+                        <Input
+                            id="title"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            className="bg-white/5 border-white/10 text-white placeholder:text-white/20 focus-visible:ring-white/20"
+                            placeholder="What needs to be done?"
+                            spellCheck={true}
+                        />
+                    </div>
+
+                    {/* Description */}
+                    <div className="grid gap-2">
+                        <Label htmlFor="description" className="text-xs font-medium text-white/60 uppercase tracking-wider">
+                            Description
+                        </Label>
+                        <Textarea
+                            id="description"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            className="bg-white/5 border-white/10 text-white placeholder:text-white/20 focus-visible:ring-white/20 min-h-[100px] resize-none"
+                            placeholder="Add details..."
+                            spellCheck={true}
+                        />
+                    </div>
+
+                    {/* Subtasks */}
+                    <div className="grid gap-2">
+                        <Label className="text-xs font-medium text-white/60 uppercase tracking-wider">Subtasks</Label>
+                        <div className="flex gap-2">
+                            <Input
+                                value={newSubtask}
+                                onChange={(e) => setNewSubtask(e.target.value)}
+                                placeholder="Add a subtask..."
+                                className="bg-white/5 border-white/10 text-white placeholder:text-white/20 text-xs h-8"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        if (newSubtask.trim()) {
+                                            setSubtasks([...subtasks, { id: crypto.randomUUID(), text: newSubtask.trim(), isComplete: false }]);
+                                            setNewSubtask("");
+                                        }
+                                    }
+                                }}
+                            />
+                            <Button
+                                type="button"
+                                size="icon"
+                                className="h-8 w-8 bg-white/10 hover:bg-white/20 border-white/10"
+                                onClick={() => {
+                                    if (newSubtask.trim()) {
+                                        setSubtasks([...subtasks, { id: crypto.randomUUID(), text: newSubtask.trim(), isComplete: false }]);
+                                        setNewSubtask("");
+                                    }
+                                }}
+                            >
+                                <Plus className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        {subtasks.length > 0 && (
+                            <div className="space-y-1 mt-1">
+                                {subtasks.map((st) => (
+                                    <div key={st.id} className="flex items-center justify-between group bg-white/5 p-1.5 rounded px-2">
+                                        <span className="text-xs text-white/80 truncate flex-1">{st.text}</span>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/10 hover:text-red-400"
+                                            onClick={() => setSubtasks(subtasks.filter(s => s.id !== st.id))}
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6">
+                        {/* Difficulty */}
+                        <div className="grid gap-3">
+                            <Label className="text-xs font-medium text-white/60 uppercase tracking-wider">
+                                Difficulty: <span className="text-white">{difficulty}</span>
+                            </Label>
+                            <Slider
+                                min={1}
+                                max={5}
+                                step={1}
+                                value={[difficulty]}
+                                onValueChange={(vals) => setDifficulty(vals[0])}
+                                className="py-2"
+                            />
+                        </div>
+
+                        {/* Due Date */}
+                        <div className="grid gap-2">
+                            <Label className="text-xs font-medium text-white/60 uppercase tracking-wider">
+                                Due Date
+                            </Label>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant={"outline"}
+                                        className={cn(
+                                            "w-full justify-start text-left font-normal bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white",
+                                            !date && "text-muted-foreground"
+                                        )}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
+                                        {date ? format(date, "PPP") : <span className="text-white/40">Pick a date</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0 bg-black/90 backdrop-blur-xl border-white/10 text-white min-w-[320px]" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={date}
+                                        onSelect={setDate}
+                                        initialFocus
+                                        className="bg-transparent text-white [&_.group\/day]:!bg-transparent [&_button[data-selected-single=true]]:!bg-white [&_button[data-selected-single=true]]:!text-black"
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6">
+                        {/* Time  */}
+                        <div className="grid gap-2">
+                            <Label className="text-xs font-medium text-white/60 uppercase tracking-wider">
+                                At Time (Optional)
+                            </Label>
+                            <Input
+                                type="time"
+                                value={time || ""}
+                                onChange={(e) => setTime(e.target.value)}
+                                className="bg-white/5 border-white/10 text-white placeholder:text-white/20 w-fit"
+                            />
+                        </div>
+
+                        {/* Note Link */}
+                        <div className="grid gap-2">
+                            <Label className="text-xs font-medium text-white/60 uppercase tracking-wider">
+                                Link to Note (Optional)
+                            </Label>
+                            <Select
+                                value={noteId ? String(noteId) : "none"}
+                                onValueChange={(val) => setNoteId(val === "none" ? null : Number(val))}
+                            >
+                                <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                                    <SelectValue placeholder="Select a note..." />
+                                </SelectTrigger>
+                                <SelectContent className="bg-black/90 border-white/10 text-white backdrop-blur-xl max-h-48 overflow-y-auto">
+                                    <SelectItem value="none" className="text-white/40">None</SelectItem>
+                                    {allNotes.map(n => (
+                                        <SelectItem key={n.id} value={String(n.id)}>
+                                            {n.title || "Untitled Note"} <span className="text-xs text-white/40 ml-2">({n.subjectTitle})</span>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="grid gap-3">
+                        <Label className="text-xs font-medium text-white/60 uppercase tracking-wider">
+                            Stats
+                        </Label>
+                        <div className="flex flex-wrap gap-2">
+                            {stats.map((stat) => (
+                                <Button
+                                    key={stat.statName}
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                        if (statTarget.includes(stat.statName)) {
+                                            setStatTarget(statTarget.filter((s) => s !== stat.statName));
+                                        } else {
+                                            setStatTarget([...statTarget, stat.statName]);
+                                        }
+                                    }}
+                                    className={cn(
+                                        "h-7 text-xs border-white/10 bg-transparent hover:bg-white/10 hover:text-white transition-all",
+                                        statTarget.includes(stat.statName) && "bg-white text-black hover:bg-white/90 hover:text-black border-transparent"
+                                    )}
+                                >
+                                    {stat.statName}
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Untimed Toggle */}
+                    <div className="flex items-center justify-between border border-white/10 rounded-lg p-3 bg-white/5">
+                        <div className="space-y-0.5">
+                            <Label className="text-xs font-medium text-white uppercase tracking-wider flex items-center gap-2">
+                                <TimerOff className="w-4 h-4" /> Untimed Task
+                            </Label>
+                            <p className="text-[10px] text-white/50">Enter duration manually upon completion</p>
+                        </div>
+                        <Switch
+                            checked={isUntimed}
+                            onCheckedChange={setIsUntimed}
+                        />
+                    </div>
+
+                </div>
+                <DialogFooter>
+                    <Button onClick={handleSubmit} className="bg-white text-black hover:bg-white/90 w-full sm:w-auto">
+                        Save Task
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}

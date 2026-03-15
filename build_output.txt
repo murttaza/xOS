@@ -1,0 +1,85 @@
+﻿
+> lifeos@2.3.0 build
+> tsc && vite build && electron-builder
+
+[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+node.exe : Found 1 warning 
+while optimizing generated 
+CSS:
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: (Found 1  
+   warning... generated CS   
+ S::String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+
+[2mΓöé   }[22m
+[2mΓöé   .\[\&_\.group\\\\\/
+day\]\:\!bg-transparent 
+{[22m
+[2mΓöé[22m     & 
+.group\\/day {
+[2mΓöå[22m                
+[33m[2m^--[22m Unexpected 
+token Ident("day")[39m
+[2mΓöå[22m
+[2mΓöé       
+background-color: 
+transparent !important;[22m
+[2mΓöé     }[22m
+
+[32mΓ£ô[39m 3142 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/[22m[32mindex.html                 [39m[1m[2m  0.70 kB[22m[1m[22m[2m Γöé gzip:   0.38 kB[22m
+[2mdist/[22m[35massets/index-CDEKH0xD.css  [39m[1m[2m152.87 kB[22m[1m[22m[2m Γöé gzip:  23.84 kB[22m
+[2mdist/[22m[36massets/index-Df3DMjMt.js   [39m[1m[33m592.63 kB[39m[22m[2m Γöé gzip: 180.16 kB[22m
+[33m
+(!) Some chunks are larger 
+than 500 kB after 
+minification. Consider:
+- Using dynamic import() to 
+code-split the application
+- Use build.rollupOptions.out
+put.manualChunks to improve 
+chunking: https://rollupjs.or
+g/configuration-options/#outp
+ut-manualchunks
+- Adjust chunk size limit 
+for this warning via build.ch
+unkSizeWarningLimit.[39m
+[32mΓ£ô built in 9.59s[39m
+[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 2 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist-electron/[22m[36mmain.js  [39m[1m[2m13.27 kB[22m[1m[22m[2m Γöé gzip: 3.67 kB[22m
+[32mΓ£ô built in 36ms[39m
+[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 1 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist-electron/[22m[36mpreload.mjs  [39m[1m[2m0.50 kB[22m[1m[22m[2m Γöé gzip: 0.24 kB[22m
+[32mΓ£ô built in 11ms[39m
+  ΓÇó electron-builder  version=24.13.3 os=10.0.26200
+  ΓÇó loaded configuration  file=C:\Users\Murtaza\Documents\AntiGravity\xOS\electron-builder.json5
+  ΓÇó description is missed in the package.json  appPackageFile=C:\Users\Murtaza\Documents\AntiGravity\xOS\package.json
+  ΓÇó author is missed in the package.json  appPackageFile=C:\Users\Murtaza\Documents\AntiGravity\xOS\package.json
+  ΓÇó rebuilding native dependencies  dependencies=better-sqlite3@12.5.0 platform=win32 arch=x64
+  ΓÇó install prebuilt binary  name=better-sqlite3 version=12.5.0 platform=win32 arch=x64 napi=
+  ΓÇó packaging       platform=win32 arch=x64 electron=30.5.1 appOutDir=release\2.3.0\win-unpacked
+  ΓÇó building        target=nsis file=release\2.3.0\mOS-Windows-2.3.0-Setup.exe archs=x64 oneClick=false perMachine=false
+  ΓÇó building block map  blockMapFile=release\2.3.0\mOS-Windows-2.3.0-Setup.exe.blockmap

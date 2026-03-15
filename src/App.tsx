@@ -1,0 +1,379 @@
+import { useEffect, useCallback, useState } from 'react';
+import { useTaskTimer } from './hooks/useTaskTimer';
+import { TaskBoard } from './components/TaskBoard';
+import { StatsBlock } from './components/StatsBlock';
+import { CalendarBlock } from './components/CalendarBlock';
+import { ActiveTaskTimer } from './components/ActiveTaskTimer';
+import { useStore } from './store';
+import { getLocalDateString } from './lib/utils';
+import { useWindowFocus } from './hooks/useWindowFocus';
+import { useShallow } from 'zustand/react/shallow';
+
+import { ThemeProvider } from './components/ThemeProvider';
+import { ModeToggle } from './components/ModeToggle';
+import { NotesMode } from './components/NotesMode';
+import { YearMode } from './components/YearMode';
+
+import { HeaderPrayers } from './components/HeaderPrayers';
+import { FocusMode } from './components/FocusMode';
+import { FocusOverlay } from './components/FocusOverlay';
+import { ReactiveBlock } from './components/ReactiveBlock';
+import { motion, AnimatePresence } from 'framer-motion';
+import { WindowControls } from './components/WindowControls';
+
+import { DevelopmentButton } from './components/DevelopmentButton';
+import { Popover, PopoverContent, PopoverTrigger } from './components/ui/popover';
+import { Input } from './components/ui/input';
+import { Button } from './components/ui/button';
+import { Switch } from './components/ui/switch';
+import { Label } from './components/ui/label';
+import { Settings2, HelpCircle, Download } from 'lucide-react';
+import { api } from './api';
+
+function App() {
+  // Grouped selectors to minimize subscription count
+  const {
+    fetchTasks, fetchStats, fetchDailyLog, fetchDevItems,
+    fetchRepeatingTasks, checkMissedTasks,
+    isMurtazaMode, setIsMurtazaMode,
+    isHardcoreMode, setIsHardcoreMode,
+    osPrefix, setOsPrefix,
+    toggleNotesMode, toggleYearMode,
+  } = useStore(useShallow(state => ({
+    fetchTasks: state.fetchTasks,
+    fetchStats: state.fetchStats,
+    fetchDailyLog: state.fetchDailyLog,
+    fetchDevItems: state.fetchDevItems,
+    fetchRepeatingTasks: state.fetchRepeatingTasks,
+    checkMissedTasks: state.checkMissedTasks,
+    isMurtazaMode: state.isMurtazaMode,
+    setIsMurtazaMode: state.setIsMurtazaMode,
+    isHardcoreMode: state.isHardcoreMode,
+    setIsHardcoreMode: state.setIsHardcoreMode,
+    osPrefix: state.osPrefix,
+    setOsPrefix: state.setOsPrefix,
+    toggleNotesMode: state.toggleNotesMode,
+    toggleYearMode: state.toggleYearMode,
+  })));
+
+  const isFocusMode = useStore(state => state.isFocusMode);
+  const dailyLog = useStore(state => state.dailyLog);
+  const isTransitioning = useStore(state => state.isTransitioning);
+
+  const [windowSize, setWindowSize] = useState<number>(0);
+
+  const APP_VERSION = __APP_VERSION__ || '4.0.1';
+
+  // Window focus state for pausing background work
+  const isWindowFocused = useWindowFocus();
+
+  // Single global timer — drives all active task timers from one interval
+  useTaskTimer();
+
+  useEffect(() => {
+    fetchTasks();
+    fetchStats();
+    fetchDailyLog(getLocalDateString());
+    fetchDevItems();
+    fetchRepeatingTasks();
+    checkMissedTasks();
+  }, [fetchTasks, fetchStats, fetchDailyLog, fetchDevItems, fetchRepeatingTasks, checkMissedTasks]); // Initial fetch only
+
+  useEffect(() => {
+    // Only check for date change when window is focused — saves CPU when minimized
+    if (!isWindowFocused) return;
+
+    const interval = setInterval(() => {
+      const currentDate = getLocalDateString();
+      if (currentDate !== dailyLog?.date) {
+        fetchDailyLog(currentDate);
+        fetchStats();
+        checkMissedTasks();
+      }
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [dailyLog, fetchDailyLog, fetchStats, checkMissedTasks, isWindowFocused]);
+
+  // Handle Overlay Mode Transition
+  useEffect(() => {
+    if (isMurtazaMode) {
+      window.ipcRenderer.send('set-overlay-mode', true);
+      document.body.style.backgroundColor = 'transparent';
+    } else {
+      window.ipcRenderer.send('set-overlay-mode', false);
+      document.body.style.backgroundColor = '';
+    }
+  }, [isMurtazaMode]);
+
+  // Handle Notes and Year Mode Shortcuts
+  useEffect(() => {
+    const removeListener = window.ipcRenderer.on('toggle-notes-mode', () => {
+      toggleNotesMode();
+    });
+    const removeYearListener = window.ipcRenderer.on('toggle-year-mode', () => {
+      toggleYearMode();
+    });
+    return () => {
+      removeListener();
+      removeYearListener();
+    };
+  }, [toggleNotesMode, toggleYearMode]);
+
+  useEffect(() => {
+    const removeSizeListener = window.ipcRenderer.on('window-size-state', (_, size: unknown) => {
+      setWindowSize(size as number);
+    });
+    return () => {
+      removeSizeListener();
+    }
+  }, []);
+
+  const handleExportData = useCallback(async () => {
+    try {
+      const data = await api.exportAllData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `xOS_backup_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to export data', err);
+    }
+  }, []);
+
+
+
+  if (isMurtazaMode) {
+    return (
+      <ThemeProvider defaultTheme="dark" storageKey="mos-theme">
+        <FocusOverlay />
+        <NotesMode />
+        <YearMode />
+
+        <AnimatePresence>
+          {isTransitioning && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="fixed inset-0 z-[9999] bg-black flex items-center justify-center no-drag pointer-events-none"
+            >
+              <motion.div
+                animate={{ opacity: [0.4, 1, 0.4], scale: [0.95, 1.05, 0.95] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                className="text-7xl text-[#800000] drop-shadow-[0_0_15px_rgba(128,0,0,0.8)]"
+              >
+                م
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </ThemeProvider>
+    )
+  }
+
+  return (
+    <ThemeProvider defaultTheme="dark" storageKey="mos-theme">
+      {isFocusMode ? (
+        <FocusMode />
+      ) : (
+        <div className={`h-screen relative ${windowSize === 0 ? 'overflow-y-hidden' : 'overflow-y-auto'} overflow-x-hidden bg-background/95 rounded-none border border-border shadow-2xl drag no-scrollbar`}>
+          {/* Ambient Background Gradient */}
+          <div className="absolute inset-0 -z-10">
+            <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-background/95" />
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 dark:bg-primary/10 rounded-full blur-[60px] -translate-y-1/2 translate-x-1/4" />
+            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-accent/5 dark:bg-accent/10 rounded-full blur-[50px] translate-y-1/2 -translate-x-1/4" />
+          </div>
+
+          <div className={`relative max-w-screen-2xl mx-auto w-full min-h-screen flex flex-col ${isMurtazaMode ? 'bg-transparent' : 'bg-transparent'} text-foreground p-6 gap-8 font-sans selection:bg-primary/20 selection:text-primary transition-colors duration-150`}>
+            {/* Header */}
+            <motion.header
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+              onDoubleClick={() => window.ipcRenderer.send('maximize-window')}
+              className={`sticky top-4 z-50 rounded-2xl px-6 py-4 flex justify-between items-center backdrop-blur-xl ${isMurtazaMode ? 'bg-background/90 border border-white/10 shadow-lg shadow-black/10' : 'glass'} drag`}
+            >
+              <div className="flex items-center gap-2">
+                <motion.h1
+                  className="text-2xl font-bold tracking-tight text-primary dark:text-primary transition-all duration-150 hover:drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)] cursor-pointer no-drag flex items-baseline gap-2"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setIsMurtazaMode(!isMurtazaMode)}
+                >
+                  <span>{isMurtazaMode ? "مُرتضیٰ" : `${osPrefix}OS`}</span>
+                  <span className="text-xs font-mono text-muted-foreground opacity-50">v{APP_VERSION}</span>
+                </motion.h1>
+
+                {!isMurtazaMode && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 hover:opacity-50 transition-opacity no-drag">
+                        <Settings2 className="h-3 w-3" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-48 p-3 no-drag space-y-3" side="right">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={osPrefix}
+                          onChange={(e) => setOsPrefix(e.target.value.slice(0, 1))}
+                          maxLength={1}
+                          className="h-8 text-center font-bold"
+                        />
+                        <span className="text-sm font-medium text-muted-foreground">OS</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="hardcore-mode" className="text-xs font-medium">Hardcore</Label>
+                        <Switch
+                          id="hardcore-mode"
+                          checked={isHardcoreMode}
+                          onCheckedChange={setIsHardcoreMode}
+                          className="scale-75"
+                        />
+                      </div>
+                      
+                      <div className="border-t border-border pt-3">
+                        <Button 
+                          variant="outline" 
+                          className="w-full text-xs flex gap-2 items-center" 
+                          onClick={handleExportData}
+                        >
+                          <Download className="h-3 w-3" />
+                          Export Data Backup
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </div>
+
+              <div className="hidden lg:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 no-drag">
+                <HeaderPrayers />
+              </div>
+
+
+
+              <div className="flex items-center gap-4 no-drag">
+                {import.meta.env.DEV && <DevelopmentButton />}
+
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 rounded-full opacity-[0.08] hover:opacity-50 transition-opacity duration-300"
+                      id="help-guide-button"
+                    >
+                      <HelpCircle className="h-3.5 w-3.5" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 p-0 no-drag" side="bottom" align="end">
+                    <div className="p-4 space-y-4">
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground mb-2">Keyboard Shortcuts</h4>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">Notes Mode</span>
+                            <kbd className="px-2 py-0.5 text-[10px] font-mono bg-muted rounded border border-border text-muted-foreground">Ctrl + `</kbd>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">Year Mode</span>
+                            <kbd className="px-2 py-0.5 text-[10px] font-mono bg-muted rounded border border-border text-muted-foreground">Ctrl + Num1</kbd>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">Focus Mode</span>
+                            <span className="text-[10px] text-muted-foreground/60 italic">via active timer</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">Toggle Theme</span>
+                            <span className="text-[10px] text-muted-foreground/60 italic">☀/☾ button</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="border-t border-border pt-3">
+                        <h4 className="text-sm font-semibold text-foreground mb-2">Quick Guide</h4>
+                        <ul className="space-y-1.5 text-xs text-muted-foreground leading-relaxed">
+                          <li className="flex gap-2"><span className="text-primary/60">•</span>Click the logo to enter overlay mode</li>
+                          <li className="flex gap-2"><span className="text-primary/60">•</span>Pin the window with the pin button</li>
+                          <li className="flex gap-2"><span className="text-primary/60">•</span>Start a timer on any task, then enter Focus Mode for distraction-free work</li>
+                          <li className="flex gap-2"><span className="text-primary/60">•</span>Double-click the header to maximize</li>
+                          <li className="flex gap-2"><span className="text-primary/60">•</span>Use Notes Mode to organize by subjects</li>
+                          <li className="flex gap-2"><span className="text-primary/60">•</span>Track streaks & progress in Year Mode</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                <ModeToggle />
+                <WindowControls />
+              </div>
+            </motion.header>
+
+            {/* Main Grid */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="grid grid-cols-12 gap-6 flex-1 min-h-[600px]"
+            >
+              {/* Left Column: Stats only */}
+              <div className="col-span-12 lg:col-span-3">
+                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-white/10 rounded-3xl' : 'glass-card'} p-6 transition-all duration-150 no-drag h-full`}>
+                  <StatsBlock />
+                </ReactiveBlock>
+              </div>
+
+              {/* Middle Column: Task Board */}
+              <div className="col-span-12 lg:col-span-6">
+                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-white/10 rounded-3xl' : 'glass-card'} overflow-hidden h-full transition-all duration-150 no-drag`}>
+                  <TaskBoard />
+                </ReactiveBlock>
+              </div>
+
+              {/* Right Column: Calendar */}
+              <div className="col-span-12 lg:col-span-3">
+                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-white/10 rounded-3xl' : 'glass-card'} overflow-hidden flex flex-col h-full transition-all duration-150 no-drag`}>
+                  <CalendarBlock />
+                </ReactiveBlock>
+              </div>
+            </motion.div>
+
+            <ActiveTaskTimer />
+          </div>
+        </div>
+      )}
+      <NotesMode />
+      <YearMode />
+
+      <AnimatePresence>
+        {isTransitioning && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-[9999] bg-black flex items-center justify-center no-drag pointer-events-none"
+          >
+            <motion.div
+              animate={{ opacity: [0.4, 1, 0.4], scale: [0.95, 1.05, 0.95] }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              className="text-7xl text-[#800000] drop-shadow-[0_0_15px_rgba(128,0,0,0.8)]"
+            >
+              م
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </ThemeProvider >
+  );
+}
+
+
+export default App;

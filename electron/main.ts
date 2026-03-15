@@ -1,0 +1,524 @@
+import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, desktopCapturer } from 'electron'
+import { fileURLToPath } from 'node:url'
+import path from 'node:path'
+import db from './db'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// The built directory structure
+//
+// ├─┬─┬ dist
+// │ │ └── index.html
+// │ │
+// │ ├─┬ dist-electron
+// │ │ ├── main.js
+// │ │ └── preload.mjs
+// │
+process.env.APP_ROOT = path.join(__dirname, '..')
+
+// 🚧 Use ['ENV_NAME'] avoid vite:define plugin - Vite@2.x
+export const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
+export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
+export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
+
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
+
+let win: BrowserWindow | null
+
+// Stop Chromium from throwing 'Failing CreateMapBlock' and other cache-related errors on dev reload
+app.commandLine.appendSwitch('disable-http-cache');
+app.commandLine.appendSwitch('disk-cache-size', '0');
+
+function createWindow() {
+  win = new BrowserWindow({
+    width: 1200,
+    height: 800,
+    icon: path.join(process.env.VITE_PUBLIC, 'favicon.ico'),
+    autoHideMenuBar: true,
+    transparent: true,
+    frame: false,
+    hasShadow: false,
+    resizable: false,
+    minWidth: 1000,
+    minHeight: 700,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.mjs'),
+      // backgroundThrottling intentionally left as default (true)
+      // This allows Chromium to throttle the renderer when minimized/hidden,
+      // drastically reducing CPU usage. Timers are kept alive via main process IPC.
+    },
+  })
+
+  win.setAspectRatio(1200 / 800)
+
+  win.on('maximize', () => {
+    win?.webContents.send('window-maximized', true)
+  })
+
+  win.on('unmaximize', () => {
+    win?.webContents.send('window-maximized', false)
+  })
+
+  // Notify renderer of window focus state for pausing expensive work
+  win.on('focus', () => {
+    win?.webContents.send('window-focus-state', true)
+  })
+
+  win.on('blur', () => {
+    win?.webContents.send('window-focus-state', false)
+  })
+
+  // Test active push message to Renderer-process.
+  win.webContents.on('did-finish-load', () => {
+    win?.webContents.send('main-process-message', (new Date).toLocaleString())
+    win?.webContents.send('window-maximized', win?.isMaximized())
+    win?.webContents.send('window-focus-state', win?.isFocused())
+  })
+
+  if (VITE_DEV_SERVER_URL) {
+    win.loadURL(VITE_DEV_SERVER_URL)
+  } else {
+    // win.loadFile('dist/index.html')
+    win.loadFile(path.join(RENDERER_DIST, 'index.html'))
+  }
+}
+
+// Quit when all windows are closed, except on macOS. There, it's common
+// for applications and their menu bar to stay active until the user quits
+// explicitly with Cmd + Q.
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit()
+    win = null
+  }
+})
+
+app.on('activate', () => {
+  // On OS X it's common to re-create a window in the app when the
+  // dock icon is clicked and there are no other windows open.
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow()
+  }
+})
+
+app.whenReady().then(() => {
+  // Set the App User Model ID for Windows to ensure the correct icon is displayed in the taskbar
+  if (process.platform === 'win32') {
+    app.setAppUserModelId('com.murtaza.mos');
+  }
+
+  // Handle permission requests for media (audio/video capture)
+  // const { session, desktopCapturer } = require('electron') as typeof import('electron'); // imported at top level
+  session.defaultSession.setPermissionRequestHandler((_webContents: Electron.WebContents, permission: string, callback: (granted: boolean) => void) => {
+    // Allow audio and video capture for system audio loopback
+    if (permission === 'media' || permission === 'audioCapture' || permission === 'videoCapture') {
+      callback(true);
+    } else {
+      callback(true); // Allow all other permissions too
+    }
+  });
+
+  // Also set display media request handler for screen/audio capture
+  session.defaultSession.setDisplayMediaRequestHandler((_request: unknown, callback: (streams: { video: Electron.DesktopCapturerSource; audio: 'loopback' }) => void) => {
+    // Auto-select the primary screen
+    desktopCapturer.getSources({ types: ['screen'] }).then((sources: Electron.DesktopCapturerSource[]) => {
+      if (sources.length > 0) {
+        callback({ video: sources[0], audio: 'loopback' });
+      }
+    });
+  });
+
+  // Pre-cache prepared statements for frequently-called IPC handlers
+  const stmts = {
+    getTasks: db.prepare('SELECT * FROM tasks'),
+    addTask: db.prepare('INSERT INTO tasks (title, description, dueDate, difficulty, statTarget, labels, repeatingTaskId, subtasks, noteId, time) VALUES (@title, @description, @dueDate, @difficulty, @statTarget, @labels, @repeatingTaskId, @subtasks, @noteId, @time)'),
+    updateTask: db.prepare('UPDATE tasks SET title = @title, description = @description, dueDate = @dueDate, difficulty = @difficulty, isComplete = @isComplete, statTarget = @statTarget, labels = @labels, subtasks = @subtasks, completedAt = @completedAt, noteId = @noteId, time = @time WHERE id = @id'),
+    deleteTask: db.prepare('DELETE FROM tasks WHERE id = ?'),
+    addSession: db.prepare('INSERT INTO sessions (taskId, startTime, endTime, duration_minutes, dateLogged) VALUES (@taskId, @startTime, @endTime, @duration_minutes, @dateLogged)'),
+    getSessionsByDate: db.prepare('SELECT * FROM sessions WHERE dateLogged = ?'),
+    getSessionsRange: db.prepare('SELECT * FROM sessions WHERE dateLogged BETWEEN ? AND ?'),
+    getSessionsByTask: db.prepare('SELECT * FROM sessions WHERE taskId = ? ORDER BY startTime DESC'),
+    getStats: db.prepare('SELECT * FROM stats'),
+    updateStat: db.prepare('UPDATE stats SET currentXP = ?, currentLevel = ? WHERE statName = ?'),
+    addStat: db.prepare('INSERT INTO stats (statName) VALUES (?)'),
+    deleteStat: db.prepare('DELETE FROM stats WHERE statName = ?'),
+    getDailyLog: db.prepare('SELECT * FROM daily_logs WHERE date = ?'),
+    saveDailyLog: db.prepare('INSERT OR REPLACE INTO daily_logs (date, journalEntry, prayersCompleted) VALUES (@date, @journalEntry, @prayersCompleted)'),
+    getDailyLogForJournal: db.prepare('SELECT * FROM daily_logs WHERE date = ?'),
+    updateJournalEntry: db.prepare('UPDATE daily_logs SET journalEntry = ? WHERE date = ?'),
+    insertJournalEntry: db.prepare("INSERT INTO daily_logs (date, journalEntry, prayersCompleted) VALUES (?, ?, '{}')"),
+    getDevItems: db.prepare('SELECT * FROM dev_items'),
+    addDevItem: db.prepare('INSERT INTO dev_items (text) VALUES (?)'),
+    toggleDevItem: db.prepare('UPDATE dev_items SET isComplete = ? WHERE id = ?'),
+    deleteDevItem: db.prepare('DELETE FROM dev_items WHERE id = ?'),
+    getRepeatingTasks: db.prepare('SELECT * FROM repeating_tasks'),
+    addRepeatingTask: db.prepare('INSERT INTO repeating_tasks (title, description, difficulty, statTarget, labels, repeatType, repeatDays, isActive, lastGeneratedDate, subtasks, streak) VALUES (@title, @description, @difficulty, @statTarget, @labels, @repeatType, @repeatDays, @isActive, @lastGeneratedDate, @subtasks, @streak)'),
+    updateRepeatingTask: db.prepare('UPDATE repeating_tasks SET title = @title, description = @description, difficulty = @difficulty, statTarget = @statTarget, labels = @labels, repeatType = @repeatType, repeatDays = @repeatDays, isActive = @isActive, lastGeneratedDate = @lastGeneratedDate, subtasks = @subtasks, streak = @streak WHERE id = @id'),
+    deleteRepeatingTask: db.prepare('DELETE FROM repeating_tasks WHERE id = ?'),
+    getSubjects: db.prepare('SELECT * FROM subjects ORDER BY orderIndex ASC, id ASC'),
+    createSubject: db.prepare('INSERT INTO subjects (title, color, createdAt, orderIndex) VALUES (@title, @color, @createdAt, @orderIndex)'),
+    updateSubject: db.prepare('UPDATE subjects SET title = @title, color = @color WHERE id = @id'),
+    deleteSubject: db.prepare('DELETE FROM subjects WHERE id = ?'),
+    getNotes: db.prepare('SELECT * FROM notes WHERE subjectId = ? ORDER BY updatedAt DESC'),
+    createNote: db.prepare('INSERT INTO notes (subjectId, title, content, createdAt, updatedAt) VALUES (@subjectId, @title, @content, @createdAt, @updatedAt)'),
+    getNote: db.prepare('SELECT n.*, s.title as subjectTitle, s.color as subjectColor FROM notes n JOIN subjects s ON n.subjectId = s.id WHERE n.id = ?'),
+    updateNote: db.prepare('UPDATE notes SET title = @title, content = @content, updatedAt = @updatedAt WHERE id = @id'),
+    deleteNote: db.prepare('DELETE FROM notes WHERE id = ?'),
+    searchNotes: db.prepare('SELECT n.*, s.title as subjectTitle, s.color as subjectColor FROM notes n JOIN subjects s ON n.subjectId = s.id WHERE n.title LIKE ? OR n.content LIKE ? ORDER BY n.updatedAt DESC'),
+    getStreaks: db.prepare('SELECT * FROM streaks ORDER BY id ASC'),
+    createStreak: db.prepare('INSERT INTO streaks (title, currentStreak, lastUpdated, isPaused, createdAt) VALUES (@title, @currentStreak, @lastUpdated, @isPaused, @createdAt)'),
+    updateStreak: db.prepare('UPDATE streaks SET title = @title, currentStreak = @currentStreak, lastUpdated = @lastUpdated, isPaused = @isPaused, createdAt = @createdAt WHERE id = @id'),
+    deleteStreak: db.prepare('DELETE FROM streaks WHERE id = ?'),
+    renameStatUpdate: db.prepare('UPDATE stats SET statName = ? WHERE statName = ?'),
+    renameStatGetTasks: db.prepare('SELECT id, statTarget FROM tasks'),
+    renameStatUpdateTask: db.prepare('UPDATE tasks SET statTarget = ? WHERE id = ?'),
+  };
+
+  // IPC Handlers (using cached prepared statements)
+  ipcMain.handle('get-tasks', () => {
+    return stmts.getTasks.all();
+  });
+
+  ipcMain.handle('add-task', (_, task) => {
+    return stmts.addTask.run({
+      ...task,
+      statTarget: JSON.stringify(task.statTarget),
+      labels: JSON.stringify(task.labels),
+      repeatingTaskId: task.repeatingTaskId || null,
+      subtasks: JSON.stringify(task.subtasks || []),
+      noteId: task.noteId || null,
+      time: task.time || null
+    });
+  });
+
+  ipcMain.handle('update-task', (_, task) => {
+    return stmts.updateTask.run({
+      ...task,
+      completedAt: task.completedAt || null,
+      statTarget: JSON.stringify(task.statTarget),
+      labels: JSON.stringify(task.labels),
+      subtasks: JSON.stringify(task.subtasks || []),
+      noteId: task.noteId || null,
+      time: task.time || null
+    });
+  });
+
+  ipcMain.handle('delete-task', (_, id) => {
+    return stmts.deleteTask.run(id);
+  });
+
+  // Sessions
+  ipcMain.handle('add-session', (_, session) => {
+    return stmts.addSession.run(session);
+  });
+
+  ipcMain.handle('get-sessions-by-date', (_, date) => {
+    return stmts.getSessionsByDate.all(date);
+  });
+
+  ipcMain.handle('get-sessions-range', (_, { startDate, endDate }) => {
+    return stmts.getSessionsRange.all(startDate, endDate);
+  });
+
+  ipcMain.handle('get-sessions-by-task', (_, taskId) => {
+    return stmts.getSessionsByTask.all(taskId);
+  });
+  // Stats
+  ipcMain.handle('get-stats', () => {
+    return stmts.getStats.all();
+  });
+
+  ipcMain.handle('update-stat', (_, { statName, currentXP, currentLevel }) => {
+    return stmts.updateStat.run(currentXP, currentLevel, statName);
+  });
+
+  ipcMain.handle('add-stat', (_, statName) => {
+    return stmts.addStat.run(statName);
+  });
+
+  ipcMain.handle('delete-stat', (_, statName) => {
+    return stmts.deleteStat.run(statName);
+  });
+
+  ipcMain.handle('rename-stat', (_, { oldName, newName }) => {
+    const transaction = db.transaction(() => {
+      stmts.renameStatUpdate.run(newName, oldName);
+
+      const tasks = stmts.renameStatGetTasks.all();
+
+      tasks.forEach((task: { id: number; statTarget: string }) => {
+        let targets: string[] = [];
+        try {
+          targets = JSON.parse(task.statTarget || '[]');
+        } catch (e) {
+          targets = [];
+        }
+
+        if (Array.isArray(targets) && targets.includes(oldName)) {
+          targets = targets.map(t => t === oldName ? newName : t);
+          stmts.renameStatUpdateTask.run(JSON.stringify(targets), task.id);
+        }
+      });
+    });
+    return transaction();
+  });
+
+  // Daily Log
+  ipcMain.handle('get-daily-log', (_, date) => {
+    return stmts.getDailyLog.get(date);
+  });
+
+  ipcMain.handle('save-daily-log', (_, log) => {
+    return stmts.saveDailyLog.run(log);
+  });
+
+  ipcMain.handle('save-journal-entry', (_, { date, entry }) => {
+    const row = stmts.getDailyLogForJournal.get(date);
+    if (row) {
+      return stmts.updateJournalEntry.run(entry, date);
+    } else {
+      return stmts.insertJournalEntry.run(date, entry);
+    }
+  });
+
+  // Dev Items
+  ipcMain.handle('get-dev-items', () => {
+    return stmts.getDevItems.all();
+  });
+
+  ipcMain.handle('add-dev-item', (_, text) => {
+    return stmts.addDevItem.run(text);
+  });
+
+  ipcMain.handle('toggle-dev-item', (_, { id, isComplete }) => {
+    return stmts.toggleDevItem.run(isComplete, id);
+  });
+
+  ipcMain.handle('delete-dev-item', (_, id) => {
+    return stmts.deleteDevItem.run(id);
+  });
+
+  // Repeating Tasks
+  ipcMain.handle('get-repeating-tasks', () => {
+    return stmts.getRepeatingTasks.all();
+  });
+
+  ipcMain.handle('add-repeating-task', (_, task) => {
+    return stmts.addRepeatingTask.run({
+      ...task,
+      lastGeneratedDate: task.lastGeneratedDate || null,
+      statTarget: JSON.stringify(task.statTarget),
+      labels: JSON.stringify(task.labels),
+      repeatDays: JSON.stringify(task.repeatDays),
+      subtasks: JSON.stringify(task.subtasks || []),
+      streak: task.streak || 0
+    });
+  });
+
+  ipcMain.handle('update-repeating-task', (_, task) => {
+    return stmts.updateRepeatingTask.run({
+      ...task,
+      lastGeneratedDate: task.lastGeneratedDate || null,
+      statTarget: JSON.stringify(task.statTarget),
+      labels: JSON.stringify(task.labels),
+      repeatDays: JSON.stringify(task.repeatDays),
+      subtasks: JSON.stringify(task.subtasks || []),
+      streak: task.streak || 0
+    });
+  });
+
+  ipcMain.handle('delete-repeating-task', (_, id) => {
+    return stmts.deleteRepeatingTask.run(id);
+  });
+
+  // Notes Mode
+  ipcMain.handle('get-subjects', () => {
+    return stmts.getSubjects.all();
+  });
+
+  ipcMain.handle('create-subject', (_, subject) => {
+    return stmts.createSubject.run({
+      ...subject,
+      createdAt: new Date().toISOString()
+    });
+  });
+
+  ipcMain.handle('update-subject', (_, subject) => {
+    return stmts.updateSubject.run(subject);
+  });
+
+  ipcMain.handle('delete-subject', (_, id) => {
+    return stmts.deleteSubject.run(id);
+  });
+
+  ipcMain.handle('get-notes', (_, subjectId) => {
+    return stmts.getNotes.all(subjectId);
+  });
+
+  ipcMain.handle('create-note', (_, note) => {
+    const now = new Date().toISOString();
+    return stmts.createNote.run({
+      ...note,
+      createdAt: now,
+      updatedAt: now
+    });
+  });
+
+  ipcMain.handle('get-note', (_, id) => {
+    return stmts.getNote.get(id);
+  });
+
+  ipcMain.handle('update-note', (_, note) => {
+    return stmts.updateNote.run({
+      ...note,
+      updatedAt: new Date().toISOString()
+    });
+  });
+
+  ipcMain.handle('delete-note', (_, id) => {
+    return stmts.deleteNote.run(id);
+  });
+
+  ipcMain.handle('search-notes', (_, query) => {
+    const likeQuery = `%${query}%`;
+    return stmts.searchNotes.all(likeQuery, likeQuery);
+  });
+
+  // Streaks
+  ipcMain.handle('get-streaks', () => {
+    return stmts.getStreaks.all();
+  });
+
+  ipcMain.handle('create-streak', (_, streak) => {
+    const now = new Date().toISOString();
+    return stmts.createStreak.run({
+      ...streak,
+      lastUpdated: streak.lastUpdated || now,
+      createdAt: streak.createdAt || now
+    });
+  });
+
+  ipcMain.handle('update-streak', (_, streak) => {
+    return stmts.updateStreak.run(streak);
+  });
+
+  ipcMain.handle('delete-streak', (_, id) => {
+    return stmts.deleteStreak.run(id);
+  });
+
+  // Data Export - dumps all tables into a single JSON object
+  ipcMain.handle('export-all-data', () => {
+    return {
+      tasks: db.prepare('SELECT * FROM tasks').all(),
+      sessions: db.prepare('SELECT * FROM sessions').all(),
+      stats: db.prepare('SELECT * FROM stats').all(),
+      dailyLogs: db.prepare('SELECT * FROM daily_logs').all(),
+      devItems: db.prepare('SELECT * FROM dev_items').all(),
+      repeatingTasks: db.prepare('SELECT * FROM repeating_tasks').all(),
+      subjects: db.prepare('SELECT * FROM subjects').all(),
+      notes: db.prepare('SELECT * FROM notes').all(),
+      streaks: db.prepare('SELECT * FROM streaks').all(),
+      exportedAt: new Date().toISOString()
+    };
+  });
+
+  ipcMain.on('minimize-window', () => {
+    win?.setAlwaysOnTop(false);
+    win?.minimize();
+  });
+
+  let windowSizeState = 0; // 0: Normal, 1: Third, 2: Full
+
+  ipcMain.on('set-window-size', (_, newState: number) => {
+    if (!win) return;
+    if (newState === windowSizeState) return;
+    
+    windowSizeState = newState;
+    const display = screen.getPrimaryDisplay();
+    // Use workArea to avoid overlapping with the taskbar
+    const { width, height, x, y } = display.workArea;
+    
+    // Briefly enable resizing to allow the window size to change properly
+    win.setResizable(true);
+    
+    if (windowSizeState === 0) {
+      if (win.isMaximized()) win.unmaximize();
+      win.setAspectRatio(1200 / 800);
+      win.setSize(1200, 800);
+      win.center();
+      win.webContents.send('window-size-state', 0);
+    } else if (windowSizeState === 1) {
+      if (win.isMaximized()) win.unmaximize();
+      win.setAspectRatio(0);
+      const thirdWidth = Math.floor(width / 3);
+      // Snap to right edge, taking full height
+      win.setBounds({ x: x + width - thirdWidth, y, width: thirdWidth, height });
+      win.webContents.send('window-size-state', 1);
+    } else if (windowSizeState === 2) {
+      win.setAspectRatio(0);
+      win.maximize();
+      win.webContents.send('window-size-state', 2);
+    }
+    
+    win.setResizable(false);
+  });
+
+  ipcMain.on('toggle-pin', (_, shouldPin) => {
+    win?.setAlwaysOnTop(shouldPin);
+  });
+
+
+
+  ipcMain.on('close-window', () => {
+    win?.close();
+  });
+
+  ipcMain.on('set-ignore-mouse-events', (event, ignore, options) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    win?.setIgnoreMouseEvents(ignore, options)
+  })
+
+  ipcMain.on('set-overlay-mode', (_, enable) => {
+    win?.setResizable(true);
+    if (enable) {
+      const display = screen.getPrimaryDisplay();
+      const { x, y, width, height } = display.bounds; // Use bounds to cover entire screen including taskbar
+      // Ideally use setContentProtection or similar if we wanted to be super aggressive, but alwaysOnTop is usually enough.
+      win?.setAspectRatio(0);
+      if (win?.isMaximized()) win?.unmaximize();
+      win?.setBounds({ x, y, width, height });
+      win?.setAlwaysOnTop(true, 'screen-saver');
+      // Default to "click-through" so user can click other apps
+      win?.setIgnoreMouseEvents(true, { forward: true });
+    } else {
+      windowSizeState = 0;
+      win?.setAspectRatio(1200 / 800);
+      win?.setSize(1200, 800);
+      win?.center();
+      win?.setAlwaysOnTop(false);
+      win?.setIgnoreMouseEvents(false);
+      win?.webContents.send('window-size-state', 0);
+    }
+    win?.setResizable(false);
+  });
+
+  // Global Shortcut for Notes Mode
+  globalShortcut.register('CommandOrControl+`', () => {
+    win?.webContents.send('toggle-notes-mode');
+    if (win?.isMinimized()) win.restore();
+    win?.focus();
+  });
+
+  // Global Shortcut for Year Mode (Ctrl + numpad 1)
+  globalShortcut.register('CommandOrControl+num1', () => {
+    win?.webContents.send('toggle-year-mode');
+    if (win?.isMinimized()) win.restore();
+    win?.focus();
+  });
+
+  createWindow()
+})
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll()
+})
