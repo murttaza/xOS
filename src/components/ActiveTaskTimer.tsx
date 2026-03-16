@@ -51,7 +51,7 @@ export function ActiveTaskTimer() {
                             className="pointer-events-auto w-auto min-w-[500px]"
                         >
                             <div
-                                className="glass border border-white/15 dark:border-white/10 shadow-2xl shadow-black/30 dark:shadow-black/50 backdrop-blur-2xl cursor-pointer group hover:border-primary/40 dark:hover:border-primary/30 transition-all duration-150 rounded-2xl overflow-hidden"
+                                className="glass border border-border shadow-2xl shadow-black/20 backdrop-blur-2xl cursor-pointer group hover:border-primary/40 dark:hover:border-primary/30 transition-all duration-150 rounded-2xl overflow-hidden"
                                 onClick={() => setIsFocusMode(true)}
                             >
                                 {/* Animated background gradient */}
@@ -93,7 +93,7 @@ export function ActiveTaskTimer() {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-12 w-12 rounded-full hover:bg-white/10 dark:hover:bg-white/5 transition-all hover:scale-[1.08] active:scale-[0.92]"
+                                            className="h-12 w-12 rounded-full hover:bg-muted transition-all hover:scale-[1.08] active:scale-[0.92]"
                                             onClick={() => setIsFocusMode(true)}
                                         >
                                             <Maximize2 className="h-4 w-4" />

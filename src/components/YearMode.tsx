@@ -7,6 +7,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { getLocalDateString } from '../lib/utils';
 import { X, Pause, Play, Trash2, RotateCcw, Plus, Edit } from 'lucide-react';
 import { Streak } from '../types';
+import { ModeToggle } from './ModeToggle';
 
 function StreakItem({ streak, updateStreak, deleteStreak }: {
     streak: Streak;
@@ -59,7 +60,7 @@ function StreakItem({ streak, updateStreak, deleteStreak }: {
             layout
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`relative p-6 rounded-2xl border transition-all duration-150 group ${streak.isPaused ? 'bg-[#050505] border-transparent text-white/50' : 'bg-[#0a0a0a] border-white/5 hover:border-white/10 hover:bg-[#111111]'}`}
+            className={`relative p-6 rounded-2xl border transition-all duration-150 group ${streak.isPaused ? 'bg-card border-transparent text-muted-foreground' : 'bg-secondary border-border/50 hover:border-border hover:bg-secondary/80'}`}
         >
             {isEditing ? (
                 <div className="flex flex-col gap-4">
@@ -80,7 +81,7 @@ function StreakItem({ streak, updateStreak, deleteStreak }: {
                                 size="icon"
                                 onClick={() => setIsEditing(true)}
                                 title="Edit Streak"
-                                className="h-8 w-8 rounded-full hover:bg-white/10"
+                                className="h-8 w-8 rounded-full hover:bg-muted"
                             >
                                 <Edit className="h-4 w-4" />
                             </Button>
@@ -89,7 +90,7 @@ function StreakItem({ streak, updateStreak, deleteStreak }: {
                                 size="icon"
                                 onClick={() => updateStreak({ ...streak, currentStreak: 0, lastUpdated: new Date().toISOString(), createdAt: new Date().toISOString() })}
                                 title="Reset Streak"
-                                className="h-8 w-8 rounded-full hover:bg-white/10"
+                                className="h-8 w-8 rounded-full hover:bg-muted"
                             >
                                 <RotateCcw className="h-4 w-4" />
                             </Button>
@@ -100,7 +101,7 @@ function StreakItem({ streak, updateStreak, deleteStreak }: {
                                     updateStreak({ ...streak, isPaused: streak.isPaused ? 0 : 1, lastUpdated: new Date().toISOString() })
                                 }}
                                 title={streak.isPaused ? "Resume tracking" : "Pause tracking"}
-                                className={`h-8 w-8 rounded-full hover:bg-white/10 ${streak.isPaused ? 'text-primary' : ''}`}
+                                className={`h-8 w-8 rounded-full hover:bg-muted ${streak.isPaused ? 'text-primary' : ''}`}
                             >
                                 {streak.isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
                             </Button>
@@ -207,20 +208,23 @@ export function YearMode() {
                     transition={{ duration: 0.3, ease: 'easeOut' }}
                     className="fixed inset-0 z-[100] bg-background flex overflow-y-auto overflow-x-hidden no-scrollbar no-drag"
                 >
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={toggleYearMode}
-                        className="fixed top-6 right-6 z-50 rounded-full hover:bg-white/10 no-drag bg-background/50 backdrop-blur-sm"
-                    >
-                        <X className="h-6 w-6" />
-                    </Button>
+                    <div className="fixed top-6 right-6 z-50 flex items-center gap-2">
+                        <ModeToggle />
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={toggleYearMode}
+                            className="rounded-full hover:bg-muted no-drag bg-background/50 backdrop-blur-sm"
+                        >
+                            <X className="h-6 w-6" />
+                        </Button>
+                    </div>
 
                     <div className="flex flex-col lg:flex-row w-full min-h-full p-4 lg:p-8 gap-4 lg:gap-8 pb-32 lg:pb-8">
                         {/* Left Column - Dots Grid */}
-                        <div className="group w-full lg:w-1/2 lg:h-full min-h-[500px] flex flex-col items-center justify-center p-4 lg:p-8 lg:border-r border-b lg:border-b-0 border-white/5 relative transition-colors duration-150 hover:bg-white/[0.01]">
+                        <div className="group w-full lg:w-1/2 lg:h-full min-h-[500px] flex flex-col items-center justify-center p-4 lg:p-8 lg:border-r border-b lg:border-b-0 border-border/50 relative transition-colors duration-150 hover:bg-muted/10">
                             {/* Subtle Hover Glow */}
-                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.03)_0%,transparent_60%)]" />
+                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none bg-[radial-gradient(ellipse_at_center,hsl(var(--foreground)/0.03)_0%,transparent_60%)]" />
 
                             <div className="absolute top-8 left-8 flex items-center gap-4 z-50 no-drag">
                                 <Button
@@ -243,7 +247,7 @@ export function YearMode() {
 
                             <div className="w-full max-w-2xl flex flex-col items-center max-h-full min-h-0">
                                 <div className="text-center mb-12 shrink-0">
-                                    <h1 className="text-5xl font-black mb-2 tabular-nums tracking-tighter text-white">
+                                    <h1 className="text-5xl font-black mb-2 tabular-nums tracking-tighter text-foreground">
                                         {viewState === 'days' ? daysLeft : weeksInYear - weeksPassed}
                                     </h1>
                                     <p className="text-muted-foreground uppercase tracking-widest text-sm font-semibold">
@@ -258,14 +262,14 @@ export function YearMode() {
                                                 key={i}
                                                 style={{ animation: `fadeInScale 0.2s ease-out ${i * (viewState === 'days' ? 0.001 : 0.01)}s both` }}
                                                 className={`rounded-full transition-all duration-150 ${i < passedDots
-                                                    ? 'bg-white/10 w-2 h-2 opacity-50 relative'
-                                                    : 'bg-white w-2.5 h-2.5'
+                                                    ? 'bg-foreground/10 w-2 h-2 opacity-50 relative'
+                                                    : 'bg-foreground w-2.5 h-2.5'
                                                     }`}
                                             >
                                                 {/* Cross mark for passed days */}
                                                 {i < passedDots && (
                                                     <div className="absolute inset-0 flex items-center justify-center -rotate-45">
-                                                        <div className="w-4 h-px bg-white/40"></div>
+                                                        <div className="w-4 h-px bg-foreground/40"></div>
                                                     </div>
                                                 )}
                                             </div>
@@ -276,9 +280,9 @@ export function YearMode() {
                         </div>
 
                         {/* Right Column - Streaks Tracker */}
-                        <div className="group w-full lg:w-1/2 lg:h-full min-h-[500px] flex flex-col justify-start lg:justify-center items-center p-4 lg:p-8 relative transition-colors duration-150 hover:bg-white/[0.01]">
+                        <div className="group w-full lg:w-1/2 lg:h-full min-h-[500px] flex flex-col justify-start lg:justify-center items-center p-4 lg:p-8 relative transition-colors duration-150 hover:bg-muted/10">
                             {/* Subtle Hover Glow */}
-                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.03)_0%,transparent_60%)]" />
+                            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none bg-[radial-gradient(ellipse_at_center,hsl(var(--foreground)/0.03)_0%,transparent_60%)]" />
 
                             <div className="w-full max-w-2xl flex flex-col max-h-full min-h-0 relative z-10">
                                 <div className="flex justify-end mb-8 w-full h-[52px] shrink-0">
@@ -288,10 +292,10 @@ export function YearMode() {
                                                 placeholder="What habit do you want to track?"
                                                 value={newStreakTitle}
                                                 onChange={(e) => setNewStreakTitle(e.target.value)}
-                                                className="bg-white/5 border-white/10 text-lg py-6 focus-visible:ring-1 focus-visible:ring-white/30 rounded-xl w-full min-w-[300px]"
+                                                className="bg-muted/50 border-border text-lg py-6 focus-visible:ring-1 focus-visible:ring-ring/30 rounded-xl w-full min-w-[300px]"
                                             />
                                         </div>
-                                        <Button type="submit" variant="ghost" size="icon" className="h-[52px] w-[52px] shrink-0 rounded-full hover:bg-white/10 text-white/50 hover:text-white transition-colors duration-150">
+                                        <Button type="submit" variant="ghost" size="icon" className="h-[52px] w-[52px] shrink-0 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors duration-150">
                                             <Plus className="h-6 w-6" />
                                         </Button>
                                     </form>

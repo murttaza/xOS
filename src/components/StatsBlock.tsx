@@ -79,7 +79,7 @@ export function StatsBlock() {
                     </div>
 
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground hover:text-white" onClick={() => openEditDialog(stat)}>
+                        <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground hover:text-foreground" onClick={() => openEditDialog(stat)}>
                             <Edit2 className="h-3 w-3" />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground hover:text-red-400" onClick={() => handleDelete(stat)}>
@@ -88,7 +88,7 @@ export function StatsBlock() {
                     </div>
                 </div>
 
-                <div className="relative h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                <div className="relative h-1.5 w-full bg-muted/50 rounded-full overflow-hidden">
                     <div
                         className="absolute top-0 left-0 h-full bg-primary transition-all duration-150 rounded-full"
                         style={{ width: `${progress}%` }}
@@ -110,7 +110,7 @@ export function StatsBlock() {
                     <div className="h-2 w-2 rounded-full bg-primary animate-pulse-soft" />
                     Stats
                 </CardTitle>
-                <Button variant="ghost" size="icon" onClick={openAddDialog} className="h-8 w-8 hover:bg-white/10 rounded-full">
+                <Button variant="ghost" size="icon" onClick={openAddDialog} className="h-8 w-8 hover:bg-muted rounded-full">
                     <Plus className="h-4 w-4" />
                 </Button>
             </CardHeader>
@@ -146,7 +146,7 @@ export function StatsBlock() {
             </div>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="sm:max-w-[425px] bg-black/80 backdrop-blur-xl border-white/10 text-white">
+                <DialogContent className="sm:max-w-[425px] bg-popover/95 backdrop-blur-xl border-border text-popover-foreground">
                     <DialogHeader>
                         <DialogTitle>{editingStat ? "Edit Stat" : "New Stat"}</DialogTitle>
                     </DialogHeader>
@@ -157,15 +157,15 @@ export function StatsBlock() {
                                 value={newStatName}
                                 onChange={(e) => setNewStatName(e.target.value)}
                                 placeholder="Stat Name (e.g. Fitness)"
-                                className="bg-white/5 border-white/10 text-white"
+                                className="bg-muted/50 border-border text-foreground"
                                 onKeyDown={(e) => e.key === 'Enter' && handleSave()}
                                 autoFocus
                             />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="border-white/10 text-white hover:bg-white/10 hover:text-white">Cancel</Button>
-                        <Button onClick={handleSave} className="bg-white text-black hover:bg-white/90">Save</Button>
+                        <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="border-border text-foreground hover:bg-muted hover:text-foreground">Cancel</Button>
+                        <Button onClick={handleSave} className="bg-primary text-primary-foreground hover:bg-primary/90">Save</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

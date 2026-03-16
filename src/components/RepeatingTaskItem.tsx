@@ -124,7 +124,7 @@ export const RepeatingTaskItem = memo(function RepeatingTaskItem({ task, onEdit,
     return (
         <div className="flex flex-col gap-1">
             <div className={cn(
-                "group relative flex items-center justify-between p-3 rounded-xl transition-all duration-150 border border-transparent hover:border-white/10 cursor-pointer",
+                "group relative flex items-center justify-between p-3 rounded-xl transition-all duration-150 border border-transparent hover:border-border cursor-pointer",
                 task.isActive ? "bg-secondary/50 hover:bg-secondary" : "bg-secondary/20 hover:bg-secondary/30 opacity-70",
                 (isDoneToday && task.repeatType === 'daily') && "opacity-50 grayscale-[0.5]",
                 (isWeeklyDoneForRemainingDays && task.repeatType === 'weekly') && "opacity-50 grayscale-[0.5]"
@@ -166,7 +166,7 @@ export const RepeatingTaskItem = memo(function RepeatingTaskItem({ task, onEdit,
                         onCheckedChange={() => onToggleActive(task)}
                         className="scale-75"
                     />
-                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-white/10" onClick={(e) => { e.stopPropagation(); onEdit(task); }}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted" onClick={(e) => { e.stopPropagation(); onEdit(task); }}>
                         <Edit className="h-3.5 w-3.5" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-destructive/20 hover:text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(task.id!); }}>
