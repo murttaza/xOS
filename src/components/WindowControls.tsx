@@ -1,4 +1,4 @@
-import { Minus, X, Square, Pin, Copy, PanelRight } from "lucide-react";
+import { Minus, X, Square, Pin, Copy, PanelLeft } from "lucide-react";
 import { Button } from "./ui/button";
 import { useState, useEffect } from "react";
 
@@ -77,7 +77,7 @@ export function WindowControls() {
                         onClick={() => handleSetSize(1)}
                         title="Snap to Side"
                     >
-                        <PanelRight className="h-3.5 w-3.5" />
+                        <PanelLeft className="h-3.5 w-3.5" />
                     </Button>
                     <Button
                         variant="ghost"
@@ -100,7 +100,7 @@ export function WindowControls() {
                     {sizeState === 0 ? (
                         <Square className="h-3.5 w-3.5" />
                     ) : sizeState === 1 ? (
-                        <PanelRight className="h-3.5 w-3.5" />
+                        <PanelLeft className="h-3.5 w-3.5" />
                     ) : (
                         <Copy className="h-3.5 w-3.5" />
                     )}
