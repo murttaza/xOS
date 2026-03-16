@@ -142,4 +142,49 @@ const stats = ['Fitness', 'Mental', 'Religion', 'Finance', 'Social'];
 const insertStat = db.prepare('INSERT OR IGNORE INTO stats (statName) VALUES (?)');
 stats.forEach(stat => insertStat.run(stat));
 
+// Migration: Add curveVersion column for XP curve migration tracking
+try {
+  db.prepare('ALTER TABLE stats ADD COLUMN curveVersion INTEGER DEFAULT 1').run();
+} catch (error) {
+  // Column likely already exists
+}
+
+// One-time migration: Recalculate XP from old curve (1000*level^1.5) to new curve (800 + 400*level*log2(level+1))
+const unmigrated = db.prepare('SELECT * FROM stats WHERE curveVersion = 1 AND currentLevel > 1').all() as Array<{
+  statName: string; currentXP: number; currentLevel: number; curveVersion: number;
+}>;
+if (unmigrated.length > 0) {
+  const oldCurve = (l: number) => Math.floor(1000 * Math.pow(l, 1.5));
+  const newCurve = (l: number) => Math.floor(800 + 400 * l * Math.log2(l + 1));
+
+  const updateMigrated = db.prepare(
+    'UPDATE stats SET currentLevel = ?, currentXP = ?, curveVersion = 2 WHERE statName = ?'
+  );
+
+  for (const stat of unmigrated) {
+    // Calculate total lifetime XP under old curve
+    let totalXP = stat.currentXP;
+    for (let l = 1; l < stat.currentLevel; l++) {
+      totalXP += oldCurve(l);
+    }
+
+    // Re-derive level/XP under new curve
+    let level = 1;
+    let remaining = totalXP;
+    while (remaining >= newCurve(level)) {
+      remaining -= newCurve(level);
+      level++;
+    }
+
+    // Never lose levels
+    const finalLevel = Math.max(level, stat.currentLevel);
+    const finalXP = finalLevel > level ? 0 : Math.floor(remaining);
+
+    updateMigrated.run(finalLevel, finalXP, stat.statName);
+  }
+}
+
+// Mark any remaining level-1 stats as migrated (nothing to recalculate)
+db.prepare('UPDATE stats SET curveVersion = 2 WHERE curveVersion = 1').run();
+
 export default db;
