@@ -1,7 +1,7 @@
 {
   "name": "xos",
   "private": true,
-  "version": "4.0.1",
+  "version": "4.2.0",
   "author": "Murtaza",
   "type": "module",
   "scripts": {
