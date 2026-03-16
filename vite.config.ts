@@ -5,6 +5,11 @@ import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+  },
   define: {
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '4.0.1'),
   },

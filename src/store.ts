@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Task, Stat, DailyLog, Session, DevItem, RepeatingTask, Subject, Note, Subtask } from './types';
 import { api } from './api';
-import { safeJSONParse, calculateSessionXP, calculateLevelFromXP, getLocalDateString } from './lib/utils';
+import { safeJSONParse, calculateSessionXP, calculateLevelFromXP, calculatePenalty, calculatePrayerXP, getLocalDateString } from './lib/utils';
 
 // Raw types from DB before parsing JSON fields
 interface RawTask extends Omit<Task, 'labels' | 'statTarget' | 'subtasks'> {
@@ -251,7 +251,20 @@ export const useStore = create<AppState>()(
                 let statsUpdated = false;
 
                 if (task && session.duration_minutes > 0) {
-                    const xpEarned = calculateSessionXP(session.duration_minutes, task.difficulty);
+                    // Determine streak count from repeating task (if applicable)
+                    const repeatingTask = task.repeatingTaskId
+                        ? state.repeatingTasks.find(rt => rt.id === task.repeatingTaskId)
+                        : null;
+                    const streakCount = repeatingTask?.streak ?? 0;
+
+                    // Check if this is the first session of the day
+                    const today = getLocalDateString();
+                    const isFirstSessionOfDay = !state.sessions.some(s => s.dateLogged === today);
+
+                    const xpEarned = calculateSessionXP(session.duration_minutes, task.difficulty, {
+                        streakCount,
+                        isFirstSessionOfDay,
+                    });
                     // Edge case: ensure statTarget is always an array
                     const statTargets = Array.isArray(task.statTarget) ? task.statTarget : (task.statTarget ? [task.statTarget] : []);
 
@@ -321,7 +334,8 @@ export const useStore = create<AppState>()(
                     const statIndex = newStats.findIndex(s => s.statName === "Religion");
                     if (statIndex !== -1) {
                         const stat = newStats[statIndex];
-                        const { newXP, newLevel } = calculateLevelFromXP(stat.currentXP + 500, stat.currentLevel);
+                        const prayerXP = calculatePrayerXP(stat.currentLevel);
+                        const { newXP, newLevel } = calculateLevelFromXP(stat.currentXP + prayerXP, stat.currentLevel);
 
                         await api.updateStat({
                             statName: "Religion",
@@ -529,14 +543,12 @@ export const useStore = create<AppState>()(
                                 await api.updateRepeatingTask({ ...rt, streak: 0 });
                             }
 
-                            // Apply XP Penalty (Difficulty * 50)
-                            const penalty = missedTask.difficulty * 50;
-
-                            // Deduct from ALL associated stats
+                            // Apply level-scaled XP penalty
                             const targets = Array.isArray(missedTask.statTarget) ? missedTask.statTarget : [missedTask.statTarget];
                             for (const statName of targets) {
                                 const stat = get().stats.find(s => s.statName === statName);
                                 if (stat) {
+                                    const penalty = calculatePenalty(missedTask.difficulty, stat.currentLevel);
                                     const newXP = Math.max(0, stat.currentXP - penalty);
                                     await api.updateStat({ ...stat, currentXP: newXP });
                                 }
