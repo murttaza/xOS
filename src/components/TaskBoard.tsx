@@ -217,20 +217,20 @@ export function TaskBoard() {
                         )}
                     </CardTitle>
                     <div className="flex flex-col gap-1 ml-1 group-hover:gap-1.5 transition-all">
-                        <div className={`h-1.5 w-1.5 rounded-full transition-colors ${activePage === 0 ? "bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-white/20"}`} />
-                        <div className={`h-1.5 w-1.5 rounded-full transition-colors ${activePage === 1 ? "bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-white/20"}`} />
+                        <div className={`h-1.5 w-1.5 rounded-full transition-colors ${activePage === 0 ? "bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-muted-foreground/40"}`} />
+                        <div className={`h-1.5 w-1.5 rounded-full transition-colors ${activePage === 1 ? "bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-muted-foreground/40"}`} />
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
                     {activePage === 0 && (
-                        <Button variant="ghost" size="icon" onClick={() => setIsAllTasksOpen(true)} className="h-8 w-8 text-white/50 hover:text-white hover:bg-white/10 transition-colors">
+                        <Button variant="ghost" size="icon" onClick={() => setIsAllTasksOpen(true)} className="h-8 w-8 text-muted-foreground/70 hover:text-foreground hover:bg-muted transition-colors">
                             <Eye className="h-4 w-4" />
                         </Button>
                     )}
                     <Button
                         size="sm"
                         onClick={handleAddClick}
-                        className="group relative overflow-hidden bg-white/5 text-white border border-white/10 hover:border-primary/50 shadow-none transition-all duration-150 hover:scale-105 active:scale-95 px-4 h-9"
+                        className="group relative overflow-hidden bg-muted/50 text-foreground border border-border hover:border-primary/50 shadow-none transition-all duration-150 hover:scale-105 active:scale-95 px-4 h-9"
                     >
                         <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-blue-600/80 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-150 ease-in-out" />
                         <span className="relative z-10 flex items-center font-medium">
@@ -253,10 +253,10 @@ export function TaskBoard() {
                             <Accordion type="single" collapsible defaultValue="dated" className="w-full space-y-4">
                                 {/* Dated Tasks */}
                                 <AccordionItem value="dated" className="border-none bg-card/40 rounded-xl overflow-hidden shadow-sm">
-                                    <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-white/5 transition-colors">
+                                    <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/50 transition-colors">
                                         <span className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
                                             Dated Tasks
-                                            <span className="bg-white/10 px-2 py-0.5 rounded-full text-xs">{datedTasks.length}</span>
+                                            <span className="bg-muted px-2 py-0.5 rounded-full text-xs">{datedTasks.length}</span>
                                         </span>
                                     </AccordionTrigger>
                                     <AccordionContent className="px-4 pb-4 pt-2 space-y-2">
@@ -281,10 +281,10 @@ export function TaskBoard() {
 
                                 {/* Loose Tasks */}
                                 <AccordionItem value="loose" className="border-none bg-card/40 rounded-xl overflow-hidden shadow-sm">
-                                    <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-white/5 transition-colors">
+                                    <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/50 transition-colors">
                                         <span className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
                                             Loose Tasks
-                                            <span className="bg-white/10 px-2 py-0.5 rounded-full text-xs">{looseTasks.length}</span>
+                                            <span className="bg-muted px-2 py-0.5 rounded-full text-xs">{looseTasks.length}</span>
                                         </span>
                                     </AccordionTrigger>
                                     <AccordionContent className="px-4 pb-4 pt-2 space-y-2">
@@ -314,10 +314,10 @@ export function TaskBoard() {
                                     const displayTasks = recentCompleted.length > 0 ? recentCompleted : completedTasks.slice(0, 5);
                                     return (
                                     <AccordionItem value="completed" className="border-none bg-card/40 rounded-xl overflow-hidden">
-                                        <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-white/5 transition-colors">
+                                        <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/50 transition-colors">
                                             <span className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
                                                 Completed
-                                                <span className="bg-white/10 px-2 py-0.5 rounded-full text-xs">
+                                                <span className="bg-muted px-2 py-0.5 rounded-full text-xs">
                                                     {recentCompleted.length > 0 && recentCompleted.length !== completedTasks.length
                                                         ? `${recentCompleted.length} recent · ${completedTasks.length} total`
                                                         : completedTasks.length}
@@ -389,41 +389,41 @@ export function TaskBoard() {
 
             {/* View All Tasks Dialog */}
             <Dialog open={isAllTasksOpen} onOpenChange={setIsAllTasksOpen}>
-                <DialogContent className="max-w-4xl h-[80vh] bg-black/90 backdrop-blur-xl border-white/10 text-white flex flex-col p-0 overflow-hidden">
-                    <DialogHeader className="px-6 py-4 border-b border-white/10">
-                        <DialogTitle className="text-xl font-light tracking-wide text-white/90">All Tasks</DialogTitle>
+                <DialogContent className="max-w-4xl h-[80vh] bg-popover/95 backdrop-blur-xl border-border text-foreground flex flex-col p-0 overflow-hidden">
+                    <DialogHeader className="px-6 py-4 border-b border-border">
+                        <DialogTitle className="text-xl font-light tracking-wide text-foreground/90">All Tasks</DialogTitle>
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto p-6 space-y-8">
                         {/* Dated */}
                         <div>
-                            <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider mb-4 border-b border-white/10 pb-2">Dated Tasks</h3>
+                            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">Dated Tasks</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {datedTasks.map(task => (
                                     <TaskItem key={task.id} task={task} isActive={false} isTimerRunning={false} onToggleTimer={() => { }} onEdit={handleEditClick} onDelete={deleteTask} onComplete={handleComplete} />
                                 ))}
-                                {datedTasks.length === 0 && <p className="text-white/30 italic text-sm">No dated tasks</p>}
+                                {datedTasks.length === 0 && <p className="text-muted-foreground/40 italic text-sm">No dated tasks</p>}
                             </div>
                         </div>
 
                         {/* Loose */}
                         <div>
-                            <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider mb-4 border-b border-white/10 pb-2">Loose Tasks</h3>
+                            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">Loose Tasks</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {looseTasks.map(task => (
                                     <TaskItem key={task.id} task={task} isActive={false} isTimerRunning={false} onToggleTimer={() => { }} onEdit={handleEditClick} onDelete={deleteTask} onComplete={handleComplete} />
                                 ))}
-                                {looseTasks.length === 0 && <p className="text-white/30 italic text-sm">No loose tasks</p>}
+                                {looseTasks.length === 0 && <p className="text-muted-foreground/40 italic text-sm">No loose tasks</p>}
                             </div>
                         </div>
 
                         {/* Completed */}
                         <div>
-                            <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider mb-4 border-b border-white/10 pb-2">Completed Tasks</h3>
+                            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">Completed Tasks</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-70">
                                 {completedTasks.map(task => (
                                     <TaskItem key={task.id} task={task} isActive={false} isTimerRunning={false} onToggleTimer={() => { }} onEdit={handleEditClick} onDelete={deleteTask} onComplete={() => updateTask({ ...task, isComplete: 0 })} />
                                 ))}
-                                {completedTasks.length === 0 && <p className="text-white/30 italic text-sm">No completed tasks</p>}
+                                {completedTasks.length === 0 && <p className="text-muted-foreground/40 italic text-sm">No completed tasks</p>}
                             </div>
                         </div>
                     </div>
@@ -434,22 +434,22 @@ export function TaskBoard() {
             {/* Manual Duration Dialog */}
             {untimedTaskToComplete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                    <div className="w-full max-w-sm bg-black/90 border border-white/10 rounded-xl shadow-2xl p-6">
-                        <h3 className="text-lg font-light text-white mb-2">Duration Worked</h3>
-                        <p className="text-xs text-white/60 mb-4">
+                    <div className="w-full max-w-sm bg-popover/95 border border-border rounded-xl shadow-2xl p-6">
+                        <h3 className="text-lg font-light text-foreground mb-2">Duration Worked</h3>
+                        <p className="text-xs text-muted-foreground mb-4">
                             How many minutes did you work on "{untimedTaskToComplete.title}"?
                         </p>
 
                         <div className="space-y-4">
                             <div className="grid gap-2">
-                                <Label htmlFor="duration" className="text-xs uppercase tracking-wider text-white/60">Minutes</Label>
+                                <Label htmlFor="duration" className="text-xs uppercase tracking-wider text-muted-foreground">Minutes</Label>
                                 <Input
                                     id="duration"
                                     type="number"
                                     min="0"
                                     value={manualDuration}
                                     onChange={(e) => setManualDuration(e.target.value)}
-                                    className="bg-white/5 border-white/10 text-white"
+                                    className="bg-muted/50 border-border text-foreground"
                                     autoFocus
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter') confirmUntimedCompletion();
@@ -457,10 +457,10 @@ export function TaskBoard() {
                                 />
                             </div>
                             <div className="flex justify-end gap-2">
-                                <Button variant="ghost" onClick={() => setUntimedTaskToComplete(null)} className="text-white/60 hover:text-white hover:bg-white/10">
+                                <Button variant="ghost" onClick={() => setUntimedTaskToComplete(null)} className="text-muted-foreground hover:text-foreground hover:bg-muted">
                                     Cancel
                                 </Button>
-                                <Button onClick={confirmUntimedCompletion} className="bg-white text-black hover:bg-white/90">
+                                <Button onClick={confirmUntimedCompletion} className="bg-primary text-primary-foreground hover:bg-primary/90">
                                     Confirm
                                 </Button>
                             </div>

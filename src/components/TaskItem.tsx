@@ -85,7 +85,7 @@ export const TaskItem = memo(function TaskItem({ task, isActive, isTimerRunning,
         <Dialog onOpenChange={(open) => { if (open) loadHistory(); }}>
             <DialogTrigger asChild>
                 <div className={cn(
-                    "group relative flex items-center justify-between p-3 rounded-xl transition-colors duration-150 border border-transparent hover:border-white/10 cursor-pointer text-left bg-secondary/30",
+                    "group relative flex items-center justify-between p-3 rounded-xl transition-colors duration-150 border border-transparent hover:border-border cursor-pointer text-left bg-secondary/30",
                     isActive ? "bg-primary/20 border-primary/30" : "hover:bg-secondary/60",
                     task.isComplete && "opacity-50 grayscale-[0.8]",
                     isOverdue && !task.isComplete && !isActive && "border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10"
@@ -107,7 +107,7 @@ export const TaskItem = memo(function TaskItem({ task, isActive, isTimerRunning,
                             <div className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-2 mt-0.5">
                                 <span className={cn(
                                     "px-1.5 py-0.5 rounded transition-colors",
-                                    isActive ? "bg-primary/20 text-primary-foreground/90" : "bg-black/20"
+                                    isActive ? "bg-primary/20 text-primary-foreground/90" : "bg-muted/50"
                                 )}>
                                     {Array.isArray(task.statTarget) ? task.statTarget.join(", ") : task.statTarget}
                                 </span>
@@ -122,7 +122,7 @@ export const TaskItem = memo(function TaskItem({ task, isActive, isTimerRunning,
 
                             {totalSubtasks > 0 && (
                                 <div className="flex items-center gap-2 mt-1.5 opacity-80">
-                                    <div className="flex-1 h-1.5 bg-black/40 rounded-full overflow-hidden">
+                                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                                         <div
                                             className={cn("h-full rounded-full transition-all duration-150 ease-out",
                                                 completedSubtasks === totalSubtasks ? "bg-emerald-500" : "bg-primary"
@@ -138,28 +138,28 @@ export const TaskItem = memo(function TaskItem({ task, isActive, isTimerRunning,
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-150 translate-x-2 group-hover:translate-x-0 relative z-10 bg-black/20 px-1 py-1 rounded-lg backdrop-blur-md">
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-150 translate-x-2 group-hover:translate-x-0 relative z-10 bg-muted/50 px-1 py-1 rounded-lg backdrop-blur-md">
                         {task.noteId && (
                             <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300" onClick={handleOpenNote} title="Open Linked Note">
                                 <BookOpen className="h-3.5 w-3.5" />
                             </Button>
                         )}
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-white/50 hover:bg-red-500/20 hover:text-red-400 transition-colors" onClick={(e) => { e.stopPropagation(); onDelete(task.id!); }}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/70 hover:bg-red-500/20 hover:text-red-400 transition-colors" onClick={(e) => { e.stopPropagation(); onDelete(task.id!); }}>
                             <Trash className="h-3.5 w-3.5" />
                         </Button>
                         {!task.isComplete && (
-                            <Button variant="ghost" size="icon" className={cn("h-7 w-7 transition-colors", isActive && isTimerRunning ? "text-amber-400 hover:bg-amber-400/20 hover:text-amber-300" : "text-white/50 hover:bg-primary/20 hover:text-primary")} onClick={(e) => { e.stopPropagation(); onToggleTimer(task.id!); }}>
+                            <Button variant="ghost" size="icon" className={cn("h-7 w-7 transition-colors", isActive && isTimerRunning ? "text-amber-400 hover:bg-amber-400/20 hover:text-amber-300" : "text-muted-foreground/70 hover:bg-primary/20 hover:text-primary")} onClick={(e) => { e.stopPropagation(); onToggleTimer(task.id!); }}>
                                 {isActive && isTimerRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
                             </Button>
                         )}
-                        <Button variant="ghost" size="icon" className={cn("h-7 w-7 transition-colors", task.isComplete ? "text-green-500 hover:bg-green-500/20" : "text-white/50 hover:bg-green-500/20 hover:text-green-400")} onClick={(e) => { e.stopPropagation(); onComplete(task); }}>
+                        <Button variant="ghost" size="icon" className={cn("h-7 w-7 transition-colors", task.isComplete ? "text-green-500 hover:bg-green-500/20" : "text-muted-foreground/70 hover:bg-green-500/20 hover:text-green-400")} onClick={(e) => { e.stopPropagation(); onComplete(task); }}>
                             <CheckCircle2 className="h-4 w-4" />
                         </Button>
                     </div>
                 </div>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] bg-black/90 backdrop-blur-xl border-white/10 text-white shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-                <DialogHeader className="pb-4 border-b border-white/10 shrink-0">
+            <DialogContent className="sm:max-w-[600px] bg-popover/95 backdrop-blur-xl border-border text-foreground shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+                <DialogHeader className="pb-4 border-b border-border shrink-0">
                     <DialogTitle className="text-xl font-light tracking-wide flex items-center gap-3">
                         <div className={cn("w-2 h-6 rounded-full", difficultyColor)} />
                         {task.title}
@@ -169,39 +169,39 @@ export const TaskItem = memo(function TaskItem({ task, isActive, isTimerRunning,
                             </Button>
                         )}
                     </DialogTitle>
-                    {task.description && <p className="text-sm text-white/60 font-light mt-2">{task.description}</p>}
+                    {task.description && <p className="text-sm text-muted-foreground font-light mt-2">{task.description}</p>}
                 </DialogHeader>
 
                 <ScrollArea className="flex-1 pr-4 -mr-4">
                     <div className="grid gap-8 py-4">
                         {/* Stats & Time */}
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-white/5 rounded-lg p-4 border border-white/5 space-y-1">
-                                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-white/40 mb-2">
+                            <div className="bg-muted/50 rounded-lg p-4 border border-border/50 space-y-1">
+                                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground/60 mb-2">
                                     <Trophy className="w-3 h-3 text-amber-500" /> XP Gained
                                 </div>
                                 <div className="space-y-1">
                                     {(task.statTarget || []).map((stat) => (
                                         <div key={stat} className="flex justify-between items-center text-sm">
-                                            <span className="text-white/60">{stat}</span>
+                                            <span className="text-muted-foreground">{stat}</span>
                                             <span className="font-mono text-amber-500/90 font-medium">+{totalXP} XP</span>
                                         </div>
                                     ))}
                                     {(!task.statTarget || task.statTarget.length === 0) && (
                                         <div className="flex justify-between items-center text-sm">
-                                            <span className="text-white/60">General</span>
+                                            <span className="text-muted-foreground">General</span>
                                             <span className="font-mono text-amber-500/90 font-medium">+{totalXP} XP</span>
                                         </div>
                                     )}
                                 </div>
                             </div>
-                            <div className="bg-white/5 rounded-lg p-4 border border-white/5 space-y-1">
-                                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-white/40 mb-2">
+                            <div className="bg-muted/50 rounded-lg p-4 border border-border/50 space-y-1">
+                                <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground/60 mb-2">
                                     <Clock className="w-3 h-3 text-blue-400" /> Total Time
                                 </div>
-                                <div className="text-2xl font-light text-white/90">
-                                    {Math.floor(totalMinutes / 60)}<span className="text-sm text-white/40 ml-0.5 mr-2 font-mono">h</span>
-                                    {totalMinutes % 60}<span className="text-sm text-white/40 ml-0.5 font-mono">m</span>
+                                <div className="text-2xl font-light text-foreground/90">
+                                    {Math.floor(totalMinutes / 60)}<span className="text-sm text-muted-foreground/60 ml-0.5 mr-2 font-mono">h</span>
+                                    {totalMinutes % 60}<span className="text-sm text-muted-foreground/60 ml-0.5 font-mono">m</span>
                                 </div>
                             </div>
                         </div>
@@ -209,19 +209,19 @@ export const TaskItem = memo(function TaskItem({ task, isActive, isTimerRunning,
                         {/* Subtasks */}
                         {(task.subtasks && task.subtasks.length > 0) && (
                             <div className="space-y-3">
-                                <h4 className="text-xs uppercase tracking-wider text-white/40 font-medium flex items-center justify-between">
+                                <h4 className="text-xs uppercase tracking-wider text-muted-foreground/60 font-medium flex items-center justify-between">
                                     <span>Subtasks</span>
-                                    <span className="text-white/30 font-mono">{completedSubtasks}/{totalSubtasks}</span>
+                                    <span className="text-muted-foreground/40 font-mono">{completedSubtasks}/{totalSubtasks}</span>
                                 </h4>
                                 <div className="space-y-2">
                                     {task.subtasks.map(st => (
-                                        <div key={st.id} className="flex items-center gap-3 bg-white/5 p-2 rounded-lg hover:bg-white/10 transition-colors border border-white/5">
+                                        <div key={st.id} className="flex items-center gap-3 bg-muted/50 p-2 rounded-lg hover:bg-muted transition-colors border border-border/50">
                                             <Checkbox
                                                 checked={st.isComplete}
                                                 onCheckedChange={() => handleSubtaskToggle(st)}
-                                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary border-white/20"
+                                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary border-border"
                                             />
-                                            <span className={cn("text-sm flex-1 transition-all", st.isComplete && "line-through text-white/40")}>{st.text}</span>
+                                            <span className={cn("text-sm flex-1 transition-all", st.isComplete && "line-through text-muted-foreground/60")}>{st.text}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -230,13 +230,13 @@ export const TaskItem = memo(function TaskItem({ task, isActive, isTimerRunning,
 
                         {/* History */}
                         <div className="space-y-3">
-                            <h4 className="text-xs uppercase tracking-wider text-white/40 font-medium">Session History</h4>
+                            <h4 className="text-xs uppercase tracking-wider text-muted-foreground/60 font-medium">Session History</h4>
                             {sessions.length === 0 ? (
-                                <p className="text-sm text-white/20 italic bg-white/5 p-4 rounded-lg text-center border border-white/5">No sessions recorded yet.</p>
+                                <p className="text-sm text-muted-foreground/30 italic bg-muted/50 p-4 rounded-lg text-center border border-border/50">No sessions recorded yet.</p>
                             ) : (
                                 <div className="space-y-1.5">
                                     {sessions.slice(0, 5).map(session => (
-                                        <div key={session.id} className="flex justify-between text-xs text-white/60 bg-white/5 p-2 rounded hover:bg-white/10 transition-colors border border-white/5">
+                                        <div key={session.id} className="flex justify-between text-xs text-muted-foreground bg-muted/50 p-2 rounded hover:bg-muted transition-colors border border-border/50">
                                             <span>{new Date(session.startTime).toLocaleDateString()} {new Date(session.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                             <span className="font-mono text-blue-400">{session.duration_minutes}m</span>
                                         </div>
@@ -247,8 +247,8 @@ export const TaskItem = memo(function TaskItem({ task, isActive, isTimerRunning,
                     </div>
                 </ScrollArea>
 
-                <div className="pt-4 mt-4 border-t border-white/10 flex justify-end gap-2 shrink-0 bg-black/40 -mx-6 -mb-6 px-6 py-4">
-                    <Button variant="outline" size="sm" onClick={() => onEdit(task)} className="bg-transparent border-white/10 hover:bg-white/10 text-white hover:text-white transition-colors">
+                <div className="pt-4 mt-4 border-t border-border flex justify-end gap-2 shrink-0 bg-muted/50 -mx-6 -mb-6 px-6 py-4">
+                    <Button variant="outline" size="sm" onClick={() => onEdit(task)} className="bg-transparent border-border hover:bg-muted text-foreground hover:text-foreground transition-colors">
                         <Edit className="w-4 h-4 mr-2" /> Edit
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => onDelete(task.id!)} className="bg-transparent border-red-500/20 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors">
@@ -257,11 +257,11 @@ export const TaskItem = memo(function TaskItem({ task, isActive, isTimerRunning,
                     {!task.isComplete && (
                         <>
                             {task.labels?.includes("untimed") ? (
-                                <Button size="sm" variant="ghost" className="opacity-50 cursor-not-allowed text-white/40 hover:bg-transparent hover:text-white/40 ml-auto" disabled title="Untimed Task">
+                                <Button size="sm" variant="ghost" className="opacity-50 cursor-not-allowed text-muted-foreground/60 hover:bg-transparent hover:text-muted-foreground/60 ml-auto" disabled title="Untimed Task">
                                     <TimerOff className="w-4 h-4 mr-2" /> Manual
                                 </Button>
                             ) : (
-                                <Button size="sm" onClick={() => onToggleTimer(task.id!)} className={cn("min-w-[100px] shadow-lg ml-auto transition-all", isActive && isTimerRunning ? "bg-amber-500 hover:bg-amber-600 text-black shadow-amber-500/20" : "bg-white text-black hover:bg-white/90 shadow-white/10")}>
+                                <Button size="sm" onClick={() => onToggleTimer(task.id!)} className={cn("min-w-[100px] shadow-lg ml-auto transition-all", isActive && isTimerRunning ? "bg-amber-500 hover:bg-amber-600 text-black shadow-amber-500/20" : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/10")}>
                                     {isActive && isTimerRunning ? <><Pause className="w-4 h-4 mr-2" /> Pause</> : <><Play className="w-4 h-4 mr-2" /> Start Focus</>}
                                 </Button>
                             )}

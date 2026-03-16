@@ -87,50 +87,50 @@ export function RepeatingTaskDialog({ open, onOpenChange, onSubmit, initialTask 
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px] bg-black/80 backdrop-blur-xl border-white/10 text-white shadow-2xl">
+            <DialogContent className="sm:max-w-[500px] bg-popover/95 backdrop-blur-xl border-border text-foreground shadow-2xl">
                 <DialogHeader>
-                    <DialogTitle className="text-xl font-light tracking-wide text-white/90">
+                    <DialogTitle className="text-xl font-light tracking-wide text-foreground/90">
                         {initialTask ? "Edit Repeating Task" : "New Repeating Task"}
                     </DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-6 py-4">
                     {/* Title */}
                     <div className="grid gap-2">
-                        <Label htmlFor="title" className="text-xs font-medium text-white/60 uppercase tracking-wider">
+                        <Label htmlFor="title" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                             Title
                         </Label>
                         <Input
                             id="title"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            className="bg-white/5 border-white/10 text-white placeholder:text-white/20 focus-visible:ring-white/20"
+                            className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-ring/30"
                             placeholder="What needs to be done?"
                         />
                     </div>
 
                     {/* Description */}
                     <div className="grid gap-2">
-                        <Label htmlFor="description" className="text-xs font-medium text-white/60 uppercase tracking-wider">
+                        <Label htmlFor="description" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                             Description
                         </Label>
                         <Textarea
                             id="description"
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            className="bg-white/5 border-white/10 text-white placeholder:text-white/20 focus-visible:ring-white/20 min-h-[100px] resize-none"
+                            className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/50 focus-visible:ring-ring/30 min-h-[100px] resize-none"
                             placeholder="Add details..."
                         />
                     </div>
 
                     {/* Subtasks */}
                     <div className="grid gap-2">
-                        <Label className="text-xs font-medium text-white/60 uppercase tracking-wider">Subtasks</Label>
+                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Subtasks</Label>
                         <div className="flex gap-2">
                             <Input
                                 value={newSubtask}
                                 onChange={(e) => setNewSubtask(e.target.value)}
                                 placeholder="Add a subtask..."
-                                className="bg-white/5 border-white/10 text-white placeholder:text-white/20 text-xs h-8"
+                                className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground/50 text-xs h-8"
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
                                         e.preventDefault();
@@ -144,7 +144,7 @@ export function RepeatingTaskDialog({ open, onOpenChange, onSubmit, initialTask 
                             <Button
                                 type="button"
                                 size="icon"
-                                className="h-8 w-8 bg-white/10 hover:bg-white/20 border-white/10"
+                                className="h-8 w-8 bg-muted hover:bg-muted border-border"
                                 onClick={() => {
                                     if (newSubtask.trim()) {
                                         setSubtasks([...subtasks, { id: crypto.randomUUID(), text: newSubtask.trim(), isComplete: false }]);
@@ -158,13 +158,13 @@ export function RepeatingTaskDialog({ open, onOpenChange, onSubmit, initialTask 
                         {subtasks.length > 0 && (
                             <div className="space-y-1 mt-1">
                                 {subtasks.map((st) => (
-                                    <div key={st.id} className="flex items-center justify-between group bg-white/5 p-1.5 rounded px-2">
-                                        <span className="text-xs text-white/80 truncate flex-1">{st.text}</span>
+                                    <div key={st.id} className="flex items-center justify-between group bg-muted/50 p-1.5 rounded px-2">
+                                        <span className="text-xs text-foreground/80 truncate flex-1">{st.text}</span>
                                         <Button
                                             type="button"
                                             variant="ghost"
                                             size="icon"
-                                            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/10 hover:text-red-400"
+                                            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted hover:text-red-400"
                                             onClick={() => setSubtasks(subtasks.filter(s => s.id !== st.id))}
                                         >
                                             <X className="h-3 w-3" />
@@ -178,8 +178,8 @@ export function RepeatingTaskDialog({ open, onOpenChange, onSubmit, initialTask 
                     <div className="grid gap-6">
                         {/* Difficulty */}
                         <div className="grid gap-3">
-                            <Label className="text-xs font-medium text-white/60 uppercase tracking-wider">
-                                Difficulty: <span className="text-white">{difficulty}</span>
+                            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                Difficulty: <span className="text-foreground">{difficulty}</span>
                             </Label>
                             <Slider
                                 min={1}
@@ -193,7 +193,7 @@ export function RepeatingTaskDialog({ open, onOpenChange, onSubmit, initialTask 
 
                         {/* Repeat Settings */}
                         <div className="grid gap-3">
-                            <Label className="text-xs font-medium text-white/60 uppercase tracking-wider">
+                            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                                 Repeat
                             </Label>
                             <div className="flex gap-2">
@@ -201,7 +201,7 @@ export function RepeatingTaskDialog({ open, onOpenChange, onSubmit, initialTask 
                                     type="button"
                                     variant={repeatType === 'daily' ? "default" : "outline"}
                                     onClick={() => setRepeatType('daily')}
-                                    className={cn("flex-1", repeatType === 'daily' ? "bg-white text-black hover:bg-white/90" : "bg-transparent border-white/10 text-white hover:bg-white/10")}
+                                    className={cn("flex-1", repeatType === 'daily' ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-transparent border-border text-foreground hover:bg-muted")}
                                 >
                                     Daily
                                 </Button>
@@ -209,7 +209,7 @@ export function RepeatingTaskDialog({ open, onOpenChange, onSubmit, initialTask 
                                     type="button"
                                     variant={repeatType === 'weekly' ? "default" : "outline"}
                                     onClick={() => setRepeatType('weekly')}
-                                    className={cn("flex-1", repeatType === 'weekly' ? "bg-white text-black hover:bg-white/90" : "bg-transparent border-white/10 text-white hover:bg-white/10")}
+                                    className={cn("flex-1", repeatType === 'weekly' ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-transparent border-border text-foreground hover:bg-muted")}
                                 >
                                     Weekly
                                 </Button>
@@ -225,7 +225,7 @@ export function RepeatingTaskDialog({ open, onOpenChange, onSubmit, initialTask 
                                             size="sm"
                                             onClick={() => toggleDay(index)}
                                             className={cn(
-                                                "h-8 w-8 p-0 rounded-full border-white/10 bg-transparent hover:bg-white/10 hover:text-white transition-all",
+                                                "h-8 w-8 p-0 rounded-full border-border bg-transparent hover:bg-muted hover:text-foreground transition-all",
                                                 repeatDays.includes(index) && "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
                                             )}
                                         >
@@ -239,7 +239,7 @@ export function RepeatingTaskDialog({ open, onOpenChange, onSubmit, initialTask 
 
                     {/* Stats */}
                     <div className="grid gap-3">
-                        <Label className="text-xs font-medium text-white/60 uppercase tracking-wider">
+                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                             Stats
                         </Label>
                         <div className="flex flex-wrap gap-2">
@@ -257,8 +257,8 @@ export function RepeatingTaskDialog({ open, onOpenChange, onSubmit, initialTask 
                                         }
                                     }}
                                     className={cn(
-                                        "h-7 text-xs border-white/10 bg-transparent hover:bg-white/10 hover:text-white transition-all",
-                                        statTarget.includes(stat.statName) && "bg-white text-black hover:bg-white/90 hover:text-black border-transparent"
+                                        "h-7 text-xs border-border bg-transparent hover:bg-muted hover:text-foreground transition-all",
+                                        statTarget.includes(stat.statName) && "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground border-transparent"
                                     )}
                                 >
                                     {stat.statName}
@@ -268,12 +268,12 @@ export function RepeatingTaskDialog({ open, onOpenChange, onSubmit, initialTask 
                     </div>
 
                     {/* Untimed Toggle */}
-                    <div className="flex items-center justify-between border border-white/10 rounded-lg p-3 bg-white/5">
+                    <div className="flex items-center justify-between border border-border rounded-lg p-3 bg-muted/50">
                         <div className="space-y-0.5">
-                            <Label className="text-xs font-medium text-white uppercase tracking-wider flex items-center gap-2">
+                            <Label className="text-xs font-medium text-foreground uppercase tracking-wider flex items-center gap-2">
                                 <TimerOff className="w-4 h-4" /> Untimed Task
                             </Label>
-                            <p className="text-[10px] text-white/50">Enter duration manually upon completion</p>
+                            <p className="text-[10px] text-muted-foreground/70">Enter duration manually upon completion</p>
                         </div>
                         <Switch
                             checked={isUntimed}
@@ -283,7 +283,7 @@ export function RepeatingTaskDialog({ open, onOpenChange, onSubmit, initialTask 
 
                 </div>
                 <DialogFooter>
-                    <Button onClick={handleSubmit} className="bg-white text-black hover:bg-white/90 w-full sm:w-auto">
+                    <Button onClick={handleSubmit} className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto">
                         Save Repeating Task
                     </Button>
                 </DialogFooter>

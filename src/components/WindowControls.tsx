@@ -43,7 +43,7 @@ export function WindowControls() {
             <Button
                 variant="ghost"
                 size="icon"
-                className={`h-8 w-8 rounded-full transition-colors ${isPinned ? 'bg-primary/20 text-primary hover:bg-primary/30' : 'hover:bg-white/10 text-muted-foreground hover:text-foreground'}`}
+                className={`h-8 w-8 rounded-full transition-colors ${isPinned ? 'bg-primary/20 text-primary hover:bg-primary/30' : 'hover:bg-muted text-muted-foreground hover:text-foreground'}`}
                 onClick={handlePin}
             >
                 <Pin className="h-3.5 w-3.5 rotate-45" />
@@ -51,20 +51,20 @@ export function WindowControls() {
             <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 rounded-full hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
+                className="h-8 w-8 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                 onClick={handleMinimize}
             >
                 <Minus className="h-4 w-4" />
             </Button>
             {isSizeExpanded ? (
                 <div 
-                    className="flex items-center bg-white/10 rounded-full overflow-hidden animate-in zoom-in-95 duration-200"
+                    className="flex items-center bg-muted rounded-full overflow-hidden animate-in zoom-in-95 duration-200"
                     onMouseLeave={() => setIsSizeExpanded(false)}
                 >
                     <Button
                         variant="ghost"
                         size="icon"
-                        className={`h-8 w-8 rounded-none hover:bg-white/20 transition-colors ${sizeState === 0 ? 'text-primary' : 'text-muted-foreground'}`}
+                        className={`h-8 w-8 rounded-none hover:bg-muted/80 transition-colors ${sizeState === 0 ? 'text-primary' : 'text-muted-foreground'}`}
                         onClick={() => handleSetSize(0)}
                         title="Normal Window"
                     >
@@ -73,7 +73,7 @@ export function WindowControls() {
                     <Button
                         variant="ghost"
                         size="icon"
-                        className={`h-8 w-8 rounded-none hover:bg-white/20 transition-colors ${sizeState === 1 ? 'text-primary' : 'text-muted-foreground'}`}
+                        className={`h-8 w-8 rounded-none hover:bg-muted/80 transition-colors ${sizeState === 1 ? 'text-primary' : 'text-muted-foreground'}`}
                         onClick={() => handleSetSize(1)}
                         title="Snap to Side"
                     >
@@ -82,7 +82,7 @@ export function WindowControls() {
                     <Button
                         variant="ghost"
                         size="icon"
-                        className={`h-8 w-8 rounded-none hover:bg-white/20 transition-colors ${sizeState === 2 ? 'text-primary' : 'text-muted-foreground'}`}
+                        className={`h-8 w-8 rounded-none hover:bg-muted/80 transition-colors ${sizeState === 2 ? 'text-primary' : 'text-muted-foreground'}`}
                         onClick={() => handleSetSize(2)}
                         title="Fullscreen"
                     >
@@ -93,7 +93,7 @@ export function WindowControls() {
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-full hover:bg-white/10 text-muted-foreground hover:text-foreground transition-colors"
+                    className="h-8 w-8 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                     onMouseEnter={() => setIsSizeExpanded(true)}
                     title="Change Window Size"
                 >

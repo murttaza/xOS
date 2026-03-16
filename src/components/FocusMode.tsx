@@ -165,7 +165,7 @@ export function FocusMode() {
                         <p className="text-xl text-muted-foreground font-light">{Array.isArray(activeTask.statTarget) ? activeTask.statTarget.join(", ") : activeTask.statTarget} • Difficulty: {activeTask.difficulty}</p>
                     </div>
 
-                    <div className={`text-[15rem] font-bold leading-none tracking-tighter tabular-nums text-primary drop-shadow-[0_0_30px_rgba(var(--primary),0.4)] ${isMurtazaMode ? 'border border-white/10 rounded-3xl px-12 py-4 bg-background/20 backdrop-blur-sm' : ''}`}>
+                    <div className={`text-[15rem] font-bold leading-none tracking-tighter tabular-nums text-primary drop-shadow-[0_0_30px_rgba(var(--primary),0.4)] ${isMurtazaMode ? 'border border-border rounded-3xl px-12 py-4 bg-background/20 backdrop-blur-sm' : ''}`}>
                         {formatTime(textDuration)}
                     </div>
 
@@ -216,7 +216,7 @@ export function FocusMode() {
                 transition={{ delay: 0.3 }}
                 className="w-full p-6 pb-8"
             >
-                <div className={`max-w-2xl mx-auto rounded-2xl p-4 border border-white/10 backdrop-blur-xl ${isMurtazaMode ? 'bg-background/20' : 'glass'}`}>
+                <div className={`max-w-2xl mx-auto rounded-2xl p-4 border border-border backdrop-blur-xl ${isMurtazaMode ? 'bg-background/20' : 'glass'}`}>
                     <div className="flex items-center justify-between gap-6">
                         {/* Pomodoro timer display */}
                         <motion.div
@@ -234,7 +234,7 @@ export function FocusMode() {
 
                         {/* Progress bar */}
                         <div className="flex-1 relative">
-                            <div className="h-2 w-full bg-secondary/50 dark:bg-secondary/30 rounded-full border border-white/10 dark:border-white/5 overflow-hidden">
+                            <div className="h-2 w-full bg-secondary/50 dark:bg-secondary/30 rounded-full border border-border overflow-hidden">
                                 <motion.div
                                     className="h-full bg-gradient-to-r from-primary via-primary to-primary/80 rounded-full shadow-[0_0_12px_hsl(var(--primary)/0.4)]"
                                     initial={{ width: 0 }}
@@ -270,7 +270,7 @@ export function FocusMode() {
                                             className={`h-8 px-2.5 rounded-full text-xs font-mono transition-all ${
                                                 isActive
                                                     ? 'bg-primary/20 text-primary border border-primary/30'
-                                                    : 'text-muted-foreground hover:text-foreground hover:bg-white/10'
+                                                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                                             }`}
                                             onClick={() => handleSetPreset(preset)}
                                         >
@@ -283,7 +283,7 @@ export function FocusMode() {
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-10 w-10 rounded-full hover:bg-white/10 dark:hover:bg-white/5 text-muted-foreground hover:text-foreground transition-all hover:scale-105 active:scale-95"
+                                className="h-10 w-10 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-all hover:scale-105 active:scale-95"
                                 onClick={handleResetPomodoro}
                             >
                                 <RotateCcw className="h-3.5 w-3.5" />

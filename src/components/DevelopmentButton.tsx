@@ -26,12 +26,12 @@ export function DevelopmentButton() {
     return (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
             <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-white/10 text-muted-foreground hover:text-foreground">
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground">
                     <Code className="h-4 w-4" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent
-                className="w-80 bg-background/95 backdrop-blur-xl border-white/10 p-4"
+                className="w-80 bg-background/95 backdrop-blur-xl border-border p-4"
                 align="end"
                 side="bottom"
             >
@@ -41,7 +41,7 @@ export function DevelopmentButton() {
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 p-0 hover:bg-white/10"
+                            className="h-6 w-6 p-0 hover:bg-muted"
                             onClick={() => {
                                 const text = devItems.map(item => `- [${item.isComplete ? 'x' : ' '}] ${item.text}`).join('\n');
                                 navigator.clipboard.writeText(text);
@@ -57,7 +57,7 @@ export function DevelopmentButton() {
                             value={newItemText}
                             onChange={(e) => setNewItemText(e.target.value)}
                             placeholder="Add something to fix..."
-                            className="h-8 text-sm bg-white/5 border-white/10"
+                            className="h-8 text-sm bg-muted/50 border-border"
                         />
                         <Button type="submit" size="sm" variant="secondary" className="h-8 px-2">
                             <Plus className="h-4 w-4" />
@@ -72,7 +72,7 @@ export function DevelopmentButton() {
                                         onClick={() => item.id && toggleDevItem(item.id)}
                                         className={`flex-shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors ${item.isComplete
                                             ? 'bg-primary border-primary text-primary-foreground'
-                                            : 'border-white/20 hover:border-white/40'
+                                            : 'border-border hover:border-foreground/40'
                                             }`}
                                     >
                                         {!!item.isComplete && <Check className="h-3 w-3" />}

@@ -59,7 +59,7 @@ const BookSpine = React.memo(({
             <div
                 className={cn(
                     "absolute inset-0 rounded-sm border border-border group-hover:border-foreground/20 transition-colors overflow-hidden cursor-pointer z-10",
-                    "bg-white shadow-sm dark:bg-[#121212] dark:shadow-none"
+                    "bg-card shadow-sm"
                 )}
                 onClick={onClick}
             >
@@ -72,7 +72,7 @@ const BookSpine = React.memo(({
                     <h3
                         className={cn(
                             "w-60 shrink-0 text-center font-medium tracking-widest uppercase text-[10px] sm:text-xs whitespace-nowrap overflow-hidden text-ellipsis px-12 select-none rotate-90 origin-center transition-colors",
-                            "text-neutral-400 group-hover:text-neutral-900 dark:text-neutral-500 dark:group-hover:text-neutral-200"
+                            "text-muted-foreground group-hover:text-foreground"
                         )}
                     >
                         {subject.title}
@@ -231,17 +231,17 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
             onClick={onClose}
         >
             <div
-                className="pointer-events-auto bg-background dark:bg-[#1a1a1a] w-full max-w-6xl h-full max-h-[800px] rounded-r-2xl rounded-l-md shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col md:flex-row overflow-hidden border border-border dark:border-white/5 relative no-drag"
+                className="pointer-events-auto bg-card w-full max-w-6xl h-full max-h-[800px] rounded-r-2xl rounded-l-md shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col md:flex-row overflow-hidden border border-border/50 relative no-drag"
                 onClick={(e) => e.stopPropagation()}
             >
 
                 {/* Cover / Sidebar Area */}
-                <div className="w-full md:w-80 bg-muted/30 dark:bg-neutral-900 border-r border-border dark:border-white/5 flex flex-col h-full relative no-drag">
+                <div className="w-full md:w-80 bg-muted/30 border-r border-border flex flex-col h-full relative no-drag">
                     <div className="absolute left-0 top-0 bottom-0 w-2" style={{ backgroundColor: subject.color }} />
 
-                    <div className="p-6 pl-8 border-b border-border dark:border-white/5 flex justify-between items-start">
+                    <div className="p-6 pl-8 border-b border-border flex justify-between items-start">
                         <div>
-                            <h2 className="text-xl font-bold text-foreground dark:text-white break-words">{subject.title}</h2>
+                            <h2 className="text-xl font-bold text-foreground break-words">{subject.title}</h2>
                             <p className="text-xs text-muted-foreground mt-1">{notes.length} Notes</p>
                         </div>
                         <Popover>
@@ -264,7 +264,7 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
                             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder="Search notes..."
-                                className="pl-8 bg-background/50 dark:bg-black/20 border-border dark:border-white/10 text-sm"
+                                className="pl-8 bg-muted/50 border-border text-sm"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -281,12 +281,12 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
                                     setEditingNote({});
                                 }}
                                 className={cn(
-                                    "mb-2 p-3 rounded-lg cursor-pointer transition-all border border-transparent group hover:border-border dark:hover:border-white/5",
-                                    selectedNoteId === note.id ? "bg-accent" : "hover:bg-muted/50 dark:hover:bg-white/5"
+                                    "mb-2 p-3 rounded-lg cursor-pointer transition-all border border-transparent group hover:border-border",
+                                    selectedNoteId === note.id ? "bg-accent" : "hover:bg-muted/50"
                                 )}
                             >
                                 <div className="flex justify-between items-start">
-                                    <h4 className={cn("font-medium text-sm truncate pr-2", selectedNoteId === note.id ? "text-accent-foreground" : "text-foreground dark:text-neutral-300")}>
+                                    <h4 className={cn("font-medium text-sm truncate pr-2", selectedNoteId === note.id ? "text-accent-foreground" : "text-foreground")}>
                                         {note.title || 'Untitled'}
                                     </h4>
                                     <Button
@@ -298,10 +298,10 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
                                         <Trash2 className="h-3 w-3" />
                                     </Button>
                                 </div>
-                                <p className="text-xs text-neutral-500 mt-1 line-clamp-2">
+                                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                                     {note.content?.substring(0, 100) || "No content..."}
                                 </p>
-                                <div className="text-[10px] text-neutral-600 mt-2 flex items-center gap-1">
+                                <div className="text-[10px] text-muted-foreground/70 mt-2 flex items-center gap-1">
                                     <Calendar className="h-2.5 w-2.5" />
                                     {format(new Date(note.updatedAt), 'MMM d, h:mm a')}
                                 </div>
@@ -315,7 +315,7 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
                         )}
                     </div>
 
-                    <div className="p-4 pl-8 border-t border-border dark:border-white/5">
+                    <div className="p-4 pl-8 border-t border-border">
                         <Button className="w-full bg-primary/10 hover:bg-primary/20 text-primary" onClick={handleCreateNote}>
                             <Plus className="h-4 w-4 mr-2" /> New Note
                         </Button>
@@ -323,7 +323,7 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
                 </div>
 
                 {/* Note Editor Area */}
-                <div className="flex-1 bg-background/50 dark:bg-neutral-900/50 backdrop-blur-sm flex flex-col relative no-drag">
+                <div className="flex-1 bg-card/50 backdrop-blur-sm flex flex-col relative no-drag">
                     <Button
                         variant="ghost"
                         size="icon"
@@ -336,7 +336,7 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
                     {activeNote ? (
                         <div className="flex flex-col h-full p-8 md:p-12 animate-in fade-in duration-150">
                             <input
-                                className="bg-transparent text-3xl md:text-4xl font-bold text-foreground dark:text-white mb-6 border-none outline-none placeholder:text-muted-foreground"
+                                className="bg-transparent text-3xl md:text-4xl font-bold text-foreground mb-6 border-none outline-none placeholder:text-muted-foreground"
                                 value={editingNote.title !== undefined ? editingNote.title : activeNote.title}
                                 onChange={(e) => {
                                     setEditingNote(prev => ({ ...prev, title: e.target.value }));
@@ -345,7 +345,7 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
                             />
 
                             <textarea
-                                className="flex-1 bg-transparent text-foreground dark:text-neutral-300 text-lg resize-none border-none outline-none placeholder:text-muted-foreground leading-relaxed custom-scrollbar selection:bg-red-500/30"
+                                className="flex-1 bg-transparent text-foreground text-lg resize-none border-none outline-none placeholder:text-muted-foreground leading-relaxed custom-scrollbar selection:bg-primary/30"
                                 value={editingNote.content !== undefined ? editingNote.content : activeNote.content}
                                 onChange={(e) => setEditingNote(prev => ({ ...prev, content: e.target.value }))}
                                 placeholder="Start writing..."
@@ -366,7 +366,7 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
                             </div>
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-neutral-600 space-y-4">
+                        <div className="flex flex-col items-center justify-center h-full text-muted-foreground space-y-4">
                             <Book className="h-16 w-16 opacity-20" />
                             <p>Select a note or create a new one</p>
                         </div>
@@ -375,10 +375,10 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
 
                 {/* Edit Subject Overlay */}
                 {isEditing && (
-                    <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-8 no-drag">
-                        <div className="bg-background dark:bg-neutral-900 border border-border dark:border-white/10 p-8 rounded-2xl w-full max-w-md shadow-2xl space-y-6 animate-in zoom-in-95 duration-150">
+                    <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-8 no-drag">
+                        <div className="bg-card border border-border p-8 rounded-2xl w-full max-w-md shadow-2xl space-y-6 animate-in zoom-in-95 duration-150">
                             <h3 className="text-xl font-bold flex items-center gap-2">
-                                <Edit2 className="h-5 w-5 text-red-500" /> Edit Book Details
+                                <Edit2 className="h-5 w-5 text-primary" /> Edit Book Details
                             </h3>
 
                             <div className="space-y-2">
@@ -386,7 +386,7 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
                                 <Input
                                     value={editTitle}
                                     onChange={(e) => setEditTitle(e.target.value)}
-                                    className="bg-secondary/50 dark:bg-black/40 border-border dark:border-white/10 text-lg font-bold"
+                                    className="bg-muted/50 border-border text-lg font-bold"
                                 />
                             </div>
 
@@ -404,7 +404,7 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
                                             style={{ backgroundColor: c }}
                                         />
                                     ))}
-                                    <div className="relative w-8 h-8 rounded-full overflow-hidden border border-border dark:border-white/20 hover:border-foreground dark:hover:border-white transition-colors group/picker">
+                                    <div className="relative w-8 h-8 rounded-full overflow-hidden border border-border hover:border-foreground transition-colors group/picker">
                                         <input
                                             type="color"
                                             value={editColor}
@@ -421,9 +421,9 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
                                 </div>
                             </div>
 
-                            <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
+                            <div className="flex justify-end gap-3 pt-4 border-t border-border/50">
                                 <Button variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>
-                                <Button onClick={handleSaveChanges} className="bg-red-600 hover:bg-red-500 text-white">
+                                <Button onClick={handleSaveChanges} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                                     <Check className="h-4 w-4 mr-2" /> Save Changes
                                 </Button>
                             </div>
@@ -546,7 +546,7 @@ export const NotesMode = () => {
                     <div className="px-6 pt-4 pb-2 bg-transparent z-20">
                         <header className={cn(
                             "rounded-2xl px-6 py-4 flex justify-between items-center backdrop-blur-xl drag relative transition-all",
-                            isMurtazaMode ? 'bg-background/90 border border-white/10 shadow-lg shadow-black/10' : 'glass'
+                            isMurtazaMode ? 'bg-background/90 border border-border shadow-lg shadow-black/10' : 'glass'
                         )}>
                             <div className="flex items-center gap-2 flex-1 min-w-0">
                                 <motion.h1
@@ -585,7 +585,7 @@ export const NotesMode = () => {
                                                     }}
                                                 >
                                                     <div className="flex justify-between">
-                                                        <span className="font-medium text-red-500 text-[10px] uppercase tracking-wider">{note.subjectTitle}</span>
+                                                        <span className="font-medium text-primary text-[10px] uppercase tracking-wider">{note.subjectTitle}</span>
                                                         <span className="text-[10px] text-muted-foreground font-medium">{format(new Date(note.updatedAt), 'MMM d')}</span>
                                                     </div>
                                                     <div className="font-bold text-sm text-foreground">{note.title}</div>
@@ -608,8 +608,8 @@ export const NotesMode = () => {
                     <div className="flex-1 overflow-y-auto p-12">
 
                         {isCreatingSubject && (
-                            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center no-drag">
-                                <form onSubmit={handleCreateSubject} className="bg-background p-8 rounded-2xl border border-red-900/20 w-full max-w-md space-y-4 shadow-2xl">
+                            <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center no-drag">
+                                <form onSubmit={handleCreateSubject} className="bg-background p-8 rounded-2xl border border-border w-full max-w-md space-y-4 shadow-2xl">
                                     <h3 className="text-xl font-bold">New Subject</h3>
                                     <Input
                                         autoFocus
@@ -659,8 +659,8 @@ export const NotesMode = () => {
                                     className="group flex flex-col items-center gap-2 opacity-50 hover:opacity-100 transition-opacity"
                                     onClick={() => setCurrentLibraryIndex(currentLibraryIndex + 1)}
                                 >
-                                    <div className="w-8 h-8 rounded-full bg-muted dark:bg-neutral-800 border border-border dark:border-white/10 flex items-center justify-center group-hover:bg-red-500/10 dark:group-hover:bg-red-900/20 group-hover:border-red-500/50 transition-colors">
-                                        <Plus className="h-4 w-4 text-neutral-400 group-hover:text-red-500" />
+                                    <div className="w-8 h-8 rounded-full bg-muted border border-border flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/50 transition-colors">
+                                        <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
                                     </div>
                                     <span className="text-[10px] text-muted-foreground uppercase tracking-widest writing-vertical-rl">New Library</span>
                                 </button>
@@ -680,7 +680,7 @@ export const NotesMode = () => {
                                     onClick={() => setCurrentLibraryIndex(idx)}
                                     className={cn(
                                         "px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider transition-all",
-                                        currentLibraryIndex === idx ? "bg-red-500 text-white" : "text-muted-foreground hover:bg-muted"
+                                        currentLibraryIndex === idx ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
                                     )}
                                 >
                                     Library {idx + 1}
@@ -693,7 +693,7 @@ export const NotesMode = () => {
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
+                                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                                 onClick={handleDeleteLibrary}
                                 title="Delete Current Library"
                             >

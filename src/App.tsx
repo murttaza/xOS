@@ -167,7 +167,7 @@ function App() {
               <motion.div
                 animate={{ opacity: [0.4, 1, 0.4], scale: [0.95, 1.05, 0.95] }}
                 transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                className="text-7xl text-[#800000] drop-shadow-[0_0_15px_rgba(128,0,0,0.8)]"
+                className="text-7xl text-primary drop-shadow-[0_0_15px_hsl(var(--primary)/0.6)]"
               >
                 م
               </motion.div>
@@ -198,7 +198,7 @@ function App() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
               onDoubleClick={() => window.ipcRenderer.send('maximize-window')}
-              className={`sticky top-4 z-50 rounded-2xl px-6 py-4 flex justify-between items-center backdrop-blur-xl ${isMurtazaMode ? 'bg-background/90 border border-white/10 shadow-lg shadow-black/10' : 'glass'} drag`}
+              className={`sticky top-4 z-50 rounded-2xl px-6 py-4 flex justify-between items-center backdrop-blur-xl ${isMurtazaMode ? 'bg-background/90 border border-border shadow-lg shadow-black/10' : 'glass'} drag`}
             >
               <div className="flex items-center gap-2">
                 <motion.h1
@@ -325,21 +325,21 @@ function App() {
             >
               {/* Left Column: Stats only */}
               <div className="col-span-12 lg:col-span-3">
-                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-white/10 rounded-3xl' : 'glass-card'} p-6 transition-all duration-150 no-drag h-full`}>
+                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'glass-card'} p-6 transition-all duration-150 no-drag h-full`}>
                   <StatsBlock />
                 </ReactiveBlock>
               </div>
 
               {/* Middle Column: Task Board */}
               <div className="col-span-12 lg:col-span-6">
-                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-white/10 rounded-3xl' : 'glass-card'} overflow-hidden h-full transition-all duration-150 no-drag`}>
+                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'glass-card'} overflow-hidden h-full transition-all duration-150 no-drag`}>
                   <TaskBoard />
                 </ReactiveBlock>
               </div>
 
               {/* Right Column: Calendar */}
               <div className="col-span-12 lg:col-span-3">
-                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-white/10 rounded-3xl' : 'glass-card'} overflow-hidden flex flex-col h-full transition-all duration-150 no-drag`}>
+                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'glass-card'} overflow-hidden flex flex-col h-full transition-all duration-150 no-drag`}>
                   <CalendarBlock />
                 </ReactiveBlock>
               </div>
@@ -364,7 +364,7 @@ function App() {
             <motion.div
               animate={{ opacity: [0.4, 1, 0.4], scale: [0.95, 1.05, 0.95] }}
               transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-              className="text-7xl text-[#800000] drop-shadow-[0_0_15px_rgba(128,0,0,0.8)]"
+              className="text-7xl text-primary drop-shadow-[0_0_15px_hsl(var(--primary)/0.6)]"
             >
               م
             </motion.div>
