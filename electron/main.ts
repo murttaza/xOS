@@ -428,39 +428,125 @@ app.whenReady().then(() => {
   });
 
   let windowSizeState = 0; // 0: Normal, 1: Third, 2: Full
+  let animationTimer: ReturnType<typeof setInterval> | null = null;
+
+  function easeOutCubic(t: number): number {
+    return 1 - Math.pow(1 - t, 3);
+  }
+
+  function animateBounds(
+    target: { x: number; y: number; width: number; height: number },
+    onComplete?: () => void
+  ) {
+    if (!win) return;
+    if (animationTimer) clearInterval(animationTimer);
+
+    const start = win.getBounds();
+    const duration = 250;
+    const stepMs = 16;
+    const startTime = Date.now();
+
+    win.setResizable(true);
+
+    animationTimer = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const t = easeOutCubic(progress);
+
+      const current = {
+        x: Math.round(start.x + (target.x - start.x) * t),
+        y: Math.round(start.y + (target.y - start.y) * t),
+        width: Math.round(start.width + (target.width - start.width) * t),
+        height: Math.round(start.height + (target.height - start.height) * t),
+      };
+
+      win?.setBounds(current);
+
+      if (progress >= 1) {
+        clearInterval(animationTimer!);
+        animationTimer = null;
+        win?.setResizable(false);
+        onComplete?.();
+      }
+    }, stepMs);
+  }
+
+  function getCurrentDisplay() {
+    if (!win) return screen.getPrimaryDisplay();
+    const bounds = win.getBounds();
+    return screen.getDisplayMatching(bounds);
+  }
 
   ipcMain.on('set-window-size', (_, newState: number) => {
     if (!win) return;
     if (newState === windowSizeState) return;
-    
+
     windowSizeState = newState;
-    const display = screen.getPrimaryDisplay();
-    // Use workArea to avoid overlapping with the taskbar
+    const display = getCurrentDisplay();
     const { width, height, x, y } = display.workArea;
-    
-    // Briefly enable resizing to allow the window size to change properly
-    win.setResizable(true);
-    
+
     if (windowSizeState === 0) {
       if (win.isMaximized()) win.unmaximize();
-      win.setAspectRatio(1200 / 800);
-      win.setSize(1200, 800);
-      win.center();
+      win.setAspectRatio(0);
+      const targetW = 1200;
+      const targetH = 800;
+      const targetX = x + Math.round((width - targetW) / 2);
+      const targetY = y + Math.round((height - targetH) / 2);
+      animateBounds({ x: targetX, y: targetY, width: targetW, height: targetH }, () => {
+        win?.setAspectRatio(1200 / 800);
+      });
       win.webContents.send('window-size-state', 0);
     } else if (windowSizeState === 1) {
       if (win.isMaximized()) win.unmaximize();
       win.setAspectRatio(0);
       const thirdWidth = Math.floor(width / 3);
-      // Snap to right edge, taking full height
-      win.setBounds({ x: x + width - thirdWidth, y, width: thirdWidth, height });
+      // Snap to left edge, taking full height
+      animateBounds({ x, y, width: thirdWidth, height });
       win.webContents.send('window-size-state', 1);
     } else if (windowSizeState === 2) {
+      // Cancel any running animation before maximizing
+      if (animationTimer) {
+        clearInterval(animationTimer);
+        animationTimer = null;
+      }
+      win.setResizable(true);
       win.setAspectRatio(0);
       win.maximize();
+      win.setResizable(false);
       win.webContents.send('window-size-state', 2);
     }
-    
-    win.setResizable(false);
+  });
+
+  ipcMain.on('maximize-window', () => {
+    if (!win) return;
+    if (win.isMaximized() || windowSizeState === 2) {
+      // Toggle back to normal
+      windowSizeState = 0;
+      const display = getCurrentDisplay();
+      const { width, height, x, y } = display.workArea;
+      if (win.isMaximized()) win.unmaximize();
+      win.setAspectRatio(0);
+      const targetW = 1200;
+      const targetH = 800;
+      const targetX = x + Math.round((width - targetW) / 2);
+      const targetY = y + Math.round((height - targetH) / 2);
+      animateBounds({ x: targetX, y: targetY, width: targetW, height: targetH }, () => {
+        win?.setAspectRatio(1200 / 800);
+      });
+      win.webContents.send('window-size-state', 0);
+    } else {
+      // Maximize
+      windowSizeState = 2;
+      if (animationTimer) {
+        clearInterval(animationTimer);
+        animationTimer = null;
+      }
+      win.setResizable(true);
+      win.setAspectRatio(0);
+      win.maximize();
+      win.setResizable(false);
+      win.webContents.send('window-size-state', 2);
+    }
   });
 
   ipcMain.on('toggle-pin', (_, shouldPin) => {
@@ -481,7 +567,7 @@ app.whenReady().then(() => {
   ipcMain.on('set-overlay-mode', (_, enable) => {
     win?.setResizable(true);
     if (enable) {
-      const display = screen.getPrimaryDisplay();
+      const display = getCurrentDisplay();
       const { x, y, width, height } = display.bounds; // Use bounds to cover entire screen including taskbar
       // Ideally use setContentProtection or similar if we wanted to be super aggressive, but alwaysOnTop is usually enough.
       win?.setAspectRatio(0);
