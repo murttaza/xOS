@@ -21,6 +21,14 @@ export function CalendarBlock() {
     const [date, setDate] = useState<Date>(new Date());
     const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
     const [journalText, setJournalText] = useState("");
+    const [windowSize, setWindowSize] = useState(0);
+
+    useEffect(() => {
+        const removeListener = window.ipcRenderer.on('window-size-state', (_: unknown, size: number) => {
+            setWindowSize(size);
+        });
+        return () => removeListener();
+    }, []);
     
     // Save Journal Entry
     const saveJournalEntry = useStore(state => state.saveJournalEntry);
@@ -113,7 +121,7 @@ export function CalendarBlock() {
     }, [sessions, tasks]);
 
     return (
-        <div className="flex flex-col h-full bg-gradient-to-br from-card to-secondary/10">
+        <div className="flex flex-col h-full overflow-hidden bg-gradient-to-br from-card to-secondary/10">
             {/* Header */}
             <div className="flex items-center justify-between p-4 pb-2 shrink-0">
                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors" onClick={prevMonth}>
@@ -129,9 +137,9 @@ export function CalendarBlock() {
                 </Button>
             </div>
 
-            <CardContent className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] p-4 pt-0 flex flex-col gap-6">
+            <CardContent className="flex-1 min-h-0 overflow-hidden p-4 pt-0 flex flex-col gap-6">
                 {/* Calendar Grid */}
-                <div className="w-full max-w-[340px] mx-auto">
+                <div className="w-full max-w-[340px] mx-auto shrink-0">
                     <div className="grid grid-cols-7 gap-1 mb-2">
                         {WEEK_DAYS.map((day) => (
                             <div key={day} className="text-center text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">
@@ -171,7 +179,7 @@ export function CalendarBlock() {
                 </div>
 
                 {/* Selected Day Details */}
-                <div className="flex-1 min-h-0 flex flex-col gap-3 bg-secondary/20 rounded-2xl p-4 border border-border/40">
+                <div className={`flex-1 min-h-0 flex flex-col gap-3 bg-secondary/20 rounded-2xl p-4 border border-border/40 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${windowSize === 0 ? 'max-h-[45vh]' : ''}`}>
                     <div className="flex items-center justify-between shrink-0 mb-1">
                         <div className="flex flex-col">
                             <h3 className="font-bold text-sm">{format(date, "EEEE")}</h3>
@@ -189,10 +197,10 @@ export function CalendarBlock() {
 
                     {/* Prayers Section (if any completed) */}
                     {completedPrayers.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 shrink-0">
+                        <div className="flex gap-1.5 shrink-0">
                             {completedPrayers.map((prayer) => (
-                                <span key={prayer} className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider border border-primary/20">
-                                    {prayer}
+                                <span key={prayer} className="w-6 h-6 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase flex items-center justify-center border border-primary/20">
+                                    {prayer[0]}
                                 </span>
                             ))}
                         </div>

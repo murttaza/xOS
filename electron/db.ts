@@ -37,6 +37,8 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_sessions_dateLogged ON sessions(dateLogged);
   CREATE INDEX IF NOT EXISTS idx_sessions_taskId ON sessions(taskId);
+  CREATE INDEX IF NOT EXISTS idx_tasks_dueDate ON tasks(dueDate);
+  CREATE INDEX IF NOT EXISTS idx_notes_subjectId ON notes(subjectId);
 
   CREATE TABLE IF NOT EXISTS daily_logs (
     date TEXT PRIMARY KEY,

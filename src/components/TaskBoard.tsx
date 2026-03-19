@@ -3,17 +3,20 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Plus, Repeat, Eye } from "lucide-react";
+import { Plus, Eye } from "lucide-react";
 import { useStore } from "@/store";
 import { TaskDialog } from "./TaskDialog";
 import { TaskItem } from "./TaskItem";
 import { Task, RepeatingTask } from "@/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Accordion } from "@/components/ui/accordion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RepeatingTaskDialog } from "./RepeatingTaskDialog";
-import { RepeatingTaskItem } from "./RepeatingTaskItem";
 import { getLocalDateString } from "@/lib/utils";
+
+import { TaskSection } from "./tasks/TaskSection";
+import { RepeatingTasksPage } from "./tasks/RepeatingTasksPage";
+import { CompletedTasks } from "./tasks/CompletedTasks";
 
 export function TaskBoard() {
     const tasks = useStore(state => state.tasks);
@@ -156,7 +159,7 @@ export function TaskBoard() {
             }
         });
 
-        // Sort dated tasks by due date ascending (overdue → today → future)
+        // Sort dated tasks by due date ascending (overdue -> today -> future)
         dated.sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
 
         // Sort loose tasks by difficulty descending (hardest first)
@@ -191,8 +194,6 @@ export function TaskBoard() {
                 top: page * height,
                 behavior: 'smooth'
             });
-            // setActivePage will be handled by onScroll, but setting it here gives immediate feedback if needed
-            // setActivePage(page); 
         }
     };
 
@@ -251,125 +252,47 @@ export function TaskBoard() {
                     <div className="w-full min-h-full snap-center flex flex-col">
                         <ScrollArea className="flex-1 px-4">
                             <Accordion type="single" collapsible defaultValue="dated" className="w-full space-y-4">
-                                {/* Dated Tasks */}
-                                <AccordionItem value="dated" className="border-none bg-card/40 rounded-xl overflow-hidden shadow-sm">
-                                    <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/50 transition-colors">
-                                        <span className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
-                                            Dated Tasks
-                                            <span className="bg-muted px-2 py-0.5 rounded-full text-xs">{datedTasks.length}</span>
-                                        </span>
-                                    </AccordionTrigger>
-                                    <AccordionContent className="px-4 pb-4 pt-2 space-y-2">
-                                        {datedTasks.length === 0 && <p className="text-xs text-muted-foreground italic px-2">No dated tasks.</p>}
-                                        <div className="max-h-[45vh] overscroll-contain overflow-y-auto snap-y snap-mandatory no-scrollbar space-y-2">
-                                            {datedTasks.map(task => (
-                                                <div key={task.id} className="snap-start">
-                                                    <TaskItem
-                                                        task={task}
-                                                        isActive={task.id !== undefined && activeTimerIds.has(task.id)}
-                                                        isTimerRunning={task.id !== undefined && activeTimerIds.has(task.id)}
-                                                        onToggleTimer={handleToggleTimer}
-                                                        onEdit={handleEditClick}
-                                                        onDelete={deleteTask}
-                                                        onComplete={handleComplete}
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </AccordionContent>
-                                </AccordionItem>
+                                <TaskSection
+                                    value="dated"
+                                    label="Dated Tasks"
+                                    tasks={datedTasks}
+                                    activeTimerIds={activeTimerIds}
+                                    emptyMessage="No dated tasks."
+                                    onToggleTimer={handleToggleTimer}
+                                    onEdit={handleEditClick}
+                                    onDelete={deleteTask}
+                                    onComplete={handleComplete}
+                                />
 
-                                {/* Loose Tasks */}
-                                <AccordionItem value="loose" className="border-none bg-card/40 rounded-xl overflow-hidden shadow-sm">
-                                    <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/50 transition-colors">
-                                        <span className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
-                                            Loose Tasks
-                                            <span className="bg-muted px-2 py-0.5 rounded-full text-xs">{looseTasks.length}</span>
-                                        </span>
-                                    </AccordionTrigger>
-                                    <AccordionContent className="px-4 pb-4 pt-2 space-y-2">
-                                        {looseTasks.length === 0 && <p className="text-xs text-muted-foreground italic px-2">No loose tasks.</p>}
-                                        <div className="max-h-[45vh] overscroll-contain overflow-y-auto snap-y snap-mandatory no-scrollbar space-y-2">
-                                            {looseTasks.map(task => (
-                                                <div key={task.id} className="snap-start">
-                                                    <TaskItem
-                                                        task={task}
-                                                        isActive={task.id !== undefined && activeTimerIds.has(task.id)}
-                                                        isTimerRunning={task.id !== undefined && activeTimerIds.has(task.id)}
-                                                        onToggleTimer={handleToggleTimer}
-                                                        onEdit={handleEditClick}
-                                                        onDelete={deleteTask}
-                                                        onComplete={handleComplete}
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </AccordionContent>
-                                </AccordionItem>
+                                <TaskSection
+                                    value="loose"
+                                    label="Loose Tasks"
+                                    tasks={looseTasks}
+                                    activeTimerIds={activeTimerIds}
+                                    emptyMessage="No loose tasks."
+                                    onToggleTimer={handleToggleTimer}
+                                    onEdit={handleEditClick}
+                                    onDelete={deleteTask}
+                                    onComplete={handleComplete}
+                                />
 
-                                {/* Completed Tasks (recent only) */}
-                                {completedTasks.length > 0 && (() => {
-                                    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-                                    const recentCompleted = completedTasks.filter(t => t.completedAt && t.completedAt > sevenDaysAgo);
-                                    const displayTasks = recentCompleted.length > 0 ? recentCompleted : completedTasks.slice(0, 5);
-                                    return (
-                                    <AccordionItem value="completed" className="border-none bg-card/40 rounded-xl overflow-hidden">
-                                        <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/50 transition-colors">
-                                            <span className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
-                                                Completed
-                                                <span className="bg-muted px-2 py-0.5 rounded-full text-xs">
-                                                    {recentCompleted.length > 0 && recentCompleted.length !== completedTasks.length
-                                                        ? `${recentCompleted.length} recent · ${completedTasks.length} total`
-                                                        : completedTasks.length}
-                                                </span>
-                                            </span>
-                                        </AccordionTrigger>
-                                        <AccordionContent className="px-4 pb-4 pt-2 space-y-2 opacity-60 grayscale hover:grayscale-0 transition-all duration-150">
-                                            <div className="max-h-[45vh] overscroll-contain overflow-y-auto snap-y snap-mandatory no-scrollbar space-y-2">
-                                                {displayTasks.map(task => (
-                                                    <div key={task.id} className="snap-start">
-                                                        <TaskItem
-                                                            task={task}
-                                                            isActive={false}
-                                                            isTimerRunning={false}
-                                                            onToggleTimer={() => { }}
-                                                            onEdit={handleEditClick}
-                                                            onDelete={deleteTask}
-                                                            onComplete={() => updateTask({ ...task, isComplete: 0 })}
-                                                        />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </AccordionContent>
-                                    </AccordionItem>
-                                    );
-                                })()}
+                                <CompletedTasks
+                                    completedTasks={completedTasks}
+                                    onEdit={handleEditClick}
+                                    onDelete={deleteTask}
+                                    onUncomplete={(task) => updateTask({ ...task, isComplete: 0 })}
+                                />
                             </Accordion>
                         </ScrollArea>
                     </div>
 
                     {/* Page 2: Repeating Tasks */}
-                    <div className="w-full min-h-full snap-center flex flex-col">
-                        <ScrollArea className="flex-1 px-4">
-                            <div className="space-y-2">
-                                {repeatingTasks.length === 0 && (
-                                    <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
-                                        <Repeat className="h-8 w-8 mb-2 opacity-20" />
-                                        <p className="text-sm">No repeating tasks</p>
-                                    </div>
-                                )}
-                                {repeatingTasks.map(task => (
-                                    <RepeatingTaskItem
-                                        key={task.id}
-                                        task={task}
-                                        onEdit={handleRepeatingEdit}
-                                        onDelete={deleteRepeatingTask}
-                                        onToggleActive={handleRepeatingToggleActive}
-                                    />
-                                ))}
-                            </div>
-                        </ScrollArea>
-                    </div>
+                    <RepeatingTasksPage
+                        repeatingTasks={repeatingTasks}
+                        onEdit={handleRepeatingEdit}
+                        onDelete={deleteRepeatingTask}
+                        onToggleActive={handleRepeatingToggleActive}
+                    />
                 </div>
             </CardContent>
 

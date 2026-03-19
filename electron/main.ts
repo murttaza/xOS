@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, desktopCa
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import db from './db'
+import { IpcChannels } from '../src/shared/ipc-types'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -114,7 +115,7 @@ app.whenReady().then(() => {
     if (permission === 'media' || permission === 'audioCapture' || permission === 'videoCapture') {
       callback(true);
     } else {
-      callback(true); // Allow all other permissions too
+      callback(false); // Deny non-media permissions
     }
   });
 
@@ -175,11 +176,11 @@ app.whenReady().then(() => {
   };
 
   // IPC Handlers (using cached prepared statements)
-  ipcMain.handle('get-tasks', () => {
+  ipcMain.handle(IpcChannels.GetTasks, () => {
     return stmts.getTasks.all();
   });
 
-  ipcMain.handle('add-task', (_, task) => {
+  ipcMain.handle(IpcChannels.AddTask, (_, task) => {
     return stmts.addTask.run({
       ...task,
       statTarget: JSON.stringify(task.statTarget),
@@ -191,7 +192,7 @@ app.whenReady().then(() => {
     });
   });
 
-  ipcMain.handle('update-task', (_, task) => {
+  ipcMain.handle(IpcChannels.UpdateTask, (_, task) => {
     return stmts.updateTask.run({
       ...task,
       completedAt: task.completedAt || null,
@@ -203,44 +204,64 @@ app.whenReady().then(() => {
     });
   });
 
-  ipcMain.handle('delete-task', (_, id) => {
+  ipcMain.handle(IpcChannels.DeleteTask, (_, id) => {
     return stmts.deleteTask.run(id);
   });
 
+  // Batch insert multiple tasks in a single transaction
+  ipcMain.handle(IpcChannels.BatchAddTasks, (_, tasks: any[]) => {
+    const batchInsert = db.transaction((taskList: any[]) => {
+      const results = [];
+      for (const task of taskList) {
+        results.push(stmts.addTask.run({
+          ...task,
+          statTarget: JSON.stringify(task.statTarget),
+          labels: JSON.stringify(task.labels),
+          repeatingTaskId: task.repeatingTaskId || null,
+          subtasks: JSON.stringify(task.subtasks || []),
+          noteId: task.noteId || null,
+          time: task.time || null
+        }));
+      }
+      return results;
+    });
+    return batchInsert(tasks);
+  });
+
   // Sessions
-  ipcMain.handle('add-session', (_, session) => {
+  ipcMain.handle(IpcChannels.AddSession, (_, session) => {
     return stmts.addSession.run(session);
   });
 
-  ipcMain.handle('get-sessions-by-date', (_, date) => {
+  ipcMain.handle(IpcChannels.GetSessionsByDate, (_, date) => {
     return stmts.getSessionsByDate.all(date);
   });
 
-  ipcMain.handle('get-sessions-range', (_, { startDate, endDate }) => {
+  ipcMain.handle(IpcChannels.GetSessionsRange, (_, { startDate, endDate }) => {
     return stmts.getSessionsRange.all(startDate, endDate);
   });
 
-  ipcMain.handle('get-sessions-by-task', (_, taskId) => {
+  ipcMain.handle(IpcChannels.GetSessionsByTask, (_, taskId) => {
     return stmts.getSessionsByTask.all(taskId);
   });
   // Stats
-  ipcMain.handle('get-stats', () => {
+  ipcMain.handle(IpcChannels.GetStats, () => {
     return stmts.getStats.all();
   });
 
-  ipcMain.handle('update-stat', (_, { statName, currentXP, currentLevel }) => {
+  ipcMain.handle(IpcChannels.UpdateStat, (_, { statName, currentXP, currentLevel }) => {
     return stmts.updateStat.run(currentXP, currentLevel, statName);
   });
 
-  ipcMain.handle('add-stat', (_, statName) => {
+  ipcMain.handle(IpcChannels.AddStat, (_, statName) => {
     return stmts.addStat.run(statName);
   });
 
-  ipcMain.handle('delete-stat', (_, statName) => {
+  ipcMain.handle(IpcChannels.DeleteStat, (_, statName) => {
     return stmts.deleteStat.run(statName);
   });
 
-  ipcMain.handle('rename-stat', (_, { oldName, newName }) => {
+  ipcMain.handle(IpcChannels.RenameStat, (_, { oldName, newName }) => {
     const transaction = db.transaction(() => {
       stmts.renameStatUpdate.run(newName, oldName);
 
@@ -264,15 +285,15 @@ app.whenReady().then(() => {
   });
 
   // Daily Log
-  ipcMain.handle('get-daily-log', (_, date) => {
+  ipcMain.handle(IpcChannels.GetDailyLog, (_, date) => {
     return stmts.getDailyLog.get(date);
   });
 
-  ipcMain.handle('save-daily-log', (_, log) => {
+  ipcMain.handle(IpcChannels.SaveDailyLog, (_, log) => {
     return stmts.saveDailyLog.run(log);
   });
 
-  ipcMain.handle('save-journal-entry', (_, { date, entry }) => {
+  ipcMain.handle(IpcChannels.SaveJournalEntry, (_, { date, entry }) => {
     const row = stmts.getDailyLogForJournal.get(date);
     if (row) {
       return stmts.updateJournalEntry.run(entry, date);
@@ -282,28 +303,28 @@ app.whenReady().then(() => {
   });
 
   // Dev Items
-  ipcMain.handle('get-dev-items', () => {
+  ipcMain.handle(IpcChannels.GetDevItems, () => {
     return stmts.getDevItems.all();
   });
 
-  ipcMain.handle('add-dev-item', (_, text) => {
+  ipcMain.handle(IpcChannels.AddDevItem, (_, text) => {
     return stmts.addDevItem.run(text);
   });
 
-  ipcMain.handle('toggle-dev-item', (_, { id, isComplete }) => {
+  ipcMain.handle(IpcChannels.ToggleDevItem, (_, { id, isComplete }) => {
     return stmts.toggleDevItem.run(isComplete, id);
   });
 
-  ipcMain.handle('delete-dev-item', (_, id) => {
+  ipcMain.handle(IpcChannels.DeleteDevItem, (_, id) => {
     return stmts.deleteDevItem.run(id);
   });
 
   // Repeating Tasks
-  ipcMain.handle('get-repeating-tasks', () => {
+  ipcMain.handle(IpcChannels.GetRepeatingTasks, () => {
     return stmts.getRepeatingTasks.all();
   });
 
-  ipcMain.handle('add-repeating-task', (_, task) => {
+  ipcMain.handle(IpcChannels.AddRepeatingTask, (_, task) => {
     return stmts.addRepeatingTask.run({
       ...task,
       lastGeneratedDate: task.lastGeneratedDate || null,
@@ -315,7 +336,7 @@ app.whenReady().then(() => {
     });
   });
 
-  ipcMain.handle('update-repeating-task', (_, task) => {
+  ipcMain.handle(IpcChannels.UpdateRepeatingTask, (_, task) => {
     return stmts.updateRepeatingTask.run({
       ...task,
       lastGeneratedDate: task.lastGeneratedDate || null,
@@ -327,35 +348,35 @@ app.whenReady().then(() => {
     });
   });
 
-  ipcMain.handle('delete-repeating-task', (_, id) => {
+  ipcMain.handle(IpcChannels.DeleteRepeatingTask, (_, id) => {
     return stmts.deleteRepeatingTask.run(id);
   });
 
   // Notes Mode
-  ipcMain.handle('get-subjects', () => {
+  ipcMain.handle(IpcChannels.GetSubjects, () => {
     return stmts.getSubjects.all();
   });
 
-  ipcMain.handle('create-subject', (_, subject) => {
+  ipcMain.handle(IpcChannels.CreateSubject, (_, subject) => {
     return stmts.createSubject.run({
       ...subject,
       createdAt: new Date().toISOString()
     });
   });
 
-  ipcMain.handle('update-subject', (_, subject) => {
+  ipcMain.handle(IpcChannels.UpdateSubject, (_, subject) => {
     return stmts.updateSubject.run(subject);
   });
 
-  ipcMain.handle('delete-subject', (_, id) => {
+  ipcMain.handle(IpcChannels.DeleteSubject, (_, id) => {
     return stmts.deleteSubject.run(id);
   });
 
-  ipcMain.handle('get-notes', (_, subjectId) => {
+  ipcMain.handle(IpcChannels.GetNotes, (_, subjectId) => {
     return stmts.getNotes.all(subjectId);
   });
 
-  ipcMain.handle('create-note', (_, note) => {
+  ipcMain.handle(IpcChannels.CreateNote, (_, note) => {
     const now = new Date().toISOString();
     return stmts.createNote.run({
       ...note,
@@ -364,32 +385,32 @@ app.whenReady().then(() => {
     });
   });
 
-  ipcMain.handle('get-note', (_, id) => {
+  ipcMain.handle(IpcChannels.GetNote, (_, id) => {
     return stmts.getNote.get(id);
   });
 
-  ipcMain.handle('update-note', (_, note) => {
+  ipcMain.handle(IpcChannels.UpdateNote, (_, note) => {
     return stmts.updateNote.run({
       ...note,
       updatedAt: new Date().toISOString()
     });
   });
 
-  ipcMain.handle('delete-note', (_, id) => {
+  ipcMain.handle(IpcChannels.DeleteNote, (_, id) => {
     return stmts.deleteNote.run(id);
   });
 
-  ipcMain.handle('search-notes', (_, query) => {
+  ipcMain.handle(IpcChannels.SearchNotes, (_, query) => {
     const likeQuery = `%${query}%`;
     return stmts.searchNotes.all(likeQuery, likeQuery);
   });
 
   // Streaks
-  ipcMain.handle('get-streaks', () => {
+  ipcMain.handle(IpcChannels.GetStreaks, () => {
     return stmts.getStreaks.all();
   });
 
-  ipcMain.handle('create-streak', (_, streak) => {
+  ipcMain.handle(IpcChannels.CreateStreak, (_, streak) => {
     const now = new Date().toISOString();
     return stmts.createStreak.run({
       ...streak,
@@ -398,16 +419,16 @@ app.whenReady().then(() => {
     });
   });
 
-  ipcMain.handle('update-streak', (_, streak) => {
+  ipcMain.handle(IpcChannels.UpdateStreak, (_, streak) => {
     return stmts.updateStreak.run(streak);
   });
 
-  ipcMain.handle('delete-streak', (_, id) => {
+  ipcMain.handle(IpcChannels.DeleteStreak, (_, id) => {
     return stmts.deleteStreak.run(id);
   });
 
   // Data Export - dumps all tables into a single JSON object
-  ipcMain.handle('export-all-data', () => {
+  ipcMain.handle(IpcChannels.ExportAllData, () => {
     return {
       tasks: db.prepare('SELECT * FROM tasks').all(),
       sessions: db.prepare('SELECT * FROM sessions').all(),
@@ -451,8 +472,8 @@ app.whenReady().then(() => {
       if (win.isMaximized()) win.unmaximize();
       win.setAspectRatio(0);
       const thirdWidth = Math.floor(width / 3);
-      // Snap to right edge, taking full height
-      win.setBounds({ x: x + width - thirdWidth, y, width: thirdWidth, height });
+      // Snap to left edge, taking full height
+      win.setBounds({ x, y, width: thirdWidth, height });
       win.webContents.send('window-size-state', 1);
     } else if (windowSizeState === 2) {
       win.setAspectRatio(0);

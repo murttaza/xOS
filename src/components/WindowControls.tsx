@@ -1,12 +1,18 @@
-import { Minus, X, Square, Pin, Copy, PanelRight } from "lucide-react";
+import { Minus, X, Square, Pin, PanelLeft, Maximize } from "lucide-react";
 import { Button } from "./ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
+const SIZE_OPTIONS = [
+    { state: 0, label: "Normal", sublabel: "Centered", icon: Square },
+    { state: 1, label: "Side Snap", sublabel: "Left third", icon: PanelLeft },
+    { state: 2, label: "Fullscreen", sublabel: "Maximized", icon: Maximize },
+];
 
 export function WindowControls() {
     const [isPinned, setIsPinned] = useState(false);
     const [sizeState, setSizeState] = useState(0);
-    const [isSizeExpanded, setIsSizeExpanded] = useState(false);
+    const [isSizeHovered, setIsSizeHovered] = useState(false);
+    const sizeRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const removeListener = window.ipcRenderer.on('window-size-state', (_event: unknown, state: number) => {
@@ -16,6 +22,18 @@ export function WindowControls() {
             removeListener();
         };
     }, []);
+
+    // Close popup on click outside
+    useEffect(() => {
+        if (!isSizeHovered) return;
+        const handleClick = (e: MouseEvent) => {
+            if (sizeRef.current && !sizeRef.current.contains(e.target as Node)) {
+                setIsSizeHovered(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [isSizeHovered]);
 
     const handlePin = () => {
         const newPinnedState = !isPinned;
@@ -30,16 +48,18 @@ export function WindowControls() {
 
     const handleSetSize = (state: number) => {
         window.ipcRenderer.send('set-window-size', state);
-        setIsSizeExpanded(false);
+        setIsSizeHovered(false);
     };
 
     const handleClose = () => {
         window.ipcRenderer.send('close-window');
     };
 
+    const currentOption = SIZE_OPTIONS.find(o => o.state === sizeState) || SIZE_OPTIONS[0];
+    const CurrentIcon = currentOption.icon;
+
     return (
         <div className="flex items-center gap-2 no-drag">
-
             <Button
                 variant="ghost"
                 size="icon"
@@ -48,6 +68,7 @@ export function WindowControls() {
             >
                 <Pin className="h-3.5 w-3.5 rotate-45" />
             </Button>
+
             <Button
                 variant="ghost"
                 size="icon"
@@ -56,56 +77,50 @@ export function WindowControls() {
             >
                 <Minus className="h-4 w-4" />
             </Button>
-            {isSizeExpanded ? (
-                <div 
-                    className="flex items-center bg-muted rounded-full overflow-hidden animate-in zoom-in-95 duration-200"
-                    onMouseLeave={() => setIsSizeExpanded(false)}
-                >
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className={`h-8 w-8 rounded-none hover:bg-muted/80 transition-colors ${sizeState === 0 ? 'text-primary' : 'text-muted-foreground'}`}
-                        onClick={() => handleSetSize(0)}
-                        title="Normal Window"
-                    >
-                        <Square className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className={`h-8 w-8 rounded-none hover:bg-muted/80 transition-colors ${sizeState === 1 ? 'text-primary' : 'text-muted-foreground'}`}
-                        onClick={() => handleSetSize(1)}
-                        title="Snap to Side"
-                    >
-                        <PanelRight className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className={`h-8 w-8 rounded-none hover:bg-muted/80 transition-colors ${sizeState === 2 ? 'text-primary' : 'text-muted-foreground'}`}
-                        onClick={() => handleSetSize(2)}
-                        title="Fullscreen"
-                    >
-                        <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                </div>
-            ) : (
+
+            {/* Size button with popup */}
+            <div
+                ref={sizeRef}
+                className="relative"
+            >
                 <Button
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                    onMouseEnter={() => setIsSizeExpanded(true)}
-                    title="Change Window Size"
+                    onClick={() => setIsSizeHovered(!isSizeHovered)}
                 >
-                    {sizeState === 0 ? (
-                        <Square className="h-3.5 w-3.5" />
-                    ) : sizeState === 1 ? (
-                        <PanelRight className="h-3.5 w-3.5" />
-                    ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                    )}
+                    <CurrentIcon className="h-3.5 w-3.5" />
                 </Button>
-            )}
+
+                {isSizeHovered && (
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 pt-1 z-[200]">
+                    <div className="py-1.5 px-1.5 rounded-xl bg-popover/95 backdrop-blur-xl border border-border shadow-2xl shadow-black/40 animate-in fade-in-0 zoom-in-95 duration-150 min-w-[140px]">
+                        {SIZE_OPTIONS.map((opt) => {
+                            const Icon = opt.icon;
+                            const isActive = sizeState === opt.state;
+                            return (
+                                <button
+                                    key={opt.state}
+                                    onClick={() => handleSetSize(opt.state)}
+                                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all ${
+                                        isActive
+                                            ? 'bg-primary/15 text-primary'
+                                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                    }`}
+                                >
+                                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-medium leading-none">{opt.label}</span>
+                                        <span className="text-[10px] opacity-60 leading-none mt-0.5">{opt.sublabel}</span>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                    </div>
+                )}
+            </div>
+
             <Button
                 variant="ghost"
                 size="icon"

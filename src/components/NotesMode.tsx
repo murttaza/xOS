@@ -2,87 +2,30 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { Subject, Note } from '../types';
-import { Book, X, Plus, Search, Trash2, Edit2, MoreVertical, Calendar, Check, Pipette } from 'lucide-react';
-import { format } from 'date-fns';
+import { Book, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { cn } from '../lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { ModeToggle } from './ModeToggle';
 import { WindowControls } from './WindowControls';
-import { Loader2 } from 'lucide-react';
 
-// --- Types & Utilities ---
+import { BookShelf } from './notes/BookShelf';
+import { NotesList } from './notes/NotesList';
+import { NoteEditor } from './notes/NoteEditor';
+import { NotesSearch } from './notes/NotesSearch';
+
+// --- Constants ---
 
 const COLORS = [
-    '#ef4444', // Red
-    '#dc2626', // Darker Red
-    '#b91c1c', // Even Darker Red
-    '#f87171', // Light Red
-    '#991b1b', // Deep Red
-    '#7f1d1d', // Very Deep Red
-    '#fbbf24', // Amber (Accent)
-    '#1f2937', // Gray (Dark)
+    '#ef4444', '#dc2626', '#b91c1c', '#f87171',
+    '#991b1b', '#7f1d1d', '#fbbf24', '#1f2937',
 ];
 
 const getRandomColor = () => COLORS[Math.floor(Math.random() * COLORS.length)];
 
-// --- Components ---
+const TOTAL_SPINES = 300;
 
-const BookSpine = React.memo(({
-    subject,
-    onClick,
-    isPlaceholder
-}: {
-    subject?: Subject;
-    onClick: () => void;
-    isPlaceholder?: boolean;
-}) => {
-    if (isPlaceholder) {
-        return (
-            <div
-                onClick={onClick}
-                className="group relative h-64 w-10 sm:w-12 cursor-pointer transition-colors duration-150 no-drag border border-transparent rounded-sm opacity-20 hover:opacity-50"
-            >
-                <div className="absolute inset-0 rounded-sm border border-border bg-transparent group-hover:bg-muted transition-colors flex items-center justify-center">
-                    <Plus className="text-muted-foreground w-4 h-4" />
-                </div>
-            </div>
-        )
-    }
-
-    if (!subject) return null;
-
-    return (
-        <div className="group relative h-64 w-10 sm:w-12 no-drag transition-transform duration-150 hover:-translate-y-1">
-            {/* Flat Spine container */}
-            <div
-                className={cn(
-                    "absolute inset-0 rounded-sm border border-border group-hover:border-foreground/20 transition-colors overflow-hidden cursor-pointer z-10",
-                    "bg-card shadow-sm"
-                )}
-                onClick={onClick}
-            >
-                {/* Minimal Accent Lines */}
-                <div className="absolute top-6 left-1/2 -translate-x-1/2 w-[1px] h-8 opacity-70" style={{ backgroundColor: subject.color }} />
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[1px] h-8 opacity-70" style={{ backgroundColor: subject.color }} />
-
-                {/* Title (Sideways) */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <h3
-                        className={cn(
-                            "w-60 shrink-0 text-center font-medium tracking-widest uppercase text-[10px] sm:text-xs whitespace-nowrap overflow-hidden text-ellipsis px-12 select-none rotate-90 origin-center transition-colors",
-                            "text-muted-foreground group-hover:text-foreground"
-                        )}
-                    >
-                        {subject.title}
-                    </h3>
-                </div>
-            </div>
-        </div>
-    );
-});
-BookSpine.displayName = 'BookSpine';
+// --- BookView (internal composite) ---
 
 const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void }) => {
     const notes = useStore(s => s.notes);
@@ -91,18 +34,12 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
     const updateNote = useStore(s => s.updateNote);
     const deleteNote = useStore(s => s.deleteNote);
     const deleteSubject = useStore(s => s.deleteSubject);
-    const updateSubject = useStore(s => s.updateSubject);
     const targetNoteId = useStore(s => s.targetNoteId);
 
     const [selectedNoteId, setSelectedNoteId] = useState<number | null>(null);
     const [editingNote, setEditingNote] = useState<Partial<Note>>({});
     const [isSaving, setIsSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-
-    // Edit Mode State
-    const [isEditing, setIsEditing] = useState(false);
-    const [editTitle, setEditTitle] = useState(subject.title);
-    const [editColor, setEditColor] = useState(subject.color);
 
     useEffect(() => {
         if (subject.id) fetchNotes(subject.id);
@@ -116,16 +53,6 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
     }, [targetNoteId, notes]);
 
     const activeNote = useMemo(() => notes.find(n => n.id === selectedNoteId), [notes, selectedNoteId]);
-
-    const handleSaveChanges = async () => {
-        if (!editTitle.trim()) return;
-        await updateSubject({
-            ...subject,
-            title: editTitle,
-            color: editColor
-        });
-        setIsEditing(false);
-    };
 
     const handleCreateNote = async () => {
         if (!subject.id) return;
@@ -216,11 +143,6 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
         }
     }
 
-    const filteredNotes = useMemo(() => notes.filter(n =>
-        (n.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-        (n.content?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-    ), [notes, searchTerm]);
-
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -234,206 +156,37 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
                 className="pointer-events-auto bg-card w-full max-w-6xl h-full max-h-[800px] rounded-r-2xl rounded-l-md shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col md:flex-row overflow-hidden border border-border/50 relative no-drag"
                 onClick={(e) => e.stopPropagation()}
             >
-
-                {/* Cover / Sidebar Area */}
-                <div className="w-full md:w-80 bg-muted/30 border-r border-border flex flex-col h-full relative no-drag">
-                    <div className="absolute left-0 top-0 bottom-0 w-2" style={{ backgroundColor: subject.color }} />
-
-                    <div className="p-6 pl-8 border-b border-border flex justify-between items-start">
-                        <div>
-                            <h2 className="text-xl font-bold text-foreground break-words">{subject.title}</h2>
-                            <p className="text-xs text-muted-foreground mt-1">{notes.length} Notes</p>
-                        </div>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6"><MoreVertical className="h-4 w-4" /></Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-48 p-1 z-[100]">
-                                <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => setIsEditing(true)}>
-                                    <Edit2 className="h-4 w-4 mr-2" /> Edit Book
-                                </Button>
-                                <Button variant="ghost" size="sm" className="w-full justify-start text-red-400 hover:text-red-400 hover:bg-red-950/20" onClick={handleDeleteSubject}>
-                                    <Trash2 className="h-4 w-4 mr-2" /> Delete Book
-                                </Button>
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-
-                    <div className="p-4 pl-8">
-                        <div className="relative">
-                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search notes..."
-                                className="pl-8 bg-muted/50 border-border text-sm"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto pl-6 pr-2 py-0 custom-scrollbar">
-                        {filteredNotes.map(note => (
-                            <div
-                                key={note.id}
-                                onClick={() => {
-                                    savePendingChanges();
-                                    setSelectedNoteId(note.id || null);
-                                    setEditingNote({});
-                                }}
-                                className={cn(
-                                    "mb-2 p-3 rounded-lg cursor-pointer transition-all border border-transparent group hover:border-border",
-                                    selectedNoteId === note.id ? "bg-accent" : "hover:bg-muted/50"
-                                )}
-                            >
-                                <div className="flex justify-between items-start">
-                                    <h4 className={cn("font-medium text-sm truncate pr-2", selectedNoteId === note.id ? "text-accent-foreground" : "text-foreground")}>
-                                        {note.title || 'Untitled'}
-                                    </h4>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity -mt-1 -mr-1 text-muted-foreground hover:text-red-400"
-                                        onClick={(e) => handleDeleteNote(e, note.id!)}
-                                    >
-                                        <Trash2 className="h-3 w-3" />
-                                    </Button>
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                                    {note.content?.substring(0, 100) || "No content..."}
-                                </p>
-                                <div className="text-[10px] text-muted-foreground/70 mt-2 flex items-center gap-1">
-                                    <Calendar className="h-2.5 w-2.5" />
-                                    {format(new Date(note.updatedAt), 'MMM d, h:mm a')}
-                                </div>
-                            </div>
-                        ))}
-
-                        {filteredNotes.length === 0 && (
-                            <div className="text-center py-10 text-muted-foreground text-sm">
-                                {searchTerm ? 'No matches' : 'No notes yet'}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="p-4 pl-8 border-t border-border">
-                        <Button className="w-full bg-primary/10 hover:bg-primary/20 text-primary" onClick={handleCreateNote}>
-                            <Plus className="h-4 w-4 mr-2" /> New Note
-                        </Button>
-                    </div>
-                </div>
+                {/* Notes List / Sidebar */}
+                <NotesList
+                    subject={subject}
+                    notes={notes}
+                    selectedNoteId={selectedNoteId}
+                    onSelectNote={(id) => {
+                        setSelectedNoteId(id);
+                        setEditingNote({});
+                    }}
+                    onCreateNote={handleCreateNote}
+                    onDeleteNote={handleDeleteNote}
+                    onDeleteSubject={handleDeleteSubject}
+                    searchTerm={searchTerm}
+                    onSearchChange={setSearchTerm}
+                    savePendingChanges={savePendingChanges}
+                />
 
                 {/* Note Editor Area */}
-                <div className="flex-1 bg-card/50 backdrop-blur-sm flex flex-col relative no-drag">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-4 right-4 z-10 text-muted-foreground hover:text-foreground"
-                        onClick={onClose}
-                    >
-                        <X className="h-6 w-6" />
-                    </Button>
-
-                    {activeNote ? (
-                        <div className="flex flex-col h-full p-8 md:p-12 animate-in fade-in duration-150">
-                            <input
-                                className="bg-transparent text-3xl md:text-4xl font-bold text-foreground mb-6 border-none outline-none placeholder:text-muted-foreground"
-                                value={editingNote.title !== undefined ? editingNote.title : activeNote.title}
-                                onChange={(e) => {
-                                    setEditingNote(prev => ({ ...prev, title: e.target.value }));
-                                }}
-                                placeholder="Note Title"
-                            />
-
-                            <textarea
-                                className="flex-1 bg-transparent text-foreground text-lg resize-none border-none outline-none placeholder:text-muted-foreground leading-relaxed custom-scrollbar selection:bg-primary/30"
-                                value={editingNote.content !== undefined ? editingNote.content : activeNote.content}
-                                onChange={(e) => setEditingNote(prev => ({ ...prev, content: e.target.value }))}
-                                placeholder="Start writing..."
-                                spellCheck={false}
-                            />
-
-                            <div className="text-xs text-muted-foreground mt-4 flex justify-between items-center h-6">
-                                <span>Last edited {format(new Date(activeNote.updatedAt), 'MMMM d, yyyy h:mm a')}</span>
-                                {isSaving ? (
-                                    <span className="text-yellow-500 flex items-center gap-2">
-                                        <Loader2 className="h-3 w-3 animate-spin" /> Saving...
-                                    </span>
-                                ) : (
-                                    <span className="text-green-500 opacity-0 transition-opacity duration-150" style={{ opacity: Object.keys(editingNote).length > 0 ? 0 : 1 }}>
-                                        Saved
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-muted-foreground space-y-4">
-                            <Book className="h-16 w-16 opacity-20" />
-                            <p>Select a note or create a new one</p>
-                        </div>
-                    )}
-                </div>
-
-                {/* Edit Subject Overlay */}
-                {isEditing && (
-                    <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-8 no-drag">
-                        <div className="bg-card border border-border p-8 rounded-2xl w-full max-w-md shadow-2xl space-y-6 animate-in zoom-in-95 duration-150">
-                            <h3 className="text-xl font-bold flex items-center gap-2">
-                                <Edit2 className="h-5 w-5 text-primary" /> Edit Book Details
-                            </h3>
-
-                            <div className="space-y-2">
-                                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Book Title</label>
-                                <Input
-                                    value={editTitle}
-                                    onChange={(e) => setEditTitle(e.target.value)}
-                                    className="bg-muted/50 border-border text-lg font-bold"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Spine Color</label>
-                                <div className="grid grid-cols-8 gap-2">
-                                    {COLORS.map((c) => (
-                                        <button
-                                            key={c}
-                                            onClick={() => setEditColor(c)}
-                                            className={cn(
-                                                "w-8 h-8 rounded-full border-2 transition-all hover:scale-110",
-                                                editColor === c ? "border-foreground dark:border-white shadow-sm scale-110" : "border-transparent opacity-70 hover:opacity-100"
-                                            )}
-                                            style={{ backgroundColor: c }}
-                                        />
-                                    ))}
-                                    <div className="relative w-8 h-8 rounded-full overflow-hidden border border-border hover:border-foreground transition-colors group/picker">
-                                        <input
-                                            type="color"
-                                            value={editColor}
-                                            onChange={(e) => setEditColor(e.target.value)}
-                                            className="absolute inset-0 w-[150%] h-[150%] -top-[25%] -left-[25%] cursor-pointer p-0 border-0 opacity-0"
-                                        />
-                                        <div
-                                            className="absolute inset-0 flex items-center justify-center pointer-events-none group-hover/picker:scale-110 transition-transform"
-                                            style={{ backgroundColor: editColor }}
-                                        >
-                                            <Pipette className="h-4 w-4 text-white mix-blend-difference" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-end gap-3 pt-4 border-t border-border/50">
-                                <Button variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>
-                                <Button onClick={handleSaveChanges} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                                    <Check className="h-4 w-4 mr-2" /> Save Changes
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                <NoteEditor
+                    activeNote={activeNote}
+                    editingNote={editingNote}
+                    isSaving={isSaving}
+                    onEditingNoteChange={setEditingNote}
+                    onClose={onClose}
+                />
             </div>
         </motion.div>
     );
 };
+
+// --- Main NotesMode Component ---
 
 export const NotesMode = () => {
     const isNotesMode = useStore(s => s.isNotesMode);
@@ -471,18 +224,6 @@ export const NotesMode = () => {
 
 
     const currentSubject = useMemo(() => subjects.find(s => s.id === currentSubjectId), [subjects, currentSubjectId]);
-    const TOTAL_SPINES = 300;
-    const allSpines = useMemo(() => Array.from({ length: TOTAL_SPINES }), []);
-
-    // Create a map for faster subject lookup
-    const subjectMap = useMemo(() => {
-        const map = new Map<number, Subject>();
-        subjects.forEach(s => map.set(s.orderIndex, s));
-        return map;
-    }, [subjects]);
-
-
-
 
     const handleCreateSubject = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -517,10 +258,14 @@ export const NotesMode = () => {
         }
     };
 
+    const handleSearchResultClick = (subjectId: number, noteId: number | undefined) => {
+        openSubject(subjectId, noteId);
+        setGlobalSearch('');
+    };
+
     // Calculate how many libraries we effectively have data for
     const maxOrderIndex = subjects.length > 0 ? Math.max(...subjects.map(s => s.orderIndex)) : 0;
     const dataLibrariesCount = Math.floor(maxOrderIndex / TOTAL_SPINES) + 1;
-    // The total tabs to show is the max of (libraries with data) AND (current library being viewed, e.g. if we just clicked 'New Library')
     const visibleLibrariesCount = Math.max(dataLibrariesCount, currentLibraryIndex + 1);
 
     return (
@@ -555,46 +300,21 @@ export const NotesMode = () => {
                                     whileTap={{ scale: 0.98 }}
                                     onClick={toggleNotesMode}
                                 >
-                                    <span>{isMurtazaMode ? "مُرتضیٰ" : `${osPrefix}OS`}</span>
+                                    <span>{isMurtazaMode ? "\u0645\u064F\u0631\u062A\u0636\u06CC\u0670" : `${osPrefix}OS`}</span>
                                     <span className="text-xs font-mono text-muted-foreground opacity-50 flex items-center gap-1.5 ml-1">
                                         <Book className="h-3 w-3" /> Notes
                                     </span>
                                 </motion.h1>
                             </div>
 
-                            {/* Center Capsule - Search (Mirroring Prayer Capsule layout style) */}
+                            {/* Center Capsule - Search */}
                             <div className="flex-[2] flex justify-center w-full max-w-md mx-4 no-drag">
-                                <div className="relative w-full bg-secondary/50 rounded-full border border-border/50 backdrop-blur-xl shadow-lg shadow-black/5 flex items-center px-4 py-1.5 transition-all">
-                                    <Search className="h-4 w-4 text-muted-foreground mr-2 shrink-0" />
-                                    <Input
-                                        className="w-full bg-transparent border-none shadow-none h-7 px-0 text-sm text-foreground focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground"
-                                        placeholder="Search across all notebooks..."
-                                        value={globalSearch}
-                                        onChange={(e) => setGlobalSearch(e.target.value)}
-                                    />
-                                    {/* Search Results Dropdown */}
-                                    {globalSearch && searchResults.length > 0 && (
-                                        <div className="absolute top-full left-0 right-0 mt-3 bg-popover border border-border rounded-2xl shadow-2xl p-2 max-h-96 overflow-y-auto z-50">
-                                            {searchResults.map(note => (
-                                                <div
-                                                    key={note.id}
-                                                    className="p-3 hover:bg-accent rounded-xl cursor-pointer flex flex-col gap-1 border-b border-border/50 last:border-0 transition-colors"
-                                                    onClick={() => {
-                                                        openSubject(note.subjectId, note.id);
-                                                        setGlobalSearch('');
-                                                    }}
-                                                >
-                                                    <div className="flex justify-between">
-                                                        <span className="font-medium text-primary text-[10px] uppercase tracking-wider">{note.subjectTitle}</span>
-                                                        <span className="text-[10px] text-muted-foreground font-medium">{format(new Date(note.updatedAt), 'MMM d')}</span>
-                                                    </div>
-                                                    <div className="font-bold text-sm text-foreground">{note.title}</div>
-                                                    <div className="text-xs text-muted-foreground line-clamp-1">{note.content}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
+                                <NotesSearch
+                                    globalSearch={globalSearch}
+                                    onGlobalSearchChange={setGlobalSearch}
+                                    searchResults={searchResults}
+                                    onResultClick={handleSearchResultClick}
+                                />
                             </div>
 
                             <div className="flex items-center gap-4 no-drag justify-end flex-1 min-w-0">
@@ -626,46 +346,16 @@ export const NotesMode = () => {
                             </div>
                         )}
 
-                        <div className="grid grid-cols-[repeat(auto-fill,minmax(60px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(80px,1fr))] gap-x-2 gap-y-12 items-end justify-items-center pb-20 no-drag">
-                            {allSpines.map((_, index) => {
-                                const libraryOffset = currentLibraryIndex * TOTAL_SPINES;
-                                const subject = subjectMap.get(libraryOffset + index);
-
-                                if (subject) {
-                                    return (
-                                        <BookSpine
-                                            key={subject.id}
-                                            subject={subject}
-                                            onClick={() => openSubject(subject.id!)}
-                                        />
-                                    );
-                                } else {
-                                    return (
-                                        <BookSpine
-                                            key={`placeholder-${index}`}
-                                            isPlaceholder
-                                            onClick={() => {
-                                                setCreatingSubjectIndex(index);
-                                                setIsCreatingSubject(true);
-                                            }}
-                                        />
-                                    );
-                                }
-                            })}
-
-                            {/* New Library Option - Switch to next library view */}
-                            <div className="h-64 w-10 sm:w-12 flex flex-col items-center justify-end">
-                                <button
-                                    className="group flex flex-col items-center gap-2 opacity-50 hover:opacity-100 transition-opacity"
-                                    onClick={() => setCurrentLibraryIndex(currentLibraryIndex + 1)}
-                                >
-                                    <div className="w-8 h-8 rounded-full bg-muted border border-border flex items-center justify-center group-hover:bg-primary/10 group-hover:border-primary/50 transition-colors">
-                                        <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
-                                    </div>
-                                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest writing-vertical-rl">New Library</span>
-                                </button>
-                            </div>
-                        </div>
+                        <BookShelf
+                            subjects={subjects}
+                            currentLibraryIndex={currentLibraryIndex}
+                            onOpenSubject={(id) => openSubject(id)}
+                            onCreateSubjectAt={(index) => {
+                                setCreatingSubjectIndex(index);
+                                setIsCreatingSubject(true);
+                            }}
+                            onNewLibrary={() => setCurrentLibraryIndex(currentLibraryIndex + 1)}
+                        />
 
                         {/* Shelf Decoration */}
                         <div className="fixed inset-0 pointer-events-none -z-10 bg-[linear-gradient(rgba(0,0,0,0.05)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:100%_300px] bg-[position:0_40px]"></div>

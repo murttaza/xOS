@@ -22,6 +22,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { WindowControls } from './components/WindowControls';
 
 import { DevelopmentButton } from './components/DevelopmentButton';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Popover, PopoverContent, PopoverTrigger } from './components/ui/popover';
 import { Input } from './components/ui/input';
 import { Button } from './components/ui/button';
@@ -183,7 +184,10 @@ function App() {
       {isFocusMode ? (
         <FocusMode />
       ) : (
-        <div className={`h-screen relative ${windowSize === 0 ? 'overflow-y-hidden' : 'overflow-y-auto'} overflow-x-hidden bg-background/95 rounded-none border border-border shadow-2xl drag no-scrollbar`}>
+        <div className={`h-screen relative ${windowSize === 0 ? 'overflow-y-hidden' : 'overflow-y-auto'} overflow-x-hidden bg-background/95 rounded-none border border-border shadow-2xl no-scrollbar`}>
+          {/* Drag Bar — always-draggable strip at the top of the window */}
+          <div className="w-full h-2.5 drag shrink-0 fixed top-0 left-0 right-0 z-[100]" />
+
           {/* Ambient Background Gradient */}
           <div className="absolute inset-0 -z-10">
             <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-background/95" />
@@ -326,21 +330,27 @@ function App() {
               {/* Left Column: Stats only */}
               <div className="col-span-12 lg:col-span-3">
                 <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'glass-card'} p-6 transition-all duration-150 no-drag h-full`}>
-                  <StatsBlock />
+                  <ErrorBoundary fallbackTitle="Stats">
+                    <StatsBlock />
+                  </ErrorBoundary>
                 </ReactiveBlock>
               </div>
 
               {/* Middle Column: Task Board */}
               <div className="col-span-12 lg:col-span-6">
                 <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'glass-card'} overflow-hidden h-full transition-all duration-150 no-drag`}>
-                  <TaskBoard />
+                  <ErrorBoundary fallbackTitle="Task Board">
+                    <TaskBoard />
+                  </ErrorBoundary>
                 </ReactiveBlock>
               </div>
 
               {/* Right Column: Calendar */}
               <div className="col-span-12 lg:col-span-3">
                 <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'glass-card'} overflow-hidden flex flex-col h-full transition-all duration-150 no-drag`}>
-                  <CalendarBlock />
+                  <ErrorBoundary fallbackTitle="Calendar">
+                    <CalendarBlock />
+                  </ErrorBoundary>
                 </ReactiveBlock>
               </div>
             </motion.div>
