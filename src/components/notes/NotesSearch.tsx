@@ -27,7 +27,7 @@ export const NotesSearch = ({
             />
             {/* Search Results Dropdown */}
             {globalSearch && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-3 bg-popover border border-border rounded-2xl shadow-2xl p-2 max-h-96 overflow-y-auto z-50">
+                <div className="absolute top-full left-0 right-0 mt-3 bg-popover border border-border rounded-2xl shadow-2xl p-2 max-h-96 overflow-y-auto z-[100]">
                     {searchResults.map(note => (
                         <div
                             key={note.id}

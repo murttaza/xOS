@@ -130,7 +130,7 @@ export function FocusMode() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className={`fixed inset-0 z-50 ${isMurtazaMode ? 'bg-transparent' : 'bg-background'} text-foreground flex flex-col transition-colors duration-150 drag p-12`}
+            className={`fixed inset-0 z-50 ${isMurtazaMode ? 'bg-transparent' : 'bg-background'} text-foreground flex flex-col transition-colors duration-150 drag p-4 sm:p-8 lg:p-12`}
         >
             {/* Top Toolbar */}
             <div className="absolute top-6 left-0 right-0 px-6 flex justify-between items-start z-50 no-drag pointer-events-none">
@@ -161,30 +161,30 @@ export function FocusMode() {
             <div className="flex-1 flex flex-col items-center justify-center px-8 z-10">
                 <div className="text-center space-y-8">
                     <div className="space-y-3">
-                        <h2 className="text-5xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-foreground to-foreground/50 pb-2 max-w-3xl mx-auto">{activeTask.title}</h2>
+                        <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-foreground to-foreground/50 pb-2 max-w-3xl mx-auto">{activeTask.title}</h2>
                         <p className="text-xl text-muted-foreground font-light">{Array.isArray(activeTask.statTarget) ? activeTask.statTarget.join(", ") : activeTask.statTarget} • Difficulty: {activeTask.difficulty}</p>
                     </div>
 
-                    <div className={`text-[15rem] font-bold leading-none tracking-tighter tabular-nums text-primary drop-shadow-[0_0_30px_rgba(var(--primary),0.4)] ${isMurtazaMode ? 'border border-border rounded-3xl px-12 py-4 bg-background/20 backdrop-blur-sm' : ''}`}>
+                    <div className={`text-[4rem] sm:text-[8rem] lg:text-[15rem] font-bold leading-none tracking-tighter tabular-nums text-primary drop-shadow-[0_0_30px_rgba(var(--primary),0.4)] ${isMurtazaMode ? 'border border-border rounded-3xl px-12 py-4 bg-background/20 backdrop-blur-sm' : ''}`}>
                         {formatTime(textDuration)}
                     </div>
 
-                    <div className="flex gap-8 justify-center no-drag">
+                    <div className="flex gap-4 sm:gap-8 justify-center no-drag">
                         <Button
                             variant="outline"
                             size="lg"
-                            className="h-32 w-32 rounded-full border-2 border-primary/20 hover:bg-primary/10 hover:border-primary/50 transition-all duration-150"
+                            className="h-20 w-20 sm:h-24 sm:w-24 lg:h-32 lg:w-32 rounded-full border-2 border-primary/20 hover:bg-primary/10 hover:border-primary/50 transition-all duration-150"
                             onClick={() => toggleTaskTimer(activeTaskId!)}
                         >
-                            <Pause className="h-12 w-12" />
+                            <Pause className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12" />
                         </Button>
                         <Button
                             variant="ghost"
                             size="lg"
-                            className="h-32 w-32 rounded-full hover:bg-destructive/20 hover:text-destructive transition-all duration-150"
+                            className="h-20 w-20 sm:h-24 sm:w-24 lg:h-32 lg:w-32 rounded-full hover:bg-destructive/20 hover:text-destructive transition-all duration-150"
                             onClick={handleStop}
                         >
-                            <Square className="h-12 w-12" />
+                            <Square className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12" />
                         </Button>
                     </div>
                 </div>
@@ -196,7 +196,7 @@ export function FocusMode() {
                 initial={{ opacity: 0, x: -50 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 }}
-                className="absolute left-0 top-24 bottom-24 w-64 no-drag flex items-center bg-gradient-to-r from-background to-transparent z-0"
+                className="hidden lg:flex absolute left-0 top-24 bottom-24 w-64 no-drag items-center bg-gradient-to-r from-background to-transparent z-0"
             >
                 <div className="w-full h-full opacity-60 hover:opacity-100 transition-opacity duration-150">
                     <AudioVisualizer

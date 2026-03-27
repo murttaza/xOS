@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { Button } from './ui/button';
@@ -9,12 +9,12 @@ import { X, Pause, Play, Trash2, RotateCcw, Plus, Edit } from 'lucide-react';
 import { Streak } from '../types';
 import { ModeToggle } from './ModeToggle';
 
-function StreakItem({ streak, updateStreak, deleteStreak }: {
+const StreakItem = memo(function StreakItem({ streak, now, updateStreak, deleteStreak }: {
     streak: Streak;
+    now: Date;
     updateStreak: (streak: Streak) => Promise<void>;
     deleteStreak: (id: number) => Promise<void>;
 }) {
-    const [now, setNow] = useState(new Date());
     const [isEditing, setIsEditing] = useState(false);
     const [editTitle, setEditTitle] = useState(streak.title);
 
@@ -26,15 +26,6 @@ function StreakItem({ streak, updateStreak, deleteStreak }: {
         return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     };
     const [editDate, setEditDate] = useState(toLocalISOString(initialDate));
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            if (!streak.isPaused) {
-                setNow(new Date());
-            }
-        }, 1000);
-        return () => clearInterval(interval);
-    }, [streak.isPaused]);
 
     const handleSave = () => {
         updateStreak({ ...streak, title: editTitle, createdAt: new Date(editDate).toISOString() });
@@ -130,7 +121,7 @@ function StreakItem({ streak, updateStreak, deleteStreak }: {
             )}
         </motion.div>
     );
-}
+});
 
 export function YearMode() {
     const isYearMode = useStore(state => state.isYearMode);
@@ -143,6 +134,15 @@ export function YearMode() {
 
     const [viewState, setViewState] = useState<'days' | 'weeks'>('days');
     const [newStreakTitle, setNewStreakTitle] = useState('');
+    const [now, setNow] = useState(new Date());
+
+    // Single timer for all streaks — only runs when YearMode is visible and at least one streak is active
+    const hasActiveStreaks = streaks?.some(s => !s.isPaused) ?? false;
+    useEffect(() => {
+        if (!isYearMode || !hasActiveStreaks) return;
+        const interval = setInterval(() => setNow(new Date()), 1000);
+        return () => clearInterval(interval);
+    }, [isYearMode, hasActiveStreaks]);
 
     useEffect(() => {
         if (isYearMode) {
@@ -177,9 +177,9 @@ export function YearMode() {
     };
 
     // Date calculations strictly bound to local timezone
-    const now = new Date();
+    const today = new Date();
     // Get the exact purely-local string representation "YYYY-MM-DD" limit scope
-    const todayStr = getLocalDateString(now);
+    const todayStr = getLocalDateString(today);
     const [localY, localM, localD] = todayStr.split('-').map(Number);
 
     const isLeapYear = (localY % 4 === 0 && localY % 100 !== 0) || (localY % 400 === 0);
@@ -208,7 +208,7 @@ export function YearMode() {
                     transition={{ duration: 0.3, ease: 'easeOut' }}
                     className="fixed inset-0 z-[100] bg-background flex overflow-y-auto overflow-x-hidden no-scrollbar no-drag"
                 >
-                    <div className="fixed top-6 right-6 z-50 flex items-center gap-2">
+                    <div className="fixed top-3 right-3 sm:top-6 sm:right-6 z-50 flex items-center gap-2">
                         <ModeToggle />
                         <Button
                             variant="ghost"
@@ -222,11 +222,11 @@ export function YearMode() {
 
                     <div className="flex flex-col lg:flex-row w-full min-h-full p-4 lg:p-8 gap-4 lg:gap-8 pb-32 lg:pb-8">
                         {/* Left Column - Dots Grid */}
-                        <div className="group w-full lg:w-1/2 lg:h-full min-h-[500px] flex flex-col items-center justify-center p-4 lg:p-8 lg:border-r border-b lg:border-b-0 border-border/50 relative transition-colors duration-150 hover:bg-muted/10">
+                        <div className="group w-full lg:w-1/2 lg:h-full min-h-0 lg:min-h-[500px] flex flex-col items-center justify-center p-4 lg:p-8 lg:border-r border-b lg:border-b-0 border-border/50 relative transition-colors duration-150 hover:bg-muted/10">
                             {/* Subtle Hover Glow */}
                             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none bg-[radial-gradient(ellipse_at_center,hsl(var(--foreground)/0.03)_0%,transparent_60%)]" />
 
-                            <div className="absolute top-8 left-8 flex items-center gap-4 z-50 no-drag">
+                            <div className="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-4 z-50 no-drag">
                                 <Button
                                     variant={viewState === 'days' ? "default" : "outline"}
                                     size="sm"
@@ -246,8 +246,8 @@ export function YearMode() {
                             </div>
 
                             <div className="w-full max-w-2xl flex flex-col items-center max-h-full min-h-0">
-                                <div className="text-center mb-12 shrink-0">
-                                    <h1 className="text-5xl font-black mb-2 tabular-nums tracking-tighter text-foreground">
+                                <div className="text-center mt-16 sm:mt-0 mb-8 sm:mb-12 shrink-0">
+                                    <h1 className="text-4xl sm:text-5xl font-black mb-2 tabular-nums tracking-tighter text-foreground">
                                         {viewState === 'days' ? daysLeft : weeksInYear - weeksPassed}
                                     </h1>
                                     <p className="text-muted-foreground uppercase tracking-widest text-sm font-semibold">
@@ -280,23 +280,24 @@ export function YearMode() {
                         </div>
 
                         {/* Right Column - Streaks Tracker */}
-                        <div className="group w-full lg:w-1/2 lg:h-full min-h-[500px] flex flex-col justify-start lg:justify-center items-center p-4 lg:p-8 relative transition-colors duration-150 hover:bg-muted/10">
+                        <div className="group w-full lg:w-1/2 lg:h-full min-h-0 lg:min-h-[500px] flex flex-col justify-start lg:justify-center items-center p-4 lg:p-8 relative transition-colors duration-150 hover:bg-muted/10">
                             {/* Subtle Hover Glow */}
                             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none bg-[radial-gradient(ellipse_at_center,hsl(var(--foreground)/0.03)_0%,transparent_60%)]" />
 
                             <div className="w-full max-w-2xl flex flex-col max-h-full min-h-0 relative z-10">
-                                <div className="flex justify-end mb-8 w-full h-[52px] shrink-0">
-                                    <form onSubmit={handleAddStreak} className="group flex items-center">
-                                        <div className="w-0 opacity-0 group-hover:w-[400px] focus-within:w-[400px] group-hover:opacity-100 focus-within:opacity-100 transition-all duration-150 ease-out overflow-hidden pr-2">
+                                <div className="flex justify-end mb-8 w-full shrink-0">
+                                    <form onSubmit={handleAddStreak} className="group flex items-center w-full sm:w-auto">
+                                        {/* Mobile: always visible input */}
+                                        <div className="flex-1 sm:w-0 sm:opacity-0 sm:group-hover:w-[400px] sm:focus-within:w-[400px] sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-all duration-150 ease-out overflow-hidden pr-2">
                                             <Input
                                                 placeholder="What habit do you want to track?"
                                                 value={newStreakTitle}
                                                 onChange={(e) => setNewStreakTitle(e.target.value)}
-                                                className="bg-muted/50 border-border text-lg py-6 focus-visible:ring-1 focus-visible:ring-ring/30 rounded-xl w-full min-w-[300px]"
+                                                className="bg-muted/50 border-border text-base sm:text-lg py-4 sm:py-6 focus-visible:ring-1 focus-visible:ring-ring/30 rounded-xl w-full sm:min-w-[300px]"
                                             />
                                         </div>
-                                        <Button type="submit" variant="ghost" size="icon" className="h-[52px] w-[52px] shrink-0 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors duration-150">
-                                            <Plus className="h-6 w-6" />
+                                        <Button type="submit" variant="ghost" size="icon" className="h-[44px] w-[44px] sm:h-[52px] sm:w-[52px] shrink-0 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors duration-150">
+                                            <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
                                         </Button>
                                     </form>
                                 </div>
@@ -307,6 +308,7 @@ export function YearMode() {
                                             <StreakItem
                                                 key={streak.id}
                                                 streak={streak}
+                                                now={now}
                                                 updateStreak={updateStreak}
                                                 deleteStreak={deleteStreak}
                                             />

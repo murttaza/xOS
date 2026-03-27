@@ -27,7 +27,7 @@ export function HeaderPrayers() {
                         whileTap={{ scale: 0.95 }}
                         onClick={() => togglePrayer(prayer)}
                         className={cn(
-                            "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-150",
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors duration-75",
                             isCompleted
                                 ? "bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 dark:from-primary/20 dark:to-primary/30 text-emerald-600 dark:text-primary hover:from-emerald-500/30 hover:to-emerald-600/30 dark:hover:from-primary/30 dark:hover:to-primary/40 shadow-[0_0_15px_-3px_hsl(var(--primary)/0.3)]"
                                 : "text-muted-foreground hover:text-foreground hover:bg-secondary"

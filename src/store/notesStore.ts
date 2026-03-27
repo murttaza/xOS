@@ -76,11 +76,11 @@ export const createNotesSlice: StateCreator<AppState, [], [], NotesSlice> = (set
     },
 
     createNote: async (note) => {
-        const result = await api.createNote(note) as { lastInsertRowid: number };
+        const result = await api.createNote(note);
         if (get().currentSubjectId === note.subjectId) {
             await get().fetchNotes(note.subjectId);
         }
-        return result.lastInsertRowid;
+        return result.id;
     },
 
     updateNote: async (note) => {

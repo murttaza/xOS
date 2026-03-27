@@ -48,7 +48,7 @@ export function ActiveTaskTimer() {
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
                             layout
-                            className="pointer-events-auto w-auto min-w-[500px]"
+                            className="pointer-events-auto w-full sm:w-auto sm:min-w-[500px] px-3 sm:px-0"
                         >
                             <div
                                 className="glass border border-border shadow-2xl shadow-black/20 backdrop-blur-2xl cursor-pointer group hover:border-primary/40 dark:hover:border-primary/30 transition-all duration-150 rounded-2xl overflow-hidden"
@@ -69,7 +69,7 @@ export function ActiveTaskTimer() {
                                         </h3>
                                     </div>
 
-                                    <div className="text-4xl font-bold tracking-tighter tabular-nums text-primary drop-shadow-[0_0_15px_hsl(var(--primary)/0.5)]">
+                                    <div className="text-2xl sm:text-4xl font-bold tracking-tighter tabular-nums text-primary drop-shadow-[0_0_15px_hsl(var(--primary)/0.5)]">
                                         {formatTime(duration)}
                                     </div>
 

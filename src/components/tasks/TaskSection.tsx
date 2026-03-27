@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Task } from "@/types";
 import { TaskItem } from "@/components/TaskItem";
 import { AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
@@ -15,7 +16,7 @@ interface TaskSectionProps {
     className?: string;
 }
 
-export function TaskSection({
+export const TaskSection = memo(function TaskSection({
     value,
     label,
     tasks,
@@ -55,4 +56,4 @@ export function TaskSection({
             </AccordionContent>
         </AccordionItem>
     );
-}
+});

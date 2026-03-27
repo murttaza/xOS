@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { Subject, Note } from '../types';
-import { Book, Trash2 } from 'lucide-react';
+import { Book, Trash2, ArrowLeft } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { cn } from '../lib/utils';
@@ -153,9 +153,18 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
             onClick={onClose}
         >
             <div
-                className="pointer-events-auto bg-card w-full max-w-6xl h-full max-h-[800px] rounded-r-2xl rounded-l-md shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col md:flex-row overflow-hidden border border-border/50 relative no-drag"
+                className="pointer-events-auto bg-card w-full max-w-6xl h-full max-h-[100dvh] md:max-h-[800px] rounded-none md:rounded-r-2xl md:rounded-l-md shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col md:flex-row overflow-hidden border border-border/50 relative no-drag"
                 onClick={(e) => e.stopPropagation()}
             >
+                {/* Mobile close button */}
+                <button
+                    onClick={onClose}
+                    className="md:hidden flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground hover:text-foreground border-b border-border shrink-0"
+                >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Library
+                </button>
+
                 {/* Notes List / Sidebar */}
                 <NotesList
                     subject={subject}
@@ -174,13 +183,25 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
                 />
 
                 {/* Note Editor Area */}
-                <NoteEditor
-                    activeNote={activeNote}
-                    editingNote={editingNote}
-                    isSaving={isSaving}
-                    onEditingNoteChange={setEditingNote}
-                    onClose={onClose}
-                />
+                <div className="flex-1 flex flex-col min-h-0">
+                    {/* Mobile back to notes list */}
+                    {selectedNoteId && (
+                        <button
+                            onClick={() => setSelectedNoteId(null)}
+                            className="md:hidden flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground border-b border-border shrink-0"
+                        >
+                            <ArrowLeft className="h-4 w-4" />
+                            Back to Notes
+                        </button>
+                    )}
+                    <NoteEditor
+                        activeNote={activeNote}
+                        editingNote={editingNote}
+                        isSaving={isSaving}
+                        onEditingNoteChange={setEditingNote}
+                        onClose={onClose}
+                    />
+                </div>
             </div>
         </motion.div>
     );
@@ -288,9 +309,9 @@ export const NotesMode = () => {
                         </div>
                     )}
                     {/* Top Bar - Drag Area */}
-                    <div className="px-6 pt-4 pb-2 bg-transparent z-20">
+                    <div className="px-3 sm:px-6 pt-3 sm:pt-4 pb-1 sm:pb-2 bg-transparent z-20">
                         <header className={cn(
-                            "rounded-2xl px-6 py-4 flex justify-between items-center backdrop-blur-xl drag relative transition-all",
+                            "rounded-2xl px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center backdrop-blur-xl drag relative transition-all",
                             isMurtazaMode ? 'bg-background/90 border border-border shadow-lg shadow-black/10' : 'glass'
                         )}>
                             <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -307,8 +328,8 @@ export const NotesMode = () => {
                                 </motion.h1>
                             </div>
 
-                            {/* Center Capsule - Search */}
-                            <div className="flex-[2] flex justify-center w-full max-w-md mx-4 no-drag">
+                            {/* Center Capsule - Search (hidden on mobile, shown md+) */}
+                            <div className="hidden md:flex flex-[2] justify-center w-full max-w-md mx-4 no-drag relative z-[60]">
                                 <NotesSearch
                                     globalSearch={globalSearch}
                                     onGlobalSearchChange={setGlobalSearch}
@@ -324,8 +345,18 @@ export const NotesMode = () => {
                         </header>
                     </div>
 
+                    {/* Mobile Search (visible below md) */}
+                    <div className="md:hidden px-4 pb-2 no-drag relative z-[60]">
+                        <NotesSearch
+                            globalSearch={globalSearch}
+                            onGlobalSearchChange={setGlobalSearch}
+                            searchResults={searchResults}
+                            onResultClick={handleSearchResultClick}
+                        />
+                    </div>
+
                     {/* Bookshelf View (Scrollable) */}
-                    <div className="flex-1 overflow-y-auto p-12">
+                    <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-12">
 
                         {isCreatingSubject && (
                             <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center no-drag">

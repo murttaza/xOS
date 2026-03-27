@@ -17,7 +17,7 @@ export function RepeatingTasksPage({
     onToggleActive,
 }: RepeatingTasksPageProps) {
     return (
-        <div className="w-full min-h-full snap-center flex flex-col">
+        <div className="w-full lg:min-h-full lg:snap-center flex flex-col">
             <ScrollArea className="flex-1 px-4">
                 <div className="space-y-2">
                     {repeatingTasks.length === 0 && (

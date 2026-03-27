@@ -6,12 +6,14 @@ export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs))
 }
 
-export function safeJSONParse<T>(jsonString: string | null | undefined, fallback: T): T {
-    if (!jsonString) return fallback;
+export function safeJSONParse<T>(value: string | T | null | undefined, fallback: T): T {
+    if (value == null) return fallback;
+    if (typeof value !== 'string') return value;
+    if (!value) return fallback;
     try {
-        return JSON.parse(jsonString);
+        return JSON.parse(value);
     } catch (e) {
-        console.error("Failed to parse JSON:", jsonString, e);
+        console.error("Failed to parse JSON:", value, e);
         return fallback;
     }
 }

@@ -7,6 +7,7 @@ import { ActiveTaskTimer } from './components/ActiveTaskTimer';
 import { useStore } from './store';
 import { getLocalDateString } from './lib/utils';
 import { useWindowFocus } from './hooks/useWindowFocus';
+import { isElectron } from './lib/platform';
 import { useShallow } from 'zustand/react/shallow';
 
 import { ThemeProvider } from './components/ThemeProvider';
@@ -28,7 +29,7 @@ import { Input } from './components/ui/input';
 import { Button } from './components/ui/button';
 import { Switch } from './components/ui/switch';
 import { Label } from './components/ui/label';
-import { Settings2, HelpCircle, Download } from 'lucide-react';
+import { Settings2, HelpCircle, Download, BookOpen, CalendarDays } from 'lucide-react';
 import { api } from './api';
 
 function App() {
@@ -61,7 +62,7 @@ function App() {
   const dailyLog = useStore(state => state.dailyLog);
   const isTransitioning = useStore(state => state.isTransitioning);
 
-  const [windowSize, setWindowSize] = useState<number>(0);
+  const [_windowSize, setWindowSize] = useState<number>(0);
 
   const APP_VERSION = __APP_VERSION__ || '4.0.1';
 
@@ -96,19 +97,22 @@ function App() {
     return () => clearInterval(interval);
   }, [dailyLog, fetchDailyLog, fetchStats, checkMissedTasks, isWindowFocused]);
 
-  // Handle Overlay Mode Transition
+  // Handle Overlay Mode Transition (Electron only)
   useEffect(() => {
-    if (isMurtazaMode) {
-      window.ipcRenderer.send('set-overlay-mode', true);
-      document.body.style.backgroundColor = 'transparent';
-    } else {
-      window.ipcRenderer.send('set-overlay-mode', false);
-      document.body.style.backgroundColor = '';
+    if (isElectron) {
+      if (isMurtazaMode) {
+        window.ipcRenderer.send('set-overlay-mode', true);
+        document.body.style.backgroundColor = 'transparent';
+      } else {
+        window.ipcRenderer.send('set-overlay-mode', false);
+        document.body.style.backgroundColor = '';
+      }
     }
   }, [isMurtazaMode]);
 
-  // Handle Notes and Year Mode Shortcuts
+  // Handle Notes and Year Mode Shortcuts (Electron global shortcuts)
   useEffect(() => {
+    if (!isElectron) return;
     const removeListener = window.ipcRenderer.on('toggle-notes-mode', () => {
       toggleNotesMode();
     });
@@ -122,6 +126,7 @@ function App() {
   }, [toggleNotesMode, toggleYearMode]);
 
   useEffect(() => {
+    if (!isElectron) return;
     const removeSizeListener = window.ipcRenderer.on('window-size-state', (_, size: unknown) => {
       setWindowSize(size as number);
     });
@@ -149,7 +154,7 @@ function App() {
 
 
 
-  if (isMurtazaMode) {
+  if (isMurtazaMode && isElectron) {
     return (
       <ThemeProvider defaultTheme="dark" storageKey="mos-theme">
         <FocusOverlay />
@@ -184,9 +189,9 @@ function App() {
       {isFocusMode ? (
         <FocusMode />
       ) : (
-        <div className={`h-screen relative ${windowSize === 0 ? 'overflow-y-hidden' : 'overflow-y-auto'} overflow-x-hidden bg-background/95 rounded-none border border-border shadow-2xl no-scrollbar`}>
-          {/* Drag Bar — always-draggable strip at the top of the window */}
-          <div className="w-full h-2.5 drag shrink-0 fixed top-0 left-0 right-0 z-[100]" />
+        <div className={`h-screen relative overflow-y-auto lg:overflow-hidden bg-background/95 rounded-none border border-border shadow-2xl no-scrollbar`}>
+          {/* Drag Bar — Electron only */}
+          {isElectron && <div className="w-full h-2.5 drag shrink-0 fixed top-0 left-0 right-0 z-[100]" />}
 
           {/* Ambient Background Gradient */}
           <div className="absolute inset-0 -z-10">
@@ -195,21 +200,21 @@ function App() {
             <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-accent/5 dark:bg-accent/10 rounded-full blur-[50px] translate-y-1/2 -translate-x-1/4" />
           </div>
 
-          <div className={`relative max-w-screen-2xl mx-auto w-full min-h-screen flex flex-col ${isMurtazaMode ? 'bg-transparent' : 'bg-transparent'} text-foreground p-6 gap-8 font-sans selection:bg-primary/20 selection:text-primary transition-colors duration-150`}>
+          <div className={`relative max-w-screen-2xl mx-auto w-full h-full flex flex-col ${isMurtazaMode ? 'bg-transparent' : 'bg-transparent'} text-foreground p-3 sm:p-4 lg:p-6 gap-2 sm:gap-4 lg:gap-8 font-sans selection:bg-primary/20 selection:text-primary transition-colors duration-150 overflow-y-auto lg:overflow-hidden`}>
             {/* Header */}
             <motion.header
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-              onDoubleClick={() => window.ipcRenderer.send('maximize-window')}
-              className={`sticky top-4 z-50 rounded-2xl px-6 py-4 flex justify-between items-center backdrop-blur-xl ${isMurtazaMode ? 'bg-background/90 border border-border shadow-lg shadow-black/10' : 'glass'} drag`}
+              onDoubleClick={() => isElectron && window.ipcRenderer.send('maximize-window')}
+              className={`sticky top-4 z-50 rounded-2xl px-3 sm:px-4 lg:px-6 py-3 lg:py-4 flex justify-between items-center backdrop-blur-xl ${isMurtazaMode ? 'bg-background/90 border border-border shadow-lg shadow-black/10' : 'glass'} drag`}
             >
               <div className="flex items-center gap-2">
                 <motion.h1
                   className="text-2xl font-bold tracking-tight text-primary dark:text-primary transition-all duration-150 hover:drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)] cursor-pointer no-drag flex items-baseline gap-2"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => setIsMurtazaMode(!isMurtazaMode)}
+                  onClick={() => isElectron && setIsMurtazaMode(!isMurtazaMode)}
                 >
                   <span>{isMurtazaMode ? "مُرتضیٰ" : `${osPrefix}OS`}</span>
                   <span className="text-xs font-mono text-muted-foreground opacity-50">v{APP_VERSION}</span>
@@ -315,6 +320,28 @@ function App() {
                   </PopoverContent>
                 </Popover>
 
+                {!isElectron && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 rounded-full opacity-50 hover:opacity-100 transition-opacity"
+                      onClick={() => toggleNotesMode()}
+                      title="Notes Mode"
+                    >
+                      <BookOpen className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 rounded-full opacity-50 hover:opacity-100 transition-opacity"
+                      onClick={() => toggleYearMode()}
+                      title="Year Mode"
+                    >
+                      <CalendarDays className="h-3.5 w-3.5" />
+                    </Button>
+                  </>
+                )}
                 <ModeToggle />
                 <WindowControls />
               </div>
@@ -325,11 +352,11 @@ function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="grid grid-cols-12 gap-6 flex-1 min-h-[600px]"
+              className="grid grid-cols-12 gap-0 lg:gap-6 lg:flex-1 lg:min-h-0 lg:overflow-hidden"
             >
               {/* Left Column: Stats only */}
-              <div className="col-span-12 lg:col-span-3">
-                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'glass-card'} p-6 transition-all duration-150 no-drag h-full`}>
+              <div className="col-span-12 lg:col-span-3 lg:overflow-hidden">
+                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'border-b border-border/30 lg:border-b-0 lg:glass-card'} p-0 lg:p-6 transition-all duration-150 no-drag lg:h-full overflow-y-auto no-scrollbar`}>
                   <ErrorBoundary fallbackTitle="Stats">
                     <StatsBlock />
                   </ErrorBoundary>
@@ -337,8 +364,8 @@ function App() {
               </div>
 
               {/* Middle Column: Task Board */}
-              <div className="col-span-12 lg:col-span-6">
-                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'glass-card'} overflow-hidden h-full transition-all duration-150 no-drag`}>
+              <div className="col-span-12 lg:col-span-6 lg:overflow-hidden">
+                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'border-b border-border/30 lg:border-b-0 lg:glass-card'} lg:overflow-hidden lg:h-full transition-all duration-150 no-drag`}>
                   <ErrorBoundary fallbackTitle="Task Board">
                     <TaskBoard />
                   </ErrorBoundary>
@@ -346,8 +373,8 @@ function App() {
               </div>
 
               {/* Right Column: Calendar */}
-              <div className="col-span-12 lg:col-span-3">
-                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'glass-card'} overflow-hidden flex flex-col h-full transition-all duration-150 no-drag`}>
+              <div className="col-span-12 lg:col-span-3 lg:overflow-hidden">
+                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'border-b border-border/30 lg:border-b-0 lg:glass-card'} lg:overflow-hidden flex flex-col lg:h-full transition-all duration-150 no-drag`}>
                   <ErrorBoundary fallbackTitle="Calendar">
                     <CalendarBlock />
                   </ErrorBoundary>

@@ -30,6 +30,7 @@ export function FocusOverlay() {
     const availableTasks = useMemo(() => tasks.filter(t => !t.isComplete), [tasks]);
 
     useEffect(() => {
+        if (!window.ipcRenderer) return;
         if (isHovered) {
             window.ipcRenderer.send('set-ignore-mouse-events', false);
         } else {
@@ -185,7 +186,7 @@ export function FocusOverlay() {
                                                             layout
                                                             key={task.id}
                                                             onClick={() => { if (task.id) { toggleTaskTimer(task.id); setIsHovered(false); } }}
-                                                            className="relative text-left px-3 py-2.5 rounded-xl hover:bg-white/10 text-sm text-white/90 transition-all border border-transparent hover:border-white/5 w-full flex items-center gap-3 group overflow-hidden"
+                                                            className="relative text-left px-3 py-2.5 rounded-xl hover:bg-white/10 text-sm text-white/90 transition-colors border border-transparent hover:border-white/5 w-full flex items-center gap-3 group overflow-hidden"
                                                             whileHover={{ scale: 1.02 }}
                                                             whileTap={{ scale: 0.98 }}
                                                         >

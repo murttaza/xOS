@@ -16,16 +16,16 @@ interface RepeatingTaskItemProps {
 
 export const RepeatingTaskItem = memo(function RepeatingTaskItem({ task, onEdit, onDelete, onToggleActive }: RepeatingTaskItemProps) {
     const tasks = useStore(state => state.tasks);
+    const relatedTasks = useMemo(() => tasks.filter(t => t.repeatingTaskId === task.id), [tasks, task.id]);
     const today = getLocalDateString();
     const todayDate = useMemo(() => new Date(), []);
     const todayDayOfWeek = todayDate.getDay(); // 0 = Sunday, 6 = Saturday
 
     // Check if done today
-    const isDoneToday = useMemo(() => tasks.some(t =>
-        t.repeatingTaskId === task.id &&
+    const isDoneToday = useMemo(() => relatedTasks.some(t =>
         t.dueDate === today &&
         t.isComplete === 1
-    ), [tasks, task.id, today]);
+    ), [relatedTasks, today]);
 
     // For weekly tasks: check if all remaining scheduled days this week are completed
     const isWeeklyDoneForRemainingDays = useMemo(() => {
@@ -46,13 +46,12 @@ export const RepeatingTaskItem = memo(function RepeatingTaskItem({ task, onEdit,
         // Check if all remaining scheduled days are completed
         return remainingScheduledDays.every(dayIndex => {
             const dateStr = format(addDays(start, dayIndex), "yyyy-MM-dd");
-            return tasks.some(t =>
-                t.repeatingTaskId === task.id &&
+            return relatedTasks.some(t =>
                 t.dueDate === dateStr &&
                 t.isComplete === 1
             );
         });
-    }, [task, tasks, todayDate, todayDayOfWeek]);
+    }, [task, relatedTasks, todayDate, todayDayOfWeek]);
 
     const difficultyColor = {
         1: "bg-emerald-500",
@@ -86,8 +85,7 @@ export const RepeatingTaskItem = memo(function RepeatingTaskItem({ task, onEdit,
                 {weekDays.map((date, idx) => {
                     const dateStr = format(date, "yyyy-MM-dd");
                     const isScheduled = (task.repeatDays || []).includes(idx);
-                    const isCompleted = tasks.some(t =>
-                        t.repeatingTaskId === task.id &&
+                    const isCompleted = relatedTasks.some(t =>
                         t.dueDate === dateStr &&
                         t.isComplete === 1
                     );
@@ -124,7 +122,7 @@ export const RepeatingTaskItem = memo(function RepeatingTaskItem({ task, onEdit,
     return (
         <div className="flex flex-col gap-1">
             <div className={cn(
-                "group relative flex items-center justify-between p-3 rounded-xl transition-all duration-150 border border-transparent hover:border-border cursor-pointer",
+                "group relative flex items-center justify-between p-3 rounded-xl transition-colors border border-transparent hover:border-border cursor-pointer",
                 task.isActive ? "bg-secondary/50 hover:bg-secondary" : "bg-secondary/20 hover:bg-secondary/30 opacity-70",
                 (isDoneToday && task.repeatType === 'daily') && "opacity-50 grayscale-[0.5]",
                 (isWeeklyDoneForRemainingDays && task.repeatType === 'weekly') && "opacity-50 grayscale-[0.5]"

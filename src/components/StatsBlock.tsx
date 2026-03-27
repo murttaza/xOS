@@ -4,7 +4,7 @@ import { useStore } from "@/store";
 import { Stat } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { calculateXPNeeded } from "@/lib/utils";
-import { Plus, Trash2, Edit2 } from "lucide-react";
+import { Plus, Trash2, Edit2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -21,6 +21,7 @@ export function StatsBlock() {
     const addStat = useStore(state => state.addStat);
     const deleteStat = useStore(state => state.deleteStat);
     const renameStat = useStore(state => state.renameStat);
+    const [isMobileExpanded, setIsMobileExpanded] = useState(false);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingStat, setEditingStat] = useState<Stat | null>(null);
     const [newStatName, setNewStatName] = useState("");
@@ -104,18 +105,22 @@ export function StatsBlock() {
     };
 
     return (
-        <div className="flex flex-col h-full">
-            <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0 shrink-0">
-                <CardTitle className="text-xl font-bold tracking-tight flex items-center gap-2">
+        <div className="flex flex-col lg:h-full">
+            <CardHeader
+                className="pb-3 flex flex-row items-center justify-between space-y-0 shrink-0 cursor-pointer lg:cursor-default"
+                onClick={() => setIsMobileExpanded(prev => !prev)}
+            >
+                <CardTitle className="text-base lg:text-xl font-bold tracking-tight flex items-center gap-2">
                     <div className="h-2 w-2 rounded-full bg-primary animate-pulse-soft" />
                     Stats
+                    <ChevronDown className={`h-4 w-4 lg:hidden transition-transform ${isMobileExpanded ? 'rotate-180' : ''}`} />
                 </CardTitle>
-                <Button variant="ghost" size="icon" onClick={openAddDialog} className="h-8 w-8 hover:bg-muted rounded-full">
+                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); openAddDialog(); }} className="h-8 w-8 hover:bg-muted rounded-full">
                     <Plus className="h-4 w-4" />
                 </Button>
             </CardHeader>
 
-            <div className="relative px-6 pb-0 group/container flex-1 min-h-0">
+            <div className={`${isMobileExpanded ? 'block' : 'hidden'} lg:block relative px-4 lg:px-6 pb-0 group/container flex-1 min-h-0`}>
                 {/* Scroll Controls - Visible on hover if needed, or just indicators */}
                 {stats.length > 3 && (
                     <>

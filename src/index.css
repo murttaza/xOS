@@ -219,7 +219,10 @@
         background: transparent;
         scroll-behavior: smooth;
         overflow: hidden;
-        /* Prevent global scrollbar flash */
+    }
+    html.web {
+        overflow: auto;
+        overflow-x: hidden;
     }
 
     body {
@@ -227,7 +230,10 @@
         font-feature-settings: "rlig" 1, "calt" 1;
         transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         overflow: hidden;
-        /* Prevent global scrollbar flash */
+    }
+    html.web body {
+        overflow: auto;
+        overflow-x: hidden;
     }
 
     ::-webkit-scrollbar {

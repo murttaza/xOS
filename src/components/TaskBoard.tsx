@@ -3,12 +3,11 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Plus, Eye } from "lucide-react";
+import { Plus, Eye, ChevronDown } from "lucide-react";
 import { useStore } from "@/store";
 import { TaskDialog } from "./TaskDialog";
 import { TaskItem } from "./TaskItem";
 import { Task, RepeatingTask } from "@/types";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Accordion } from "@/components/ui/accordion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RepeatingTaskDialog } from "./RepeatingTaskDialog";
@@ -20,7 +19,7 @@ import { CompletedTasks } from "./tasks/CompletedTasks";
 
 export function TaskBoard() {
     const tasks = useStore(state => state.tasks);
-    const activeTimerIdsString = useStore(state => Object.keys(state.activeTimers).sort().join(','));
+    const activeTimerIdsString = useStore(state => Object.keys(state.activeTimers).join(','));
     const activeTimerIds = useMemo(() => new Set(activeTimerIdsString.split(',').filter(Boolean).map(Number)), [activeTimerIdsString]);
     const repeatingTasks = useStore(state => state.repeatingTasks);
 
@@ -144,6 +143,10 @@ export function TaskBoard() {
         setIsDialogOpen(true);
     }, []);
 
+    const handleUncomplete = useCallback((task: Task) => {
+        updateTask({ ...task, isComplete: 0 });
+    }, [updateTask]);
+
     const { datedTasks, looseTasks, completedTasks } = useMemo(() => {
         const dated: Task[] = [];
         const loose: Task[] = [];
@@ -198,21 +201,30 @@ export function TaskBoard() {
     };
 
     const [isAllTasksOpen, setIsAllTasksOpen] = useState(false);
+    const [isMobileExpanded, setIsMobileExpanded] = useState(true);
 
     const todayStr = getLocalDateString(new Date());
     const completedTodayCount = completedTasks.filter(t => t.completedAt && t.completedAt.startsWith(todayStr)).length;
 
     return (
-        <Card className="h-full flex flex-col border-none shadow-none bg-transparent">
-            <CardHeader className="flex flex-row items-center justify-between px-4 pt-6 pb-4">
+        <Card className="lg:h-full flex flex-col border-none shadow-none bg-transparent">
+            <CardHeader className="flex flex-row items-center justify-between px-3 sm:px-4 pt-4 sm:pt-6 pb-3 sm:pb-4 gap-2">
                 <div
-                    className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity group"
-                    onClick={() => scrollToPage(activePage === 0 ? 1 : 0)}
+                    className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity group min-w-0"
+                    onClick={() => {
+                        // On mobile: toggle collapse. On desktop: switch pages.
+                        if (window.innerWidth < 1024) {
+                            setIsMobileExpanded(prev => !prev);
+                        } else {
+                            scrollToPage(activePage === 0 ? 1 : 0);
+                        }
+                    }}
                 >
-                    <CardTitle className="text-xl font-bold tracking-tight select-none flex items-center gap-3">
-                        {activePage === 0 ? "Tasks" : "Repeating Tasks"}
+                    <CardTitle className="text-lg sm:text-xl font-bold tracking-tight select-none flex items-center gap-2 sm:gap-3">
+                        {activePage === 0 ? "Tasks" : "Repeating"}
+                        <ChevronDown className={`h-4 w-4 lg:hidden transition-transform ${isMobileExpanded ? 'rotate-180' : ''}`} />
                         {activePage === 0 && completedTodayCount > 0 && (
-                            <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full border border-green-500/20 font-medium">
+                            <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full border border-green-500/20 font-medium hidden sm:inline">
                                 {completedTodayCount} done today
                             </span>
                         )}
@@ -222,7 +234,7 @@ export function TaskBoard() {
                         <div className={`h-1.5 w-1.5 rounded-full transition-colors ${activePage === 1 ? "bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-muted-foreground/40"}`} />
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                     {activePage === 0 && (
                         <Button variant="ghost" size="icon" onClick={() => setIsAllTasksOpen(true)} className="h-8 w-8 text-muted-foreground/70 hover:text-foreground hover:bg-muted transition-colors">
                             <Eye className="h-4 w-4" />
@@ -231,26 +243,26 @@ export function TaskBoard() {
                     <Button
                         size="sm"
                         onClick={handleAddClick}
-                        className="group relative overflow-hidden bg-muted/50 text-foreground border border-border hover:border-primary/50 shadow-none transition-all duration-150 hover:scale-105 active:scale-95 px-4 h-9"
+                        className="group relative overflow-hidden bg-muted/50 text-foreground border border-border hover:border-primary/50 shadow-none transition-all duration-150 hover:scale-105 active:scale-95 px-3 sm:px-4 h-8 sm:h-9 text-xs sm:text-sm"
                     >
                         <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-blue-600/80 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-150 ease-in-out" />
                         <span className="relative z-10 flex items-center font-medium">
-                            <Plus className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform duration-150" />
+                            <Plus className="h-4 w-4 mr-1 sm:mr-2 group-hover:rotate-90 transition-transform duration-150" />
                             Add {activePage === 0 ? "Task" : "Repeat"}
                         </span>
                     </Button>
                 </div>
             </CardHeader>
-            <CardContent className="flex-1 px-0 overflow-hidden flex flex-col relative">
+            <CardContent className={`${isMobileExpanded ? 'flex' : 'hidden'} lg:flex flex-1 px-0 overflow-hidden flex-col relative`}>
                 <div
                     ref={scrollContainerRef}
                     onScroll={handleScroll}
-                    className="flex-1 overflow-y-auto snap-y snap-mandatory flex flex-col no-scrollbar"
+                    className="flex-1 overflow-y-auto lg:snap-y lg:snap-mandatory flex flex-col no-scrollbar"
                     style={{ scrollBehavior: 'smooth' }}
                 >
                     {/* Page 1: Task List */}
-                    <div className="w-full min-h-full snap-center flex flex-col">
-                        <ScrollArea className="flex-1 px-4">
+                    <div className="w-full lg:min-h-full lg:snap-center flex flex-col">
+                        <div className="flex-1 overflow-y-auto no-scrollbar px-4">
                             <Accordion type="single" collapsible defaultValue="dated" className="w-full space-y-4">
                                 <TaskSection
                                     value="dated"
@@ -280,10 +292,10 @@ export function TaskBoard() {
                                     completedTasks={completedTasks}
                                     onEdit={handleEditClick}
                                     onDelete={deleteTask}
-                                    onUncomplete={(task) => updateTask({ ...task, isComplete: 0 })}
+                                    onUncomplete={handleUncomplete}
                                 />
                             </Accordion>
-                        </ScrollArea>
+                        </div>
                     </div>
 
                     {/* Page 2: Repeating Tasks */}
@@ -312,7 +324,7 @@ export function TaskBoard() {
 
             {/* View All Tasks Dialog */}
             <Dialog open={isAllTasksOpen} onOpenChange={setIsAllTasksOpen}>
-                <DialogContent className="max-w-4xl h-[80vh] bg-popover/95 backdrop-blur-xl border-border text-foreground flex flex-col p-0 overflow-hidden">
+                <DialogContent className="max-w-4xl h-[95vh] sm:h-[80vh] bg-popover/95 backdrop-blur-xl border-border text-foreground flex flex-col p-0 overflow-hidden">
                     <DialogHeader className="px-6 py-4 border-b border-border">
                         <DialogTitle className="text-xl font-light tracking-wide text-foreground/90">All Tasks</DialogTitle>
                     </DialogHeader>

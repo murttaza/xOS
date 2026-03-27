@@ -1,6 +1,9 @@
+import { memo } from "react";
 import { Task } from "@/types";
 import { TaskItem } from "@/components/TaskItem";
 import { AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+
+const noop = () => { };
 
 interface CompletedTasksProps {
     completedTasks: Task[];
@@ -9,7 +12,7 @@ interface CompletedTasksProps {
     onUncomplete: (task: Task) => void;
 }
 
-export function CompletedTasks({
+export const CompletedTasks = memo(function CompletedTasks({
     completedTasks,
     onEdit,
     onDelete,
@@ -41,7 +44,7 @@ export function CompletedTasks({
                                 task={task}
                                 isActive={false}
                                 isTimerRunning={false}
-                                onToggleTimer={() => { }}
+                                onToggleTimer={noop}
                                 onEdit={onEdit}
                                 onDelete={onDelete}
                                 onComplete={() => onUncomplete(task)}
@@ -52,4 +55,4 @@ export function CompletedTasks({
             </AccordionContent>
         </AccordionItem>
     );
-}
+});

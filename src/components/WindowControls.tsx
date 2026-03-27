@@ -1,6 +1,7 @@
 import { Minus, X, Square, Pin, PanelLeft, Maximize } from "lucide-react";
 import { Button } from "./ui/button";
 import { useState, useEffect, useRef } from "react";
+import { isElectron } from "../lib/platform";
 
 const SIZE_OPTIONS = [
     { state: 0, label: "Normal", sublabel: "Centered", icon: Square },
@@ -9,6 +10,7 @@ const SIZE_OPTIONS = [
 ];
 
 export function WindowControls() {
+    if (!isElectron) return null;
     const [isPinned, setIsPinned] = useState(false);
     const [sizeState, setSizeState] = useState(0);
     const [isSizeHovered, setIsSizeHovered] = useState(false);

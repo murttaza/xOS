@@ -1,9 +1,9 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { CardContent } from "@/components/ui/card";
 
 import { useStore } from "@/store";
 import { startOfMonth, endOfMonth, format, addMonths, subMonths, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isToday } from "date-fns";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn, safeJSONParse } from "@/lib/utils";
@@ -22,8 +22,10 @@ export function CalendarBlock() {
     const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
     const [journalText, setJournalText] = useState("");
     const [windowSize, setWindowSize] = useState(0);
+    const [isMobileExpanded, setIsMobileExpanded] = useState(false);
 
     useEffect(() => {
+        if (!window.ipcRenderer) return;
         const removeListener = window.ipcRenderer.on('window-size-state', (_: unknown, size: number) => {
             setWindowSize(size);
         });
@@ -72,10 +74,10 @@ export function CalendarBlock() {
     const nextMonth = () => setCurrentMonth(prev => addMonths(prev, 1));
     const prevMonth = () => setCurrentMonth(prev => subMonths(prev, 1));
 
-    const getTaskTitle = (taskId: number) => {
+    const getTaskTitle = useCallback((taskId: number) => {
         const task = taskMap.get(taskId);
         return task ? task.title : "Unknown Task";
-    };
+    }, [taskMap]);
 
     const selectedDateStr = format(date, "yyyy-MM-dd");
 
@@ -121,23 +123,27 @@ export function CalendarBlock() {
     }, [sessions, tasks]);
 
     return (
-        <div className="flex flex-col h-full overflow-hidden bg-gradient-to-br from-card to-secondary/10">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 pb-2 shrink-0">
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors" onClick={prevMonth}>
+        <div className="flex flex-col lg:h-full overflow-hidden lg:bg-gradient-to-br lg:from-card lg:to-secondary/10">
+            {/* Header - collapsible on mobile */}
+            <div
+                className="flex items-center justify-between p-4 pb-2 shrink-0 cursor-pointer lg:cursor-default"
+                onClick={() => setIsMobileExpanded(prev => !prev)}
+            >
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors hidden lg:flex" onClick={(e) => { e.stopPropagation(); prevMonth(); }}>
                     <ChevronLeft className="h-4 w-4" />
                 </Button>
 
-                <div className="flex flex-col items-center">
+                <div className="flex items-center gap-2">
                     <span className="text-base font-bold tracking-tight">{format(currentMonth, "MMMM yyyy")}</span>
+                    <ChevronDown className={`h-4 w-4 lg:hidden transition-transform ${isMobileExpanded ? 'rotate-180' : ''}`} />
                 </div>
 
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors" onClick={nextMonth}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors hidden lg:flex" onClick={(e) => { e.stopPropagation(); nextMonth(); }}>
                     <ChevronRight className="h-4 w-4" />
                 </Button>
             </div>
 
-            <CardContent className="flex-1 min-h-0 overflow-hidden p-4 pt-0 flex flex-col gap-6">
+            <CardContent className={`${isMobileExpanded ? 'block' : 'hidden'} lg:flex flex-1 min-h-0 overflow-hidden p-4 pt-0 flex-col gap-6`}>
                 {/* Calendar Grid */}
                 <div className="w-full max-w-[340px] mx-auto shrink-0">
                     <div className="grid grid-cols-7 gap-1 mb-2">
@@ -161,7 +167,7 @@ export function CalendarBlock() {
                                     key={idx}
                                     onClick={() => setDate(day)}
                                     className={cn(
-                                        "relative aspect-square flex flex-col items-center justify-center rounded-xl text-xs font-medium transition-all duration-150 hover:scale-110 active:scale-95",
+                                        "relative aspect-square flex flex-col items-center justify-center rounded-xl text-xs font-medium transition-[color,background-color,border-color,transform] duration-100 hover:scale-110 active:scale-95",
                                         !isCurrentMonth && "text-muted-foreground/30 opacity-50",
                                         isCurrentMonth && "text-foreground/80 hover:bg-secondary/70 hover:text-foreground",
                                         isSelected && "bg-primary text-primary-foreground shadow-lg shadow-primary/25 scale-105 font-bold z-10 hover:bg-primary hover:scale-105",
@@ -232,7 +238,7 @@ export function CalendarBlock() {
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, scale: 0.95 }}
                                         transition={{ delay: i * 0.05 }}
-                                        className="flex items-center justify-between p-2.5 rounded-lg bg-background/50 border border-border/40 hover:bg-background/80 hover:border-primary/20 hover:shadow-sm transition-all group"
+                                        className="flex items-center justify-between p-2.5 rounded-lg bg-background/50 border border-border/40 hover:bg-background/80 hover:border-primary/20 hover:shadow-sm transition-colors group"
                                     >
                                         <span className="text-xs font-medium truncate max-w-[70%] group-hover:text-primary transition-colors">
                                             {getTaskTitle(session.taskId)}
@@ -249,7 +255,7 @@ export function CalendarBlock() {
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, scale: 0.95 }}
                                         transition={{ delay: (daySessions.length + i) * 0.05 }}
-                                        className="flex items-center justify-between p-2.5 rounded-lg bg-background/50 border border-border/40 hover:bg-background/80 hover:border-primary/20 hover:shadow-sm transition-all group"
+                                        className="flex items-center justify-between p-2.5 rounded-lg bg-background/50 border border-border/40 hover:bg-background/80 hover:border-primary/20 hover:shadow-sm transition-colors group"
                                     >
                                         <span className="text-xs font-medium truncate max-w-[70%] group-hover:text-primary transition-colors line-through opacity-70">
                                             {task.title}

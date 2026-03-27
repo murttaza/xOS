@@ -1,14 +1,19 @@
+import { useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/store";
 import { Check } from "lucide-react";
+import { safeJSONParse } from "@/lib/utils";
 
 export function PrayerBlock() {
     const dailyLog = useStore(s => s.dailyLog);
     const togglePrayer = useStore(s => s.togglePrayer);
     const prayers = ['Fajr', 'Zuhr', 'Asr', 'Maghrib', 'Isha'];
 
-    const completedPrayers = dailyLog ? JSON.parse(dailyLog.prayersCompleted || "{}") : {};
+    const completedPrayers = useMemo(() =>
+        dailyLog ? safeJSONParse<Record<string, boolean>>(dailyLog.prayersCompleted, {}) : {},
+        [dailyLog?.prayersCompleted]
+    );
 
     return (
         <Card>

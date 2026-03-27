@@ -22,6 +22,7 @@ declare namespace NodeJS {
 }
 
 // Used in Renderer process, expose in `preload.ts`
+// Optional because the web build doesn't have Electron
 interface Window {
-  ipcRenderer: import('electron').IpcRenderer
+  ipcRenderer: import('electron').IpcRenderer | undefined
 }

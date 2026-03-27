@@ -68,7 +68,7 @@ export const NotesList = ({
 
     return (
         <>
-            <div className="w-full md:w-80 bg-muted/30 border-r border-border flex flex-col h-full relative no-drag">
+            <div className={`w-full md:w-80 bg-muted/30 border-r border-border flex-col h-full relative no-drag ${selectedNoteId ? 'hidden md:flex' : 'flex'}`}>
                 <div className="absolute left-0 top-0 bottom-0 w-2" style={{ backgroundColor: subject.color }} />
 
                 <div className="p-6 pl-8 border-b border-border flex justify-between items-start">
@@ -112,7 +112,7 @@ export const NotesList = ({
                                 onSelectNote(note.id || null);
                             }}
                             className={cn(
-                                "mb-2 p-3 rounded-lg cursor-pointer transition-all border border-transparent group hover:border-border",
+                                "mb-2 p-3 rounded-lg cursor-pointer transition-colors border border-transparent group hover:border-border",
                                 selectedNoteId === note.id ? "bg-accent" : "hover:bg-muted/50"
                             )}
                         >

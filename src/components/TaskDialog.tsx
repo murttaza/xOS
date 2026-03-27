@@ -190,7 +190,7 @@ export function TaskDialog({ open, onOpenChange, onSubmit, initialTask }: TaskDi
                         )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                         {/* Difficulty */}
                         <div className="grid gap-3">
                             <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -237,7 +237,7 @@ export function TaskDialog({ open, onOpenChange, onSubmit, initialTask }: TaskDi
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                         {/* Time  */}
                         <div className="grid gap-2">
                             <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
