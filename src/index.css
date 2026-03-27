@@ -231,6 +231,13 @@
         transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         overflow: hidden;
     }
+    /* Prevent iOS auto-zoom on input focus (requires font-size >= 16px) */
+    html.web input,
+    html.web textarea,
+    html.web select {
+        font-size: 16px !important;
+    }
+
     html.web body {
         overflow: auto;
         overflow-x: hidden;
