@@ -384,11 +384,11 @@ function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="grid grid-cols-12 gap-0 lg:gap-6 lg:flex-1 lg:min-h-0 lg:overflow-hidden"
+              className="grid grid-cols-12 gap-3 sm:gap-4 lg:gap-6 lg:flex-1 lg:min-h-0 lg:overflow-hidden"
             >
               {/* Left Column: Stats only */}
               <div className="col-span-12 lg:col-span-3 lg:overflow-hidden">
-                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'border-b border-border/30 lg:border-b-0 lg:glass-card'} p-0 lg:p-6 transition-all duration-150 no-drag lg:h-full overflow-y-auto no-scrollbar`}>
+                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'glass-card'} p-0 lg:p-6 transition-all duration-150 no-drag lg:h-full overflow-y-auto no-scrollbar`}>
                   <ErrorBoundary fallbackTitle="Stats">
                     <StatsBlock />
                   </ErrorBoundary>
@@ -397,7 +397,7 @@ function App() {
 
               {/* Middle Column: Task Board */}
               <div className="col-span-12 lg:col-span-6 lg:overflow-hidden">
-                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'border-b border-border/30 lg:border-b-0 lg:glass-card'} lg:overflow-hidden lg:h-full transition-all duration-150 no-drag`}>
+                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'glass-card'} lg:overflow-hidden lg:h-full transition-all duration-150 no-drag`}>
                   <ErrorBoundary fallbackTitle="Task Board">
                     <TaskBoard />
                   </ErrorBoundary>
@@ -406,7 +406,7 @@ function App() {
 
               {/* Right Column: Calendar */}
               <div className="col-span-12 lg:col-span-3 lg:overflow-hidden">
-                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'border-b border-border/30 lg:border-b-0 lg:glass-card'} lg:overflow-hidden flex flex-col lg:h-full transition-all duration-150 no-drag`}>
+                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'glass-card'} lg:overflow-hidden flex flex-col lg:h-full transition-all duration-150 no-drag`}>
                   <ErrorBoundary fallbackTitle="Calendar">
                     <CalendarBlock />
                   </ErrorBoundary>

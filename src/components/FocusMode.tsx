@@ -6,8 +6,10 @@ import { motion } from "framer-motion";
 import { WindowControls } from "@/components/WindowControls";
 import { AudioVisualizer } from "@/components/AudioVisualizer";
 import { ModeToggle } from "@/components/ModeToggle";
+import { useTheme } from "@/components/ThemeProvider";
 import { useWindowFocus } from "@/hooks/useWindowFocus";
 import { useShallow } from 'zustand/react/shallow';
+import { cn } from "@/lib/utils";
 
 const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -16,6 +18,9 @@ const formatTime = (seconds: number) => {
 };
 
 export function FocusMode() {
+    const { theme } = useTheme();
+    const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
     const {
         stopTaskTimer, setIsFocusMode, toggleTaskTimer,
         setPomodoroTime, setIsPomodoroRunning,
@@ -130,7 +135,11 @@ export function FocusMode() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className={`fixed inset-0 z-50 ${isMurtazaMode ? 'bg-transparent' : 'bg-background'} text-foreground flex flex-col transition-colors duration-150 drag p-4 sm:p-8 lg:p-12`}
+            className={cn(
+                "fixed inset-0 z-50 text-foreground flex flex-col transition-colors duration-150 drag p-4 sm:p-8 lg:p-12",
+                isDark ? "dark" : "",
+                isMurtazaMode ? "bg-transparent" : isDark ? "bg-zinc-950" : "bg-white"
+            )}
         >
             {/* Top Toolbar */}
             <div className="absolute top-6 left-0 right-0 px-6 flex justify-between items-start z-50 no-drag pointer-events-none">
