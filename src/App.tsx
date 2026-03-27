@@ -232,7 +232,7 @@ function App() {
             <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-accent/5 dark:bg-accent/10 rounded-full blur-[50px] translate-y-1/2 -translate-x-1/4" />
           </div>
 
-          <div className={`relative max-w-screen-2xl mx-auto w-full h-full flex flex-col ${isMurtazaMode ? 'bg-transparent' : 'bg-transparent'} text-foreground p-3 sm:p-4 lg:p-6 gap-2 sm:gap-4 lg:gap-8 font-sans selection:bg-primary/20 selection:text-primary transition-colors duration-150 overflow-y-auto lg:overflow-hidden`}>
+          <div className={`relative max-w-screen-2xl mx-auto w-full h-full flex flex-col ${isMurtazaMode ? 'bg-transparent' : 'bg-transparent'} text-foreground p-3 sm:p-4 lg:p-6 gap-4 sm:gap-4 lg:gap-8 font-sans selection:bg-primary/20 selection:text-primary transition-colors duration-150 overflow-y-auto lg:overflow-hidden`}>
             {/* Header */}
             <motion.header
               initial={{ opacity: 0, y: -20 }}

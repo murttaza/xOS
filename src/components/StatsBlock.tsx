@@ -107,16 +107,16 @@ export function StatsBlock() {
     return (
         <div className="flex flex-col lg:h-full">
             <CardHeader
-                className="pb-3 flex flex-row items-center justify-between space-y-0 shrink-0 cursor-pointer lg:cursor-default"
+                className="py-2 px-4 lg:pb-3 lg:px-6 flex flex-row items-center justify-between space-y-0 shrink-0 cursor-pointer lg:cursor-default"
                 onClick={() => setIsMobileExpanded(prev => !prev)}
             >
-                <CardTitle className="text-base lg:text-xl font-bold tracking-tight flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-primary animate-pulse-soft" />
+                <CardTitle className="text-sm lg:text-xl font-medium lg:font-bold tracking-tight flex items-center gap-2 text-muted-foreground lg:text-foreground">
+                    <div className="h-1.5 w-1.5 lg:h-2 lg:w-2 rounded-full bg-primary animate-pulse-soft opacity-60 lg:opacity-100" />
                     Stats
-                    <ChevronDown className={`h-4 w-4 lg:hidden transition-transform ${isMobileExpanded ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`h-3.5 w-3.5 lg:hidden transition-transform opacity-50 ${isMobileExpanded ? 'rotate-180' : ''}`} />
                 </CardTitle>
-                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); openAddDialog(); }} className="h-8 w-8 hover:bg-muted rounded-full">
-                    <Plus className="h-4 w-4" />
+                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); openAddDialog(); }} className="h-7 w-7 lg:h-8 lg:w-8 hover:bg-muted rounded-full opacity-50 hover:opacity-100 transition-opacity">
+                    <Plus className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
                 </Button>
             </CardHeader>
 
