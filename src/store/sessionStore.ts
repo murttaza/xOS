@@ -171,15 +171,34 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
     },
 
     syncTimers: async () => {
-        const remoteTimers = await api.getActiveTimers();
-        const startTimes: Record<number, string> = {};
-        const timers: Record<number, number> = {};
-        const now = Date.now();
-        for (const t of remoteTimers) {
-            startTimes[t.taskId] = t.startTime;
-            timers[t.taskId] = Math.min(Math.floor((now - new Date(t.startTime).getTime()) / 1000), MAX_TIMER_SECONDS);
+        const localStartTimes = get().timerStartTimes;
+        let remoteTimers: { taskId: number; startTime: string }[] = [];
+        try {
+            remoteTimers = await api.getActiveTimers();
+        } catch {
+            // If Supabase fetch fails, keep local timers
         }
-        set({ timerStartTimes: startTimes, activeTimers: timers });
+
+        // Merge: remote timers + any local timers not in remote (push them to Supabase)
+        const merged: Record<number, string> = {};
+        for (const t of remoteTimers) {
+            merged[t.taskId] = t.startTime;
+        }
+        for (const [id, startTime] of Object.entries(localStartTimes)) {
+            const taskId = Number(id);
+            if (!merged[taskId]) {
+                merged[taskId] = startTime;
+                // Local timer missing from Supabase — push it up
+                api.setActiveTimer(taskId, startTime).catch(() => {});
+            }
+        }
+
+        const now = Date.now();
+        const timers: Record<number, number> = {};
+        for (const [id, startTime] of Object.entries(merged)) {
+            timers[Number(id)] = Math.min(Math.floor((now - new Date(startTime).getTime()) / 1000), MAX_TIMER_SECONDS);
+        }
+        set({ timerStartTimes: merged, activeTimers: timers });
     },
 
     toggleTaskTimer: async (taskId: number) => {
@@ -194,7 +213,7 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
                 timerStartTimes: { ...state.timerStartTimes, [taskId]: now }
             }));
             // Persist to Supabase for cross-device sync
-            await api.setActiveTimer(taskId, now);
+            try { await api.setActiveTimer(taskId, now); } catch {}
         }
     },
 
