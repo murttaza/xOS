@@ -58,6 +58,11 @@ export interface ApiBackend {
     updateStreak: (streak: Streak) => Promise<unknown>;
     deleteStreak: (id: number) => Promise<unknown>;
 
+    // Active Timers (cross-device sync)
+    getActiveTimers: () => Promise<{ taskId: number; startTime: string }[]>;
+    setActiveTimer: (taskId: number, startTime: string) => Promise<unknown>;
+    removeActiveTimer: (taskId: number) => Promise<unknown>;
+
     // Export
     exportAllData: () => Promise<unknown>;
 }

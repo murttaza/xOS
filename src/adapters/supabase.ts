@@ -360,6 +360,24 @@ export const supabaseBackend: ApiBackend = {
         return throwOnError(await supabase.from('streaks').delete().eq('id', id));
     },
 
+    // ── Active Timers (cross-device sync) ────────────────────────
+    getActiveTimers: async () => {
+        const { data } = await supabase.from('active_timers').select('taskId, startTime');
+        return (data || []) as { taskId: number; startTime: string }[];
+    },
+
+    setActiveTimer: async (taskId, startTime) => {
+        return throwOnError(
+            await supabase.from('active_timers').upsert({ taskId, startTime }, { onConflict: 'taskId,user_id' })
+        );
+    },
+
+    removeActiveTimer: async (taskId) => {
+        return throwOnError(
+            await supabase.from('active_timers').delete().eq('taskId', taskId)
+        );
+    },
+
     // ── Export ──────────────────────────────────────────────────
     exportAllData: async () => {
         const [tasks, sessions, stats, dailyLogs, devItems, repeatingTasks, subjects, notes, streaks] = await Promise.all([

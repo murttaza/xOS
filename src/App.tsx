@@ -36,7 +36,7 @@ function App() {
   // Grouped selectors to minimize subscription count
   const {
     fetchTasks, fetchStats, fetchDailyLog, fetchDevItems,
-    fetchRepeatingTasks, checkMissedTasks,
+    fetchRepeatingTasks, checkMissedTasks, syncTimers,
     isMurtazaMode, setIsMurtazaMode,
     isHardcoreMode, setIsHardcoreMode,
     osPrefix, setOsPrefix,
@@ -54,6 +54,7 @@ function App() {
     setIsHardcoreMode: state.setIsHardcoreMode,
     osPrefix: state.osPrefix,
     setOsPrefix: state.setOsPrefix,
+    syncTimers: state.syncTimers,
     toggleNotesMode: state.toggleNotesMode,
     toggleYearMode: state.toggleYearMode,
   })));
@@ -63,6 +64,7 @@ function App() {
   const isTransitioning = useStore(state => state.isTransitioning);
 
   const [_windowSize, setWindowSize] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   const APP_VERSION = __APP_VERSION__ || '4.0.1';
 
@@ -73,13 +75,26 @@ function App() {
   useTaskTimer();
 
   useEffect(() => {
-    fetchTasks();
-    fetchStats();
-    fetchDailyLog(getLocalDateString());
-    fetchDevItems();
-    fetchRepeatingTasks();
-    checkMissedTasks();
-  }, [fetchTasks, fetchStats, fetchDailyLog, fetchDevItems, fetchRepeatingTasks, checkMissedTasks]); // Initial fetch only
+    Promise.all([
+      fetchTasks(),
+      fetchStats(),
+      fetchDailyLog(getLocalDateString()),
+      fetchDevItems(),
+      fetchRepeatingTasks(),
+      syncTimers(),
+    ]).then(() => {
+      checkMissedTasks();
+      setIsLoading(false);
+    }).catch(() => setIsLoading(false));
+  }, []); // Initial fetch only - run once
+
+  // Sync timers from Supabase when window regains focus (cross-device)
+  useEffect(() => {
+    if (isWindowFocused) {
+      syncTimers();
+      fetchTasks(); // Refresh tasks too in case they changed on another device
+    }
+  }, [isWindowFocused, syncTimers, fetchTasks]);
 
   useEffect(() => {
     // Only check for date change when window is focused — saves CPU when minimized
@@ -182,6 +197,23 @@ function App() {
         </AnimatePresence>
       </ThemeProvider>
     )
+  }
+
+  if (isLoading) {
+    return (
+      <ThemeProvider defaultTheme="dark" storageKey="mos-theme">
+        <div className="h-screen flex flex-col items-center justify-center bg-background gap-4">
+          <motion.div
+            animate={{ opacity: [0.4, 1, 0.4], scale: [0.95, 1.05, 0.95] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            className="text-4xl font-bold text-primary"
+          >
+            {osPrefix}OS
+          </motion.div>
+          <p className="text-sm text-muted-foreground animate-pulse">Loading your data...</p>
+        </div>
+      </ThemeProvider>
+    );
   }
 
   return (

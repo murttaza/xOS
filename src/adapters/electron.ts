@@ -62,6 +62,11 @@ export const electronBackend: ApiBackend = {
     updateStreak: (streak) => window.ipcRenderer.invoke(IpcChannels.UpdateStreak, streak),
     deleteStreak: (id) => window.ipcRenderer.invoke(IpcChannels.DeleteStreak, id),
 
+    // Active Timers (not used in Electron since it also uses Supabase now, but satisfies interface)
+    getActiveTimers: async () => [],
+    setActiveTimer: async () => {},
+    removeActiveTimer: async () => {},
+
     // Export
     exportAllData: () => window.ipcRenderer.invoke(IpcChannels.ExportAllData),
 } as ApiBackend;

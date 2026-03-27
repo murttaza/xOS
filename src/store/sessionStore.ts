@@ -10,12 +10,13 @@ export interface SessionSlice {
     sessions: Session[];
     dailyLog: DailyLog | null;
 
-    // Timer state - Multi-tasking support
+    // Timer state - Multi-tasking support (synced to Supabase for cross-device)
     activeTimers: Record<number, number>; // taskId -> duration in seconds (derived from startTimes)
-    timerStartTimes: Record<number, string>; // taskId -> ISO start timestamp (persisted)
+    timerStartTimes: Record<number, string>; // taskId -> ISO start timestamp
     toggleTaskTimer: (taskId: number) => Promise<void>;
     stopTaskTimer: (taskId: number) => Promise<void>;
     incrementTimers: () => void;
+    syncTimers: () => Promise<void>;
 
     // Pomodoro
     pomodoroTime: number;
@@ -169,19 +170,31 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
         });
     },
 
+    syncTimers: async () => {
+        const remoteTimers = await api.getActiveTimers();
+        const startTimes: Record<number, string> = {};
+        const timers: Record<number, number> = {};
+        const now = Date.now();
+        for (const t of remoteTimers) {
+            startTimes[t.taskId] = t.startTime;
+            timers[t.taskId] = Math.min(Math.floor((now - new Date(t.startTime).getTime()) / 1000), MAX_TIMER_SECONDS);
+        }
+        set({ timerStartTimes: startTimes, activeTimers: timers });
+    },
+
     toggleTaskTimer: async (taskId: number) => {
         const state = get();
 
         if (state.timerStartTimes[taskId] !== undefined) {
-            // Task is running, stop it
             await state.stopTaskTimer(taskId);
         } else {
-            // Start new task (allow parallel) - store the start timestamp
             const now = new Date().toISOString();
             set((state) => ({
                 activeTimers: { ...state.activeTimers, [taskId]: 0 },
                 timerStartTimes: { ...state.timerStartTimes, [taskId]: now }
             }));
+            // Persist to Supabase for cross-device sync
+            await api.setActiveTimer(taskId, now);
         }
     },
 
@@ -197,6 +210,9 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
         const newStartTimes = { ...state.timerStartTimes };
         delete newStartTimes[taskId];
         set({ activeTimers: newTimers, timerStartTimes: newStartTimes });
+
+        // Remove from Supabase
+        await api.removeActiveTimer(taskId);
 
         const startTime = new Date(startTimeStr);
         const now = new Date();
