@@ -79,12 +79,12 @@ export function StatsBlock() {
                         </span>
                     </div>
 
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground hover:text-foreground" onClick={() => openEditDialog(stat)}>
-                            <Edit2 className="h-3 w-3" />
+                    <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-5 lg:w-5 text-muted-foreground hover:text-foreground" onClick={() => openEditDialog(stat)}>
+                            <Edit2 className="h-3.5 w-3.5 lg:h-3 lg:w-3" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground hover:text-red-400" onClick={() => handleDelete(stat)}>
-                            <Trash2 className="h-3 w-3" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-5 lg:w-5 text-muted-foreground hover:text-red-400" onClick={() => handleDelete(stat)}>
+                            <Trash2 className="h-3.5 w-3.5 lg:h-3 lg:w-3" />
                         </Button>
                     </div>
                 </div>
@@ -96,7 +96,7 @@ export function StatsBlock() {
                     />
                 </div>
 
-                <div className="flex justify-between mt-1 opacity-0 group-hover:opacity-60 transition-opacity text-[10px] text-muted-foreground">
+                <div className="flex justify-between mt-1 opacity-60 lg:opacity-0 lg:group-hover:opacity-60 transition-opacity text-[10px] text-muted-foreground">
                     <span>{stat.currentXP.toLocaleString()} XP</span>
                     <span>{Math.floor(progress)}%</span>
                 </div>

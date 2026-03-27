@@ -60,7 +60,7 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
                     placeholder="Email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-4 py-3 h-12 rounded-lg border border-border bg-card text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                     required
                 />
 
@@ -69,7 +69,7 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
                     placeholder="Password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-4 py-3 h-12 rounded-lg border border-border bg-card text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                     required
                     minLength={6}
                 />
@@ -77,7 +77,7 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-2 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                    className="w-full py-3 h-12 rounded-lg bg-primary text-primary-foreground font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
                 >
                     {loading ? (isSignUp ? 'Creating account...' : 'Signing in...') : (isSignUp ? 'Sign Up' : 'Sign In')}
                 </button>
@@ -85,7 +85,7 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
                 <button
                     type="button"
                     onClick={() => { setIsSignUp(!isSignUp); setError(''); setSuccess(''); }}
-                    className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                     {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
                 </button>

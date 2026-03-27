@@ -31,9 +31,9 @@ export const NoteEditor = ({
             </Button>
 
             {activeNote ? (
-                <div className="flex flex-col h-full p-8 md:p-12 animate-in fade-in duration-150">
+                <div className="flex flex-col h-full p-4 sm:p-8 md:p-12 animate-in fade-in duration-150">
                     <input
-                        className="bg-transparent text-3xl md:text-4xl font-bold text-foreground mb-6 border-none outline-none placeholder:text-muted-foreground"
+                        className="bg-transparent text-xl sm:text-3xl md:text-4xl font-bold text-foreground mb-4 sm:mb-6 border-none outline-none placeholder:text-muted-foreground"
                         value={editingNote.title !== undefined ? editingNote.title : activeNote.title}
                         onChange={(e) => {
                             onEditingNoteChange(prev => ({ ...prev, title: e.target.value }));

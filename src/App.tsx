@@ -248,7 +248,7 @@ function App() {
                   whileTap={{ scale: 0.98 }}
                   onClick={() => isElectron && setIsMurtazaMode(!isMurtazaMode)}
                 >
-                  <span>{isMurtazaMode ? "مُرتضیٰ" : `${osPrefix}OS`}</span>
+                  <span>{isMurtazaMode && isElectron ? "مُرتضیٰ" : `${osPrefix}OS`}</span>
                   <span className="text-xs font-mono text-muted-foreground opacity-50">v{APP_VERSION}</span>
                 </motion.h1>
 
@@ -357,20 +357,20 @@ function App() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 rounded-full opacity-50 hover:opacity-100 transition-opacity"
+                      className="h-10 w-10 lg:h-7 lg:w-7 rounded-full opacity-70 hover:opacity-100 transition-opacity"
                       onClick={() => toggleNotesMode()}
                       title="Notes Mode"
                     >
-                      <BookOpen className="h-3.5 w-3.5" />
+                      <BookOpen className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 rounded-full opacity-50 hover:opacity-100 transition-opacity"
+                      className="h-10 w-10 lg:h-7 lg:w-7 rounded-full opacity-70 hover:opacity-100 transition-opacity"
                       onClick={() => toggleYearMode()}
                       title="Year Mode"
                     >
-                      <CalendarDays className="h-3.5 w-3.5" />
+                      <CalendarDays className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
                     </Button>
                   </>
                 )}

@@ -138,21 +138,21 @@ export const TaskItem = memo(function TaskItem({ task, isActive, isTimerRunning,
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-150 translate-x-2 group-hover:translate-x-0 relative z-10 bg-muted/50 px-1 py-1 rounded-lg backdrop-blur-md">
+                    <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-150 lg:translate-x-2 lg:group-hover:translate-x-0 relative z-10 lg:bg-muted/50 px-1 py-1 rounded-lg lg:backdrop-blur-md">
                         {task.noteId && (
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300" onClick={handleOpenNote} title="Open Linked Note">
-                                <BookOpen className="h-3.5 w-3.5" />
+                            <Button variant="ghost" size="icon" className="h-9 w-9 lg:h-7 lg:w-7 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300" onClick={handleOpenNote} title="Open Linked Note">
+                                <BookOpen className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
                             </Button>
                         )}
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/70 hover:bg-red-500/20 hover:text-red-400 transition-colors" onClick={(e) => { e.stopPropagation(); onDelete(task.id!); }}>
-                            <Trash className="h-3.5 w-3.5" />
+                        <Button variant="ghost" size="icon" className="h-9 w-9 lg:h-7 lg:w-7 text-muted-foreground/70 hover:bg-red-500/20 hover:text-red-400 transition-colors" onClick={(e) => { e.stopPropagation(); onDelete(task.id!); }}>
+                            <Trash className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
                         </Button>
                         {!task.isComplete && (
-                            <Button variant="ghost" size="icon" className={cn("h-7 w-7 transition-colors", isActive && isTimerRunning ? "text-amber-400 hover:bg-amber-400/20 hover:text-amber-300" : "text-muted-foreground/70 hover:bg-primary/20 hover:text-primary")} onClick={(e) => { e.stopPropagation(); onToggleTimer(task.id!); }}>
+                            <Button variant="ghost" size="icon" className={cn("h-9 w-9 lg:h-7 lg:w-7 transition-colors", isActive && isTimerRunning ? "text-amber-400 hover:bg-amber-400/20 hover:text-amber-300" : "text-muted-foreground/70 hover:bg-primary/20 hover:text-primary")} onClick={(e) => { e.stopPropagation(); onToggleTimer(task.id!); }}>
                                 {isActive && isTimerRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
                             </Button>
                         )}
-                        <Button variant="ghost" size="icon" className={cn("h-7 w-7 transition-colors", task.isComplete ? "text-green-500 hover:bg-green-500/20" : "text-muted-foreground/70 hover:bg-green-500/20 hover:text-green-400")} onClick={(e) => { e.stopPropagation(); onComplete(task); }}>
+                        <Button variant="ghost" size="icon" className={cn("h-9 w-9 lg:h-7 lg:w-7 transition-colors", task.isComplete ? "text-green-500 hover:bg-green-500/20" : "text-muted-foreground/70 hover:bg-green-500/20 hover:text-green-400")} onClick={(e) => { e.stopPropagation(); onComplete(task); }}>
                             <CheckCircle2 className="h-4 w-4" />
                         </Button>
                     </div>

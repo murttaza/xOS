@@ -71,7 +71,7 @@ export const NotesList = ({
             <div className={`w-full md:w-80 bg-muted/30 border-r border-border flex-col h-full relative no-drag ${selectedNoteId ? 'hidden md:flex' : 'flex'}`}>
                 <div className="absolute left-0 top-0 bottom-0 w-2" style={{ backgroundColor: subject.color }} />
 
-                <div className="p-6 pl-8 border-b border-border flex justify-between items-start">
+                <div className="p-4 pl-6 sm:p-6 sm:pl-8 border-b border-border flex justify-between items-start">
                     <div>
                         <h2 className="text-xl font-bold text-foreground break-words">{subject.title}</h2>
                         <p className="text-xs text-muted-foreground mt-1">{notes.length} Notes</p>

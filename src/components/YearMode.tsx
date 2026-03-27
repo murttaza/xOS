@@ -72,7 +72,7 @@ const StreakItem = memo(function StreakItem({ streak, now, updateStreak, deleteS
                                 size="icon"
                                 onClick={() => setIsEditing(true)}
                                 title="Edit Streak"
-                                className="h-8 w-8 rounded-full hover:bg-muted"
+                                className="h-10 w-10 sm:h-8 sm:w-8 rounded-full hover:bg-muted"
                             >
                                 <Edit className="h-4 w-4" />
                             </Button>
@@ -81,7 +81,7 @@ const StreakItem = memo(function StreakItem({ streak, now, updateStreak, deleteS
                                 size="icon"
                                 onClick={() => updateStreak({ ...streak, currentStreak: 0, lastUpdated: new Date().toISOString(), createdAt: new Date().toISOString() })}
                                 title="Reset Streak"
-                                className="h-8 w-8 rounded-full hover:bg-muted"
+                                className="h-10 w-10 sm:h-8 sm:w-8 rounded-full hover:bg-muted"
                             >
                                 <RotateCcw className="h-4 w-4" />
                             </Button>
@@ -92,7 +92,7 @@ const StreakItem = memo(function StreakItem({ streak, now, updateStreak, deleteS
                                     updateStreak({ ...streak, isPaused: streak.isPaused ? 0 : 1, lastUpdated: new Date().toISOString() })
                                 }}
                                 title={streak.isPaused ? "Resume tracking" : "Pause tracking"}
-                                className={`h-8 w-8 rounded-full hover:bg-muted ${streak.isPaused ? 'text-primary' : ''}`}
+                                className={`h-10 w-10 sm:h-8 sm:w-8 rounded-full hover:bg-muted ${streak.isPaused ? 'text-primary' : ''}`}
                             >
                                 {streak.isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
                             </Button>
@@ -101,7 +101,7 @@ const StreakItem = memo(function StreakItem({ streak, now, updateStreak, deleteS
                                 size="icon"
                                 onClick={() => typeof streak.id === 'number' && deleteStreak(streak.id)}
                                 title="Delete Streak"
-                                className="h-8 w-8 rounded-full hover:bg-red-500/20 hover:text-red-400 text-muted-foreground"
+                                className="h-10 w-10 sm:h-8 sm:w-8 rounded-full hover:bg-red-500/20 hover:text-red-400 text-muted-foreground"
                             >
                                 <Trash2 className="h-4 w-4" />
                             </Button>

@@ -224,12 +224,12 @@ export function TaskBoard() {
                         {activePage === 0 ? "Tasks" : "Repeating"}
                         <ChevronDown className={`h-4 w-4 lg:hidden transition-transform ${isMobileExpanded ? 'rotate-180' : ''}`} />
                         {activePage === 0 && completedTodayCount > 0 && (
-                            <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full border border-green-500/20 font-medium hidden sm:inline">
+                            <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full border border-green-500/20 font-medium max-lg:hidden">
                                 {completedTodayCount} done today
                             </span>
                         )}
                     </CardTitle>
-                    <div className="flex flex-col gap-1 ml-1 group-hover:gap-1.5 transition-all">
+                    <div className="hidden lg:flex flex-col gap-1 ml-1 group-hover:gap-1.5 transition-all">
                         <div className={`h-1.5 w-1.5 rounded-full transition-colors ${activePage === 0 ? "bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-muted-foreground/40"}`} />
                         <div className={`h-1.5 w-1.5 rounded-full transition-colors ${activePage === 1 ? "bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-muted-foreground/40"}`} />
                     </div>
