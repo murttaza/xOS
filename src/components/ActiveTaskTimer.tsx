@@ -57,46 +57,46 @@ export function ActiveTaskTimer() {
                                 {/* Animated background gradient */}
                                 <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
 
-                                <CardContent className="relative p-4 pl-6 pr-4 flex items-center justify-between gap-8">
+                                <CardContent className="relative p-3 sm:p-4 sm:pl-6 sm:pr-4 flex items-center justify-between gap-3 sm:gap-8">
                                     <div className="flex flex-col min-w-0 flex-1">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <div className="h-2 w-2 rounded-full bg-primary animate-pulse-soft shadow-[0_0_8px_hsl(var(--primary))]" />
-                                            <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Active Task</span>
-                                            <span className="text-[10px] text-muted-foreground">• {Array.isArray(task.statTarget) ? task.statTarget.join(", ") : task.statTarget}</span>
+                                        <div className="flex items-center gap-1.5 mb-0.5">
+                                            <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-primary animate-pulse-soft shadow-[0_0_8px_hsl(var(--primary))]" />
+                                            <span className="text-[9px] sm:text-[10px] font-bold text-primary uppercase tracking-widest">Active</span>
+                                            <span className="text-[9px] sm:text-[10px] text-muted-foreground truncate">• {Array.isArray(task.statTarget) ? task.statTarget.join(", ") : task.statTarget}</span>
                                         </div>
-                                        <h3 className="font-bold text-base truncate leading-tight text-foreground group-hover:text-primary transition-colors">
+                                        <h3 className="font-bold text-sm sm:text-base truncate leading-tight text-foreground group-hover:text-primary transition-colors">
                                             {task.title}
                                         </h3>
                                     </div>
 
-                                    <div className="text-2xl sm:text-4xl font-bold tracking-tighter tabular-nums text-primary drop-shadow-[0_0_15px_hsl(var(--primary)/0.5)]">
+                                    <div className="text-xl sm:text-4xl font-bold tracking-tighter tabular-nums text-primary drop-shadow-[0_0_15px_hsl(var(--primary)/0.5)] shrink-0">
                                         {formatTime(duration)}
                                     </div>
 
-                                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex gap-1 sm:gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                                         <Button
                                             variant="outline"
                                             size="icon"
-                                            className="h-12 w-12 rounded-full border-2 border-primary/30 bg-primary/5 hover:bg-primary/15 hover:text-primary hover:border-primary/50 transition-all shadow-[0_0_12px_-3px_hsl(var(--primary)/0.3)] hover:scale-[1.08] active:scale-[0.92]"
+                                            className="h-9 w-9 sm:h-12 sm:w-12 rounded-full border-2 border-primary/30 bg-primary/5 hover:bg-primary/15 hover:text-primary hover:border-primary/50 transition-all shadow-[0_0_12px_-3px_hsl(var(--primary)/0.3)] hover:scale-[1.08] active:scale-[0.92]"
                                             onClick={() => toggleTaskTimer(taskId)}
                                         >
-                                            <Pause className="h-5 w-5" />
+                                            <Pause className="h-4 w-4 sm:h-5 sm:w-5" />
                                         </Button>
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-12 w-12 rounded-full hover:bg-destructive/20 dark:hover:bg-destructive/15 hover:text-destructive transition-all hover:scale-[1.08] active:scale-[0.92]"
+                                            className="h-9 w-9 sm:h-12 sm:w-12 rounded-full hover:bg-destructive/20 dark:hover:bg-destructive/15 hover:text-destructive transition-all hover:scale-[1.08] active:scale-[0.92]"
                                             onClick={() => stopTaskTimer(taskId)}
                                         >
-                                            <Square className="h-4 w-4" />
+                                            <Square className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                         </Button>
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-12 w-12 rounded-full hover:bg-muted transition-all hover:scale-[1.08] active:scale-[0.92]"
+                                            className="h-9 w-9 sm:h-12 sm:w-12 rounded-full hover:bg-muted transition-all hover:scale-[1.08] active:scale-[0.92]"
                                             onClick={() => setIsFocusMode(true)}
                                         >
-                                            <Maximize2 className="h-4 w-4" />
+                                            <Maximize2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                         </Button>
                                     </div>
                                 </CardContent>

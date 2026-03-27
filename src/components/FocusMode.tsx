@@ -158,14 +158,14 @@ export function FocusMode() {
             </div>
 
             {/* Main content area - session timer (always centered) */}
-            <div className="flex-1 flex flex-col items-center justify-center px-8 z-10">
-                <div className="text-center space-y-8">
-                    <div className="space-y-3">
-                        <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-foreground to-foreground/50 pb-2 max-w-3xl mx-auto">{activeTask.title}</h2>
-                        <p className="text-xl text-muted-foreground font-light">{Array.isArray(activeTask.statTarget) ? activeTask.statTarget.join(", ") : activeTask.statTarget} • Difficulty: {activeTask.difficulty}</p>
+            <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8 z-10">
+                <div className="text-center space-y-4 sm:space-y-8">
+                    <div className="space-y-1 sm:space-y-3">
+                        <h2 className="text-xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-foreground to-foreground/50 pb-1 sm:pb-2 max-w-3xl mx-auto">{activeTask.title}</h2>
+                        <p className="text-sm sm:text-xl text-muted-foreground font-light">{Array.isArray(activeTask.statTarget) ? activeTask.statTarget.join(", ") : activeTask.statTarget} • Difficulty: {activeTask.difficulty}</p>
                     </div>
 
-                    <div className={`text-[4rem] sm:text-[8rem] lg:text-[15rem] font-bold leading-none tracking-tighter tabular-nums text-primary drop-shadow-[0_0_30px_rgba(var(--primary),0.4)] ${isMurtazaMode ? 'border border-border rounded-3xl px-12 py-4 bg-background/20 backdrop-blur-sm' : ''}`}>
+                    <div className={`text-[5rem] sm:text-[8rem] lg:text-[15rem] font-bold leading-none tracking-tighter tabular-nums text-primary drop-shadow-[0_0_30px_rgba(var(--primary),0.4)] ${isMurtazaMode ? 'border border-border rounded-3xl px-8 sm:px-12 py-3 sm:py-4 bg-background/20 backdrop-blur-sm' : ''}`}>
                         {formatTime(textDuration)}
                     </div>
 
@@ -173,18 +173,18 @@ export function FocusMode() {
                         <Button
                             variant="outline"
                             size="lg"
-                            className="h-20 w-20 sm:h-24 sm:w-24 lg:h-32 lg:w-32 rounded-full border-2 border-primary/20 hover:bg-primary/10 hover:border-primary/50 transition-all duration-150"
+                            className="h-16 w-16 sm:h-24 sm:w-24 lg:h-32 lg:w-32 rounded-full border-2 border-primary/20 hover:bg-primary/10 hover:border-primary/50 transition-all duration-150"
                             onClick={() => toggleTaskTimer(activeTaskId!)}
                         >
-                            <Pause className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12" />
+                            <Pause className="h-6 w-6 sm:h-10 sm:w-10 lg:h-12 lg:w-12" />
                         </Button>
                         <Button
                             variant="ghost"
                             size="lg"
-                            className="h-20 w-20 sm:h-24 sm:w-24 lg:h-32 lg:w-32 rounded-full hover:bg-destructive/20 hover:text-destructive transition-all duration-150"
+                            className="h-16 w-16 sm:h-24 sm:w-24 lg:h-32 lg:w-32 rounded-full hover:bg-destructive/20 hover:text-destructive transition-all duration-150"
                             onClick={handleStop}
                         >
-                            <Square className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12" />
+                            <Square className="h-6 w-6 sm:h-10 sm:w-10 lg:h-12 lg:w-12" />
                         </Button>
                     </div>
                 </div>
@@ -214,25 +214,19 @@ export function FocusMode() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="w-full p-6 pb-8"
+                className="w-full p-3 pb-4 sm:p-6 sm:pb-8"
             >
-                <div className={`max-w-2xl mx-auto rounded-2xl p-4 border border-border backdrop-blur-xl ${isMurtazaMode ? 'bg-background/20' : 'glass'}`}>
-                    <div className="flex items-center justify-between gap-6">
-                        {/* Pomodoro timer display */}
+                <div className={`max-w-2xl mx-auto rounded-2xl p-3 sm:p-4 border border-border backdrop-blur-xl ${isMurtazaMode ? 'bg-background/20' : 'glass'}`}>
+                    {/* Row 1: timer + progress bar */}
+                    <div className="flex items-center gap-3 sm:gap-6">
                         <motion.div
-                            className="text-3xl font-bold tracking-tighter tabular-nums text-primary drop-shadow-[0_0_12px_hsl(var(--primary)/0.4)]"
-                            animate={{
-                                scale: isPomodoroRunning ? [1, 1.015, 1] : 1
-                            }}
-                            transition={{
-                                duration: 1,
-                                repeat: isPomodoroRunning ? Infinity : 0
-                            }}
+                            className="text-2xl sm:text-3xl font-bold tracking-tighter tabular-nums text-primary drop-shadow-[0_0_12px_hsl(var(--primary)/0.4)] shrink-0"
+                            animate={{ scale: isPomodoroRunning ? [1, 1.015, 1] : 1 }}
+                            transition={{ duration: 1, repeat: isPomodoroRunning ? Infinity : 0 }}
                         >
                             {formatTime(pomodoroTime)}
                         </motion.div>
 
-                        {/* Progress bar */}
                         <div className="flex-1 relative">
                             <div className="h-2 w-full bg-secondary/50 dark:bg-secondary/30 rounded-full border border-border overflow-hidden">
                                 <motion.div
@@ -247,48 +241,45 @@ export function FocusMode() {
                             </div>
                         </div>
 
-                        {/* Controls */}
-                        <div className="flex gap-2 items-center no-drag">
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-10 w-10 rounded-full border-2 border-primary/30 hover:bg-primary/10 hover:border-primary/60 transition-all shadow-[0_0_10px_-3px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_15px_-3px_hsl(var(--primary)/0.5)] hover:scale-105 active:scale-95"
-                                onClick={() => setIsPomodoroRunning(!isPomodoroRunning)}
-                            >
-                                {isPomodoroRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
-                            </Button>
+                        {/* Play/pause always visible */}
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9 sm:h-10 sm:w-10 rounded-full border-2 border-primary/30 hover:bg-primary/10 hover:border-primary/60 transition-all shadow-[0_0_10px_-3px_hsl(var(--primary)/0.3)] hover:scale-105 active:scale-95 shrink-0 no-drag"
+                            onClick={() => setIsPomodoroRunning(!isPomodoroRunning)}
+                        >
+                            {isPomodoroRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
+                        </Button>
+                    </div>
 
-                            {/* Preset Duration Buttons */}
-                            <div className="flex items-center gap-1 mx-1">
-                                {POMODORO_PRESETS.map(preset => {
-                                    const isActive = !isPomodoroRunning && pomodoroTime === preset * 60;
-                                    return (
-                                        <Button
-                                            key={preset}
-                                            variant="ghost"
-                                            size="sm"
-                                            className={`h-8 px-2.5 rounded-full text-xs font-mono transition-all ${
-                                                isActive
-                                                    ? 'bg-primary/20 text-primary border border-primary/30'
-                                                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                                            }`}
-                                            onClick={() => handleSetPreset(preset)}
-                                        >
-                                            {preset}m
-                                        </Button>
-                                    );
-                                })}
-                            </div>
-
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-10 w-10 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-all hover:scale-105 active:scale-95"
-                                onClick={handleResetPomodoro}
-                            >
-                                <RotateCcw className="h-3.5 w-3.5" />
-                            </Button>
-                        </div>
+                    {/* Row 2: preset buttons + reset */}
+                    <div className="flex items-center gap-1 mt-2 no-drag">
+                        {POMODORO_PRESETS.map(preset => {
+                            const isActive = !isPomodoroRunning && pomodoroTime === preset * 60;
+                            return (
+                                <Button
+                                    key={preset}
+                                    variant="ghost"
+                                    size="sm"
+                                    className={`h-7 px-2.5 rounded-full text-xs font-mono transition-all ${
+                                        isActive
+                                            ? 'bg-primary/20 text-primary border border-primary/30'
+                                            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                                    }`}
+                                    onClick={() => handleSetPreset(preset)}
+                                >
+                                    {preset}m
+                                </Button>
+                            );
+                        })}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-all hover:scale-105 active:scale-95 ml-auto"
+                            onClick={handleResetPomodoro}
+                        >
+                            <RotateCcw className="h-3 w-3" />
+                        </Button>
                     </div>
                 </div>
             </motion.div>
