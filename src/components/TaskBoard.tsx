@@ -42,17 +42,23 @@ export function TaskBoard() {
     const [manualDuration, setManualDuration] = useState("30");
 
     const [activePage, setActivePage] = useState(0);
+    const [showRepeatingMobile, setShowRepeatingMobile] = useState(false);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const lastTapRef = useRef<number>(0);
+
+    const isOnRepeating = window.innerWidth < 1024 ? showRepeatingMobile : activePage === 1;
 
     const handleAddClick = useCallback(() => {
-        if (activePage === 0) {
-            setEditingTask(null);
-            setIsDialogOpen(true);
-        } else {
+        const isMobile = window.innerWidth < 1024;
+        const onRepeating = isMobile ? showRepeatingMobile : activePage === 1;
+        if (onRepeating) {
             setEditingRepeatingTask(null);
             setIsRepeatingDialogOpen(true);
+        } else {
+            setEditingTask(null);
+            setIsDialogOpen(true);
         }
-    }, [activePage]);
+    }, [activePage, showRepeatingMobile]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -206,24 +212,35 @@ export function TaskBoard() {
     const todayStr = getLocalDateString(new Date());
     const completedTodayCount = completedTasks.filter(t => t.completedAt && t.completedAt.startsWith(todayStr)).length;
 
+    const handleTitleClick = useCallback(() => {
+        if (window.innerWidth < 1024) {
+            const now = Date.now();
+            if (now - lastTapRef.current < 400) {
+                // Double tap: toggle repeating tasks
+                setShowRepeatingMobile(prev => !prev);
+                lastTapRef.current = 0;
+            } else {
+                // Single tap: toggle collapse
+                setIsMobileExpanded(prev => !prev);
+                lastTapRef.current = now;
+            }
+        } else {
+            scrollToPage(activePage === 0 ? 1 : 0);
+        }
+    }, [activePage]);
+
     return (
         <Card className="lg:h-full flex flex-col border-none shadow-none bg-transparent">
             <CardHeader className="flex flex-row items-center justify-between px-3 sm:px-4 pt-4 sm:pt-6 pb-3 sm:pb-4 gap-2">
                 <div
                     className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity group min-w-0"
-                    onClick={() => {
-                        // On mobile: toggle collapse. On desktop: switch pages.
-                        if (window.innerWidth < 1024) {
-                            setIsMobileExpanded(prev => !prev);
-                        } else {
-                            scrollToPage(activePage === 0 ? 1 : 0);
-                        }
-                    }}
+                    onClick={handleTitleClick}
                 >
                     <CardTitle className="text-lg sm:text-xl font-bold tracking-tight select-none flex items-center gap-2 sm:gap-3">
-                        {activePage === 0 ? "Tasks" : "Repeating"}
+                        <span className="lg:hidden">{showRepeatingMobile ? "Repeating" : "Tasks"}</span>
+                        <span className="hidden lg:inline">{activePage === 0 ? "Tasks" : "Repeating"}</span>
                         <ChevronDown className={`h-4 w-4 lg:hidden transition-transform ${isMobileExpanded ? 'rotate-180' : ''}`} />
-                        {activePage === 0 && completedTodayCount > 0 && (
+                        {!showRepeatingMobile && completedTodayCount > 0 && (
                             <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full border border-green-500/20 font-medium max-lg:hidden">
                                 {completedTodayCount} done today
                             </span>
@@ -235,7 +252,7 @@ export function TaskBoard() {
                     </div>
                 </div>
                 <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                    {activePage === 0 && (
+                    {!isOnRepeating && (
                         <Button variant="ghost" size="icon" onClick={() => setIsAllTasksOpen(true)} className="h-8 w-8 text-muted-foreground/70 hover:text-foreground hover:bg-muted transition-colors">
                             <Eye className="h-4 w-4" />
                         </Button>
@@ -248,12 +265,12 @@ export function TaskBoard() {
                         <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-blue-600/80 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-150 ease-in-out" />
                         <span className="relative z-10 flex items-center font-medium">
                             <Plus className="h-4 w-4 mr-1 sm:mr-2 group-hover:rotate-90 transition-transform duration-150" />
-                            Add {activePage === 0 ? "Task" : "Repeat"}
+                            Add {isOnRepeating ? "Repeat" : "Task"}
                         </span>
                     </Button>
                 </div>
             </CardHeader>
-            <CardContent className={`${isMobileExpanded ? 'flex' : 'hidden'} lg:flex flex-1 px-0 overflow-hidden flex-col relative`}>
+            <CardContent className={`${(isMobileExpanded || showRepeatingMobile) ? 'flex' : 'hidden'} lg:flex flex-1 px-0 overflow-hidden flex-col relative`}>
                 <div
                     ref={scrollContainerRef}
                     onScroll={handleScroll}
@@ -261,7 +278,7 @@ export function TaskBoard() {
                     style={{ scrollBehavior: 'smooth' }}
                 >
                     {/* Page 1: Task List */}
-                    <div className="w-full lg:min-h-full lg:snap-center flex flex-col">
+                    <div className={`w-full lg:min-h-full lg:snap-center flex-col ${showRepeatingMobile ? 'hidden lg:flex' : 'flex'}`}>
                         <div className="flex-1 overflow-y-auto no-scrollbar px-4">
                             <Accordion type="single" collapsible defaultValue="dated" className="w-full space-y-4">
                                 <TaskSection
@@ -298,13 +315,15 @@ export function TaskBoard() {
                         </div>
                     </div>
 
-                    {/* Page 2: Repeating Tasks */}
-                    <RepeatingTasksPage
-                        repeatingTasks={repeatingTasks}
-                        onEdit={handleRepeatingEdit}
-                        onDelete={deleteRepeatingTask}
-                        onToggleActive={handleRepeatingToggleActive}
-                    />
+                    {/* Page 2: Repeating Tasks — mobile: shown via double-tap only; desktop: snap scroll */}
+                    <div className={`${showRepeatingMobile ? 'block' : 'hidden'} lg:block`}>
+                        <RepeatingTasksPage
+                            repeatingTasks={repeatingTasks}
+                            onEdit={handleRepeatingEdit}
+                            onDelete={deleteRepeatingTask}
+                            onToggleActive={handleRepeatingToggleActive}
+                        />
+                    </div>
                 </div>
             </CardContent>
 
