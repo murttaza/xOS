@@ -24,6 +24,7 @@ export const useStore = create<AppState>()(
                 isFocusMode: state.isFocusMode,
                 isHardcoreMode: state.isHardcoreMode,
                 osPrefix: state.osPrefix,
+                timerStartTimes: state.timerStartTimes,
             }),
         }
     )

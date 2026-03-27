@@ -3,19 +3,16 @@ import { useStore } from '@/store';
 
 /**
  * Single global timer hook — drives all active task timers from one interval.
- * 
- * Performance optimization: Uses a ref to track whether any timers are active,
- * so the interval is only created/destroyed when timers start/stop (not every second).
- * The incrementTimers function uses an early-out when no timers are active.
+ *
+ * Uses persisted timerStartTimes to survive page reloads and background tabs.
+ * incrementTimers recalculates elapsed time from start timestamps each tick.
  */
 export function useTaskTimer() {
-    const activeTimers = useStore(s => s.activeTimers);
+    const timerStartTimes = useStore(s => s.timerStartTimes);
     const incrementTimers = useStore(s => s.incrementTimers);
 
-    // Memoize the check to prevent unnecessary effect triggers
-    const hasActiveTimers = useMemo(() => Object.keys(activeTimers).length > 0, [activeTimers]);
+    const hasActiveTimers = useMemo(() => Object.keys(timerStartTimes).length > 0, [timerStartTimes]);
 
-    // Use ref for the callback so the interval doesn't need to be recreated
     const incrementTimersRef = useRef(incrementTimers);
     incrementTimersRef.current = incrementTimers;
 
@@ -25,6 +22,9 @@ export function useTaskTimer() {
 
     useEffect(() => {
         if (!hasActiveTimers) return;
+
+        // Immediately sync elapsed times on mount/resume
+        tick();
 
         const interval = setInterval(tick, 1000);
         return () => clearInterval(interval);

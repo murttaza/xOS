@@ -4,12 +4,15 @@ import { api } from '@/api';
 import { safeJSONParse, calculateSessionXP, calculateLevelFromXP, calculatePrayerXP, getLocalDateString } from '@/lib/utils';
 import type { AppState } from './index';
 
+const MAX_TIMER_SECONDS = 86400; // 24-hour cap
+
 export interface SessionSlice {
     sessions: Session[];
     dailyLog: DailyLog | null;
 
     // Timer state - Multi-tasking support
-    activeTimers: Record<number, number>; // taskId -> duration in seconds
+    activeTimers: Record<number, number>; // taskId -> duration in seconds (derived from startTimes)
+    timerStartTimes: Record<number, string>; // taskId -> ISO start timestamp (persisted)
     toggleTaskTimer: (taskId: number) => Promise<void>;
     stopTaskTimer: (taskId: number) => Promise<void>;
     incrementTimers: () => void;
@@ -31,6 +34,7 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
     sessions: [],
     dailyLog: null,
     activeTimers: {},
+    timerStartTimes: {},
 
     pomodoroTime: 25 * 60,
     isPomodoroRunning: false,
@@ -168,35 +172,41 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
     toggleTaskTimer: async (taskId: number) => {
         const state = get();
 
-        if (state.activeTimers[taskId] !== undefined) {
+        if (state.timerStartTimes[taskId] !== undefined) {
             // Task is running, stop it
             await state.stopTaskTimer(taskId);
         } else {
-            // Start new task (allow parallel)
+            // Start new task (allow parallel) - store the start timestamp
+            const now = new Date().toISOString();
             set((state) => ({
-                activeTimers: { ...state.activeTimers, [taskId]: 0 }
+                activeTimers: { ...state.activeTimers, [taskId]: 0 },
+                timerStartTimes: { ...state.timerStartTimes, [taskId]: now }
             }));
         }
     },
 
     stopTaskTimer: async (taskId: number) => {
         const state = get();
-        const duration = state.activeTimers[taskId];
+        const startTimeStr = state.timerStartTimes[taskId];
 
-        if (duration === undefined) return;
+        if (startTimeStr === undefined) return;
 
         // Stop timer immediately in UI
         const newTimers = { ...state.activeTimers };
         delete newTimers[taskId];
-        set({ activeTimers: newTimers });
+        const newStartTimes = { ...state.timerStartTimes };
+        delete newStartTimes[taskId];
+        set({ activeTimers: newTimers, timerStartTimes: newStartTimes });
 
+        const startTime = new Date(startTimeStr);
+        const now = new Date();
+        const duration = Math.min(Math.floor((now.getTime() - startTime.getTime()) / 1000), MAX_TIMER_SECONDS);
         const durationMinutes = Math.floor(duration / 60);
 
         if (durationMinutes > 0) {
-            const now = new Date();
             await state.addSession({
                 taskId: taskId,
-                startTime: new Date(now.getTime() - duration * 1000).toISOString(),
+                startTime: startTime.toISOString(),
                 endTime: now.toISOString(),
                 duration_minutes: durationMinutes,
                 dateLogged: getLocalDateString(now)
@@ -205,12 +215,15 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
     },
 
     incrementTimers: () => set((state) => {
-        const newTimers = { ...state.activeTimers };
-        let hasChanges = false;
-        for (const id in newTimers) {
-            newTimers[id] = newTimers[id] + 1;
-            hasChanges = true;
+        const startTimes = state.timerStartTimes;
+        if (Object.keys(startTimes).length === 0) return {};
+
+        const now = Date.now();
+        const newTimers: Record<number, number> = {};
+        for (const id in startTimes) {
+            const elapsed = Math.floor((now - new Date(startTimes[id]).getTime()) / 1000);
+            newTimers[Number(id)] = Math.min(elapsed, MAX_TIMER_SECONDS);
         }
-        return hasChanges ? { activeTimers: newTimers } : {};
+        return { activeTimers: newTimers };
     }),
 });
