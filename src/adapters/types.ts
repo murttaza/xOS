@@ -62,6 +62,7 @@ export interface ApiBackend {
     getActiveTimers: () => Promise<{ taskId: number; startTime: string }[]>;
     setActiveTimer: (taskId: number, startTime: string) => Promise<unknown>;
     removeActiveTimer: (taskId: number) => Promise<unknown>;
+    sessionExistsForTimer: (taskId: number, startTime: string) => Promise<boolean>;
 
     // Export
     exportAllData: () => Promise<unknown>;

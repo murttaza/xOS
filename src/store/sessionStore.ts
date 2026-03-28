@@ -258,13 +258,17 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
         const durationMinutes = Math.floor(duration / 60);
 
         if (durationMinutes > 0) {
-            await state.addSession({
-                taskId: taskId,
-                startTime: startTime.toISOString(),
-                endTime: now.toISOString(),
-                duration_minutes: durationMinutes,
-                dateLogged: getLocalDateString(now)
-            });
+            // Prevent duplicate sessions when both devices stop the same timer
+            const alreadyRecorded = await api.sessionExistsForTimer(taskId, startTime.toISOString());
+            if (!alreadyRecorded) {
+                await state.addSession({
+                    taskId: taskId,
+                    startTime: startTime.toISOString(),
+                    endTime: now.toISOString(),
+                    duration_minutes: durationMinutes,
+                    dateLogged: getLocalDateString(now)
+                });
+            }
         }
     },
 

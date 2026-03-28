@@ -29,8 +29,9 @@ import { Input } from './components/ui/input';
 import { Button } from './components/ui/button';
 import { Switch } from './components/ui/switch';
 import { Label } from './components/ui/label';
-import { Settings2, HelpCircle, Download, BookOpen, CalendarDays } from 'lucide-react';
+import { Settings2, HelpCircle, Download, BookOpen, CalendarDays, LogOut } from 'lucide-react';
 import { api } from './api';
+import { supabase } from './lib/supabase';
 
 function App() {
   // Grouped selectors to minimize subscription count
@@ -66,7 +67,7 @@ function App() {
   const [_windowSize, setWindowSize] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  const APP_VERSION = __APP_VERSION__ || '4.0.1';
+  const APP_VERSION = __APP_VERSION__ || '5.0.0';
 
   // Window focus state for pausing background work
   const isWindowFocused = useWindowFocus();
@@ -88,13 +89,22 @@ function App() {
     }).catch(() => setIsLoading(false));
   }, []); // Initial fetch only - run once
 
-  // Sync timers from Supabase when window regains focus (cross-device)
+  // Sync all data from Supabase when window regains focus (cross-device)
   useEffect(() => {
     if (isWindowFocused) {
       syncTimers();
-      fetchTasks(); // Refresh tasks too in case they changed on another device
+      fetchTasks();
+      fetchStats();
+      fetchDailyLog(getLocalDateString());
     }
-  }, [isWindowFocused, syncTimers, fetchTasks]);
+  }, [isWindowFocused, syncTimers, fetchTasks, fetchStats, fetchDailyLog]);
+
+  // Periodic timer sync while window is focused (cross-device, 30s interval)
+  useEffect(() => {
+    if (!isWindowFocused) return;
+    const interval = setInterval(() => { syncTimers(); }, 30000);
+    return () => clearInterval(interval);
+  }, [isWindowFocused, syncTimers]);
 
   useEffect(() => {
     // Only check for date change when window is focused — saves CPU when minimized
@@ -279,14 +289,22 @@ function App() {
                         />
                       </div>
                       
-                      <div className="border-t border-border pt-3">
-                        <Button 
-                          variant="outline" 
-                          className="w-full text-xs flex gap-2 items-center" 
+                      <div className="border-t border-border pt-3 space-y-2">
+                        <Button
+                          variant="outline"
+                          className="w-full text-xs flex gap-2 items-center"
                           onClick={handleExportData}
                         >
                           <Download className="h-3 w-3" />
                           Export Data Backup
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full text-xs flex gap-2 items-center text-destructive hover:text-destructive"
+                          onClick={() => supabase.auth.signOut()}
+                        >
+                          <LogOut className="h-3 w-3" />
+                          Sign Out
                         </Button>
                       </div>
                     </PopoverContent>

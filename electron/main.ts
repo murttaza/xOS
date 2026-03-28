@@ -538,6 +538,17 @@ app.whenReady().then(() => {
   });
 
   createWindow()
+
+  // Auto-update: check for updates via GitHub Releases
+  try {
+    import('electron-updater').then(({ autoUpdater }) => {
+      autoUpdater.autoDownload = true;
+      autoUpdater.autoInstallOnAppQuit = true;
+      autoUpdater.checkForUpdatesAndNotify();
+    });
+  } catch {
+    // electron-updater may not be available in dev mode
+  }
 })
 
 app.on('will-quit', () => {

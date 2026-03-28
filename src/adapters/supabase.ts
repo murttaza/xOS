@@ -6,6 +6,39 @@ function throwOnError<T>(result: { data: T; error: any }): T {
     return result.data;
 }
 
+// Retry wrapper for critical writes — retries once after 1s on network failure
+async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
+    try {
+        return await fn();
+    } catch (err) {
+        if (err instanceof TypeError) { // TypeError = network failure (fetch)
+            await new Promise(r => setTimeout(r, 1000));
+            return fn();
+        }
+        throw err;
+    }
+}
+
+// Lightweight offline queue — queues writes when offline, flushes on reconnect
+const offlineQueue: (() => Promise<unknown>)[] = [];
+
+function enqueueIfOffline(fn: () => Promise<unknown>): boolean {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        offlineQueue.push(fn);
+        return true;
+    }
+    return false;
+}
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('online', async () => {
+        while (offlineQueue.length > 0) {
+            const op = offlineQueue.shift()!;
+            try { await op(); } catch { /* best-effort */ }
+        }
+    });
+}
+
 export const supabaseBackend: ApiBackend = {
     // ── Tasks ──────────────────────────────────────────────────
     getTasks: async () => {
@@ -68,13 +101,15 @@ export const supabaseBackend: ApiBackend = {
 
     // ── Sessions ───────────────────────────────────────────────
     addSession: async (session) => {
-        return throwOnError(await supabase.from('sessions').insert({
+        const doInsert = async () => throwOnError(await supabase.from('sessions').insert({
             taskId: session.taskId,
             startTime: session.startTime,
             endTime: session.endTime,
             duration_minutes: session.duration_minutes,
             dateLogged: session.dateLogged,
         }));
+        if (enqueueIfOffline(doInsert)) return;
+        return withRetry(doInsert);
     },
 
     getSessionsByDate: async (date) => {
@@ -367,15 +402,28 @@ export const supabaseBackend: ApiBackend = {
     },
 
     setActiveTimer: async (taskId, startTime) => {
-        return throwOnError(
+        const doUpsert = async () => throwOnError(
             await supabase.from('active_timers').upsert({ taskId, startTime }, { onConflict: 'taskId,user_id' })
         );
+        if (enqueueIfOffline(doUpsert)) return;
+        return withRetry(doUpsert);
     },
 
     removeActiveTimer: async (taskId) => {
-        return throwOnError(
+        const doDelete = async () => throwOnError(
             await supabase.from('active_timers').delete().eq('taskId', taskId)
         );
+        if (enqueueIfOffline(doDelete)) return;
+        return withRetry(doDelete);
+    },
+
+    sessionExistsForTimer: async (taskId, startTime) => {
+        const { data } = await supabase.from('sessions')
+            .select('id')
+            .eq('taskId', taskId)
+            .eq('startTime', startTime)
+            .limit(1);
+        return (data?.length ?? 0) > 0;
     },
 
     // ── Export ──────────────────────────────────────────────────

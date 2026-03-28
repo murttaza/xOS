@@ -1,7 +1,7 @@
 {
   "name": "lifeos",
   "private": true,
-  "version": "4.4.0",
+  "version": "5.0.0",
   "author": "Murtaza",
   "type": "module",
   "scripts": {
@@ -38,6 +38,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "electron-updater": "^6.8.3",
     "framer-motion": "^12.23.25",
     "lucide-react": "^0.555.0",
     "react": "^18.2.0",

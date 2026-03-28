@@ -22,7 +22,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
         return () => listener.subscription.unsubscribe();
     }, []);
 
-    if (!ready) return null;
+    if (!ready) return (
+        <div className="h-screen flex items-center justify-center bg-background">
+            <div className="text-4xl font-bold text-primary animate-pulse">xOS</div>
+        </div>
+    );
     if (!authenticated) return <LoginPage onLogin={() => setAuthenticated(true)} />;
     return <>{children}</>;
 }

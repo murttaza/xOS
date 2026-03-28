@@ -66,6 +66,7 @@ export const electronBackend: ApiBackend = {
     getActiveTimers: async () => [],
     setActiveTimer: async () => {},
     removeActiveTimer: async () => {},
+    sessionExistsForTimer: async () => false,
 
     // Export
     exportAllData: () => window.ipcRenderer.invoke(IpcChannels.ExportAllData),
