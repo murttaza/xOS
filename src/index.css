@@ -216,7 +216,7 @@
 
 @layer base {
     html {
-        background: transparent;
+        background: hsl(var(--background));
         scroll-behavior: smooth;
         overflow: hidden;
     }
@@ -226,7 +226,7 @@
     }
 
     body {
-        @apply bg-transparent text-foreground font-sans antialiased;
+        @apply bg-background text-foreground font-sans antialiased;
         font-feature-settings: "rlig" 1, "calt" 1;
         transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         overflow: hidden;

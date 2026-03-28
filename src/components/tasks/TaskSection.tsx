@@ -38,9 +38,9 @@ export const TaskSection = memo(function TaskSection({
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4 pt-2 space-y-2">
                 {tasks.length === 0 && <p className="text-xs text-muted-foreground italic px-2">{emptyMessage}</p>}
-                <div className="max-h-[45vh] overscroll-contain overflow-y-auto snap-y snap-mandatory no-scrollbar space-y-2">
+                <div className="max-h-[60vh] lg:max-h-[45vh] overscroll-contain overflow-y-auto lg:snap-y lg:snap-mandatory no-scrollbar space-y-2">
                     {tasks.map(task => (
-                        <div key={task.id} className="snap-start">
+                        <div key={task.id} className="lg:snap-start">
                             <TaskItem
                                 task={task}
                                 isActive={task.id !== undefined && activeTimerIds.has(task.id)}

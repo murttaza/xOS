@@ -274,12 +274,12 @@ export function TaskBoard() {
                 <div
                     ref={scrollContainerRef}
                     onScroll={handleScroll}
-                    className="flex-1 overflow-y-auto lg:snap-y lg:snap-mandatory flex flex-col no-scrollbar"
+                    className="flex-1 overflow-y-auto overflow-x-hidden lg:snap-y lg:snap-mandatory flex flex-col no-scrollbar"
                     style={{ scrollBehavior: 'smooth' }}
                 >
                     {/* Page 1: Task List */}
                     <div className={`w-full lg:min-h-full lg:snap-center flex-col ${showRepeatingMobile ? 'hidden lg:flex' : 'flex'}`}>
-                        <div className="flex-1 overflow-y-auto no-scrollbar px-4">
+                        <div className="flex-1 lg:overflow-y-auto no-scrollbar px-3 sm:px-4">
                             <Accordion type="single" collapsible defaultValue="dated" className="w-full space-y-4">
                                 <TaskSection
                                     value="dated"

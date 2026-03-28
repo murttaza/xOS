@@ -220,13 +220,13 @@ export function YearMode() {
                         </Button>
                     </div>
 
-                    <div className="flex flex-col lg:flex-row w-full min-h-full p-4 lg:p-8 gap-4 lg:gap-8 pb-32 lg:pb-8">
+                    <div className="flex flex-col lg:flex-row w-full min-h-full p-3 sm:p-4 lg:p-8 gap-3 lg:gap-8 pb-8 lg:pb-8">
                         {/* Left Column - Dots Grid */}
-                        <div className="group w-full lg:w-1/2 lg:h-full min-h-0 lg:min-h-[500px] flex flex-col items-center justify-center p-4 lg:p-8 lg:border-r border-b lg:border-b-0 border-border/50 relative transition-colors duration-150 hover:bg-muted/10">
+                        <div className="group w-full lg:w-1/2 lg:h-full min-h-0 lg:min-h-[500px] flex flex-col items-center justify-center p-2 sm:p-4 lg:p-8 lg:border-r border-b lg:border-b-0 border-border/50 relative transition-colors duration-150 hover:bg-muted/10 pb-4 lg:pb-8">
                             {/* Subtle Hover Glow */}
                             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none bg-[radial-gradient(ellipse_at_center,hsl(var(--foreground)/0.03)_0%,transparent_60%)]" />
 
-                            <div className="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-4 z-50 no-drag">
+                            <div className="absolute top-3 left-3 sm:top-8 sm:left-8 flex items-center gap-3 z-50 no-drag">
                                 <Button
                                     variant={viewState === 'days' ? "default" : "outline"}
                                     size="sm"
@@ -246,46 +246,49 @@ export function YearMode() {
                             </div>
 
                             <div className="w-full max-w-2xl flex flex-col items-center max-h-full min-h-0">
-                                <div className="text-center mt-16 sm:mt-0 mb-8 sm:mb-12 shrink-0">
-                                    <h1 className="text-4xl sm:text-5xl font-black mb-2 tabular-nums tracking-tighter text-foreground">
+                                <div className="text-center mt-10 sm:mt-0 mb-3 sm:mb-12 shrink-0">
+                                    <h1 className="text-4xl sm:text-5xl font-black mb-1 sm:mb-2 tabular-nums tracking-tighter text-foreground">
                                         {viewState === 'days' ? daysLeft : weeksInYear - weeksPassed}
                                     </h1>
-                                    <p className="text-muted-foreground uppercase tracking-widest text-sm font-semibold">
+                                    <p className="text-muted-foreground uppercase tracking-widest text-xs sm:text-sm font-semibold">
                                         {viewState === 'days' ? 'Days' : 'Weeks'} left in {localY}
                                     </p>
                                 </div>
 
-                                <ScrollArea className="w-full shrink min-h-0 px-4 [&_[data-radix-scroll-area-scrollbar]]:hidden">
-                                    <div className="flex flex-wrap gap-2.5 justify-center content-start pb-6">
+                                <div className="w-full shrink min-h-0">
+                                    <div
+                                        className="w-full pb-2 sm:pb-6"
+                                        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(7px, 1fr))', gap: '5px' }}
+                                    >
                                         {Array.from({ length: totalDots }).map((_, i) => (
                                             <div
                                                 key={i}
                                                 style={{ animation: `fadeInScale 0.2s ease-out ${i * (viewState === 'days' ? 0.001 : 0.01)}s both` }}
-                                                className={`rounded-full transition-all duration-150 ${i < passedDots
-                                                    ? 'bg-foreground/10 w-2 h-2 opacity-50 relative'
-                                                    : 'bg-foreground w-2.5 h-2.5'
+                                                className={`rounded-full transition-all duration-150 justify-self-center ${i < passedDots
+                                                    ? 'bg-foreground/10 w-1.5 h-1.5 sm:w-2 sm:h-2 opacity-50 relative'
+                                                    : 'bg-foreground w-2 h-2 sm:w-2.5 sm:h-2.5'
                                                     }`}
                                             >
                                                 {/* Cross mark for passed days */}
                                                 {i < passedDots && (
                                                     <div className="absolute inset-0 flex items-center justify-center -rotate-45">
-                                                        <div className="w-4 h-px bg-foreground/40"></div>
+                                                        <div className="w-3 sm:w-4 h-px bg-foreground/40"></div>
                                                     </div>
                                                 )}
                                             </div>
                                         ))}
                                     </div>
-                                </ScrollArea>
+                                </div>
                             </div>
                         </div>
 
                         {/* Right Column - Streaks Tracker */}
-                        <div className="group w-full lg:w-1/2 lg:h-full min-h-0 lg:min-h-[500px] flex flex-col justify-start lg:justify-center items-center p-4 lg:p-8 relative transition-colors duration-150 hover:bg-muted/10">
+                        <div className="group w-full lg:w-1/2 lg:h-full min-h-0 lg:min-h-[500px] flex flex-col justify-start lg:justify-center items-center p-2 sm:p-4 lg:p-8 relative transition-colors duration-150 hover:bg-muted/10">
                             {/* Subtle Hover Glow */}
                             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none bg-[radial-gradient(ellipse_at_center,hsl(var(--foreground)/0.03)_0%,transparent_60%)]" />
 
                             <div className="w-full max-w-2xl flex flex-col lg:max-h-full min-h-0 relative z-10">
-                                <div className="flex justify-end mb-8 w-full shrink-0">
+                                <div className="flex justify-end mb-4 sm:mb-8 w-full shrink-0">
                                     <form onSubmit={handleAddStreak} className="group flex items-center w-full sm:w-auto">
                                         {/* Mobile: always visible input */}
                                         <div className="flex-1 sm:w-0 sm:opacity-0 sm:group-hover:w-[400px] sm:focus-within:w-[400px] sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-all duration-150 ease-out overflow-hidden pr-2">
@@ -293,17 +296,17 @@ export function YearMode() {
                                                 placeholder="What habit do you want to track?"
                                                 value={newStreakTitle}
                                                 onChange={(e) => setNewStreakTitle(e.target.value)}
-                                                className="bg-muted/50 border-border text-base sm:text-lg py-4 sm:py-6 focus-visible:ring-1 focus-visible:ring-ring/30 rounded-xl w-full sm:min-w-[300px]"
+                                                className="bg-muted/50 border-border text-base sm:text-lg py-3 sm:py-6 focus-visible:ring-1 focus-visible:ring-ring/30 rounded-xl w-full sm:min-w-[300px]"
                                             />
                                         </div>
-                                        <Button type="submit" variant="ghost" size="icon" className="h-[44px] w-[44px] sm:h-[52px] sm:w-[52px] shrink-0 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors duration-150">
+                                        <Button type="submit" variant="ghost" size="icon" className="h-10 w-10 sm:h-[52px] sm:w-[52px] shrink-0 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors duration-150">
                                             <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
                                         </Button>
                                     </form>
                                 </div>
 
-                                <ScrollArea className="lg:flex-1 lg:min-h-0 -mx-4 px-4 [&_[data-radix-scroll-area-scrollbar]]:hidden">
-                                    <div className="space-y-4 pb-12">
+                                <ScrollArea className="lg:flex-1 lg:min-h-0 -mx-2 px-2 sm:-mx-4 sm:px-4 [&_[data-radix-scroll-area-scrollbar]]:hidden">
+                                    <div className="space-y-3 sm:space-y-4 pb-6">
                                         {streaks?.map((streak) => (
                                             <StreakItem
                                                 key={streak.id}

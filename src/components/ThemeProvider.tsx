@@ -32,19 +32,24 @@ export function ThemeProvider({
     useEffect(() => {
         const root = window.document.documentElement
 
-        root.classList.remove("light", "dark")
-
-        if (theme === "system") {
-            const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-                .matches
-                ? "dark"
-                : "light"
-
-            root.classList.add(systemTheme)
-            return
+        const applyTheme = (resolved: "light" | "dark") => {
+            root.classList.remove("light", "dark")
+            root.classList.add(resolved)
+            // Update theme-color meta tag for iOS Safari
+            const meta = document.querySelector('meta[name="theme-color"]:not([media])')
+                || (() => { const m = document.createElement("meta"); m.name = "theme-color"; document.head.appendChild(m); return m; })();
+            meta.setAttribute("content", resolved === "dark" ? "#000000" : "#f5f6f8");
         }
 
-        root.classList.add(theme)
+        if (theme === "system") {
+            const mq = window.matchMedia("(prefers-color-scheme: dark)")
+            applyTheme(mq.matches ? "dark" : "light")
+            const handler = (e: MediaQueryListEvent) => applyTheme(e.matches ? "dark" : "light")
+            mq.addEventListener("change", handler)
+            return () => mq.removeEventListener("change", handler)
+        }
+
+        applyTheme(theme)
     }, [theme])
 
     const value = {

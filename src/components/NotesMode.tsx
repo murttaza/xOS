@@ -393,14 +393,15 @@ export const NotesMode = () => {
                     </div>
 
                     {/* Footer Navigation for Libraries */}
-                    <div className="h-12 border-t border-border/50 bg-background/50 backdrop-blur-md z-10 flex items-center justify-center gap-4 no-drag relative">
-                        <div className="flex gap-2">
+                    <div className="h-12 border-t border-border/50 bg-background/50 backdrop-blur-md z-10 flex items-center justify-between px-3 sm:px-6 no-drag">
+                        <div className="flex-1" />
+                        <div className="flex gap-1.5 sm:gap-2">
                             {Array.from({ length: visibleLibrariesCount }).map((_, idx) => (
                                 <button
                                     key={idx}
                                     onClick={() => setCurrentLibraryIndex(idx)}
                                     className={cn(
-                                        "px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider transition-all",
+                                        "px-3 sm:px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider transition-all",
                                         currentLibraryIndex === idx ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
                                     )}
                                 >
@@ -410,15 +411,15 @@ export const NotesMode = () => {
                         </div>
 
                         {/* Delete Library Option */}
-                        <div className="absolute right-8">
+                        <div className="flex-1 flex justify-end">
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 px-2 sm:px-3"
                                 onClick={handleDeleteLibrary}
                                 title="Delete Current Library"
                             >
-                                <Trash2 className="h-4 w-4 mr-2" /> Delete Library
+                                <Trash2 className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Delete Library</span>
                             </Button>
                         </div>
                     </div>
