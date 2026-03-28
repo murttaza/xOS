@@ -6,6 +6,10 @@ import type { AppState } from './index';
 
 const MAX_TIMER_SECONDS = 86400; // 24-hour cap
 
+// Module-level set: tracks timers recently stopped locally so syncTimers
+// doesn't re-restore them from Supabase during the async removal window.
+const recentlyStoppedTimers = new Set<number>();
+
 export interface SessionSlice {
     sessions: Session[];
     dailyLog: DailyLog | null;
@@ -182,7 +186,11 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
         // Merge: remote timers + any local timers not in remote (push them to Supabase)
         const merged: Record<number, string> = {};
         for (const t of remoteTimers) {
-            merged[t.taskId] = t.startTime;
+            // Skip timers the user just stopped locally — they may still be in
+            // Supabase because the async removal hasn't completed yet.
+            if (!recentlyStoppedTimers.has(t.taskId)) {
+                merged[t.taskId] = t.startTime;
+            }
         }
         for (const [id, startTime] of Object.entries(localStartTimes)) {
             const taskId = Number(id);
@@ -222,6 +230,10 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
         const startTimeStr = state.timerStartTimes[taskId];
 
         if (startTimeStr === undefined) return;
+
+        // Prevent syncTimers from re-restoring this timer during the async removal window
+        recentlyStoppedTimers.add(taskId);
+        setTimeout(() => recentlyStoppedTimers.delete(taskId), 15000);
 
         // Stop timer immediately in UI
         const newTimers = { ...state.activeTimers };
