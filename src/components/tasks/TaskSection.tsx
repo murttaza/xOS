@@ -30,7 +30,7 @@ export const TaskSection = memo(function TaskSection({
 }: TaskSectionProps) {
     return (
         <AccordionItem value={value} className={`border-none bg-card/40 rounded-xl overflow-hidden shadow-sm ${className || ''}`}>
-            <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/50 transition-colors">
+            <AccordionTrigger className="px-4 py-3 min-h-[44px] hover:no-underline hover:bg-muted/50 transition-colors">
                 <span className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
                     {label}
                     <span className="bg-muted px-2 py-0.5 rounded-full text-xs">{tasks.length}</span>

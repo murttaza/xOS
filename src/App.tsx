@@ -300,7 +300,7 @@ function App() {
 
 
 
-              <div className="flex items-center gap-4 no-drag">
+              <div className="flex items-center gap-1 sm:gap-4 no-drag">
                 {import.meta.env.DEV && <DevelopmentButton />}
 
                 <Popover>

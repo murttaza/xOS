@@ -135,12 +135,12 @@ export const RepeatingTaskItem = memo(function RepeatingTaskItem({ task, onEdit,
                                 {task.title}
                             </h3>
                             {task.streak !== undefined && task.streak > 0 && (
-                                <span className="text-[10px] bg-orange-500/20 text-orange-500 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5" title="Current Streak">
+                                <span className="text-[11px] bg-orange-500/20 text-orange-500 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5" title="Current Streak">
                                     <Flame className="w-3 h-3 fill-orange-500" /> {task.streak}
                                 </span>
                             )}
                             {isDoneToday && task.repeatType === 'daily' && (
-                                <span className="text-[10px] bg-green-500/20 text-green-500 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1">
+                                <span className="text-[11px] bg-green-500/20 text-green-500 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1">
                                     <CheckCircle2 className="w-3 h-3" /> Done
                                 </span>
                             )}
@@ -149,7 +149,7 @@ export const RepeatingTaskItem = memo(function RepeatingTaskItem({ task, onEdit,
                         {task.repeatType === 'weekly' ? (
                             renderWeeklyProgress()
                         ) : (
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground flex gap-2 items-center">
+                            <div className="text-[11px] uppercase tracking-wider text-muted-foreground flex gap-2 items-center">
                                 <Repeat className="h-3 w-3" />
                                 <span>{getRepeatText()}</span>
                                 <span className="bg-secondary/50 px-1.5 py-0.5 rounded">{Array.isArray(task.statTarget) ? task.statTarget.join(", ") : task.statTarget}</span>

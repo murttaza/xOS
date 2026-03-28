@@ -110,10 +110,15 @@ export function StatsBlock() {
                 className="py-2 px-4 lg:pb-3 lg:px-6 flex flex-row items-center justify-between space-y-0 shrink-0 cursor-pointer lg:cursor-default"
                 onClick={() => setIsMobileExpanded(prev => !prev)}
             >
-                <CardTitle className="text-sm lg:text-xl font-medium lg:font-bold tracking-tight flex items-center gap-2 text-muted-foreground lg:text-foreground">
-                    <div className="h-1.5 w-1.5 lg:h-2 lg:w-2 rounded-full bg-primary animate-pulse-soft opacity-60 lg:opacity-100" />
+                <CardTitle className="text-sm lg:text-xl font-medium lg:font-bold tracking-tight flex items-center gap-2 text-muted-foreground lg:text-foreground min-w-0">
+                    <div className="h-1.5 w-1.5 lg:h-2 lg:w-2 rounded-full bg-primary animate-pulse-soft opacity-60 lg:opacity-100 shrink-0" />
                     Stats
-                    <ChevronDown className={`h-3.5 w-3.5 lg:hidden transition-transform opacity-50 ${isMobileExpanded ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`h-3.5 w-3.5 lg:hidden transition-transform opacity-50 shrink-0 ${isMobileExpanded ? 'rotate-180' : ''}`} />
+                    {!isMobileExpanded && stats.length > 0 && (
+                        <span className="text-[11px] text-muted-foreground/50 font-normal truncate lg:hidden">
+                            {stats.length} stat{stats.length !== 1 ? 's' : ''} · top: {[...stats].sort((a, b) => b.currentLevel - a.currentLevel)[0]?.statName} Lv{[...stats].sort((a, b) => b.currentLevel - a.currentLevel)[0]?.currentLevel}
+                        </span>
+                    )}
                 </CardTitle>
                 <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); openAddDialog(); }} className="h-7 w-7 lg:h-8 lg:w-8 hover:bg-muted rounded-full opacity-50 hover:opacity-100 transition-opacity">
                     <Plus className="h-3.5 w-3.5 lg:h-4 lg:w-4" />

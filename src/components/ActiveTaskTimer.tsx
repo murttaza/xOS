@@ -33,7 +33,10 @@ export function ActiveTaskTimer() {
     if (activeTaskIds.length === 0 || (isNotesMode && currentSubjectId !== null)) return null;
 
     return (
-        <div className={`fixed left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-[100] no-drag w-full max-w-2xl pointer-events-none transition-all duration-150 ${isNotesMode ? 'bottom-20' : 'bottom-8'}`}>
+        <div
+            className={`fixed left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 z-[100] no-drag w-full max-w-2xl pointer-events-none transition-all duration-150 ${isNotesMode ? 'bottom-20' : 'bottom-6 sm:bottom-8'}`}
+            style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        >
             <AnimatePresence mode="popLayout">
                 {activeTaskIds.map((taskId) => {
                     const task = taskMap.get(taskId);
@@ -48,7 +51,7 @@ export function ActiveTaskTimer() {
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
                             layout
-                            className="pointer-events-auto w-full sm:w-auto sm:min-w-[500px] px-3 sm:px-0"
+                            className="pointer-events-auto w-full px-3 sm:px-6"
                         >
                             <div
                                 className="glass border border-border shadow-2xl shadow-black/20 backdrop-blur-2xl cursor-pointer group hover:border-primary/40 dark:hover:border-primary/30 transition-all duration-150 rounded-2xl overflow-hidden"
@@ -61,8 +64,8 @@ export function ActiveTaskTimer() {
                                     <div className="flex flex-col min-w-0 flex-1">
                                         <div className="flex items-center gap-1.5 mb-0.5">
                                             <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-primary animate-pulse-soft shadow-[0_0_8px_hsl(var(--primary))]" />
-                                            <span className="text-[9px] sm:text-[10px] font-bold text-primary uppercase tracking-widest">Active</span>
-                                            <span className="text-[9px] sm:text-[10px] text-muted-foreground truncate">• {Array.isArray(task.statTarget) ? task.statTarget.join(", ") : task.statTarget}</span>
+                                            <span className="text-[11px] font-bold text-primary uppercase tracking-widest">Active</span>
+                                            <span className="text-[11px] text-muted-foreground truncate">• {Array.isArray(task.statTarget) ? task.statTarget.join(", ") : task.statTarget}</span>
                                         </div>
                                         <h3 className="font-bold text-sm sm:text-base truncate leading-tight text-foreground group-hover:text-primary transition-colors">
                                             {task.title}
