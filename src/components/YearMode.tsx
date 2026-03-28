@@ -51,7 +51,7 @@ const StreakItem = memo(function StreakItem({ streak, now, updateStreak, deleteS
             layout
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`relative p-6 rounded-2xl border transition-all duration-150 group ${streak.isPaused ? 'bg-card border-transparent text-muted-foreground' : 'bg-secondary border-border/50 hover:border-border hover:bg-secondary/80'}`}
+            className={`relative p-4 lg:p-6 rounded-2xl border transition-all duration-150 group ${streak.isPaused ? 'bg-card border-transparent text-muted-foreground' : 'bg-secondary border-border/50 hover:border-border hover:bg-secondary/80'}`}
         >
             {isEditing ? (
                 <div className="flex flex-col gap-4">
@@ -284,7 +284,7 @@ export function YearMode() {
                             {/* Subtle Hover Glow */}
                             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none bg-[radial-gradient(ellipse_at_center,hsl(var(--foreground)/0.03)_0%,transparent_60%)]" />
 
-                            <div className="w-full max-w-2xl flex flex-col max-h-full min-h-0 relative z-10">
+                            <div className="w-full max-w-2xl flex flex-col lg:max-h-full min-h-0 relative z-10">
                                 <div className="flex justify-end mb-8 w-full shrink-0">
                                     <form onSubmit={handleAddStreak} className="group flex items-center w-full sm:w-auto">
                                         {/* Mobile: always visible input */}
@@ -302,7 +302,7 @@ export function YearMode() {
                                     </form>
                                 </div>
 
-                                <ScrollArea className="flex-1 min-h-0 -mx-4 px-4 [&_[data-radix-scroll-area-scrollbar]]:hidden">
+                                <ScrollArea className="lg:flex-1 lg:min-h-0 -mx-4 px-4 [&_[data-radix-scroll-area-scrollbar]]:hidden">
                                     <div className="space-y-4 pb-12">
                                         {streaks?.map((streak) => (
                                             <StreakItem

@@ -10,6 +10,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { useWindowFocus } from "@/hooks/useWindowFocus";
 import { useShallow } from 'zustand/react/shallow';
 import { cn } from "@/lib/utils";
+import { isElectron } from "@/lib/platform";
 
 const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -138,30 +139,29 @@ export function FocusMode() {
             className={cn(
                 "fixed inset-0 z-50 text-foreground flex flex-col transition-colors duration-150 drag p-4 sm:p-8 lg:p-12",
                 isDark ? "dark" : "",
-                isMurtazaMode ? "bg-transparent" : isDark ? "bg-zinc-950" : "bg-white"
+                isMurtazaMode && isElectron ? "bg-transparent" : isDark ? "bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950" : "bg-stone-100"
             )}
         >
             {/* Top Toolbar */}
             <div className="absolute left-0 right-0 px-4 sm:px-6 flex justify-between items-start z-50 no-drag pointer-events-none" style={{ top: 'max(env(safe-area-inset-top, 0px), 16px)' }}>
-                {/* Left: Window Controls */}
-                <div className="pointer-events-auto bg-black/5 dark:bg-black/20 backdrop-blur-md border border-black/5 dark:border-white/5 rounded-full p-1.5 hover:bg-black/10 dark:hover:bg-black/40 transition-all duration-150 shadow-sm">
-                    <WindowControls />
+                {/* Left: Exit button */}
+                <div className="pointer-events-auto bg-black/5 dark:bg-black/20 backdrop-blur-md border border-black/5 dark:border-white/5 rounded-full p-1.5 flex items-center gap-1 hover:bg-black/10 dark:hover:bg-black/40 transition-all duration-150 shadow-sm">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setIsFocusMode(false)}
+                        className="h-9 w-9 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground"
+                        title="Exit Focus Mode"
+                    >
+                        <Minimize2 className="h-4 w-4" />
+                    </Button>
                 </div>
 
-                {/* Right: Actions */}
+                {/* Right: Window Controls + Theme toggle */}
                 <div className="pointer-events-auto flex items-center gap-3">
                     <div className="bg-black/5 dark:bg-black/20 backdrop-blur-md border border-black/5 dark:border-white/5 rounded-full p-1.5 flex items-center gap-1 hover:bg-black/10 dark:hover:bg-black/40 transition-all duration-150 shadow-sm">
                         <ModeToggle />
-                        <div className="w-px h-5 bg-black/10 dark:bg-white/10 mx-1" />
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setIsFocusMode(false)}
-                            className="h-9 w-9 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground"
-                            title="Exit Focus Mode"
-                        >
-                            <Minimize2 className="h-4 w-4" />
-                        </Button>
+                        {isElectron && <><div className="w-px h-5 bg-black/10 dark:bg-white/10 mx-1" /><WindowControls /></>}
                     </div>
                 </div>
             </div>
@@ -174,7 +174,7 @@ export function FocusMode() {
                         <p className="text-sm sm:text-xl text-muted-foreground font-light">{Array.isArray(activeTask.statTarget) ? activeTask.statTarget.join(", ") : activeTask.statTarget} • Difficulty: {activeTask.difficulty}</p>
                     </div>
 
-                    <div className={`text-[5rem] sm:text-[8rem] lg:text-[15rem] font-bold leading-none tracking-tighter tabular-nums text-primary drop-shadow-[0_0_30px_rgba(var(--primary),0.4)] ${isMurtazaMode ? 'border border-border rounded-3xl px-8 sm:px-12 py-3 sm:py-4 bg-background/20 backdrop-blur-sm' : ''}`}>
+                    <div className={`text-[5rem] sm:text-[8rem] lg:text-[15rem] font-bold leading-none tracking-tighter tabular-nums text-primary drop-shadow-[0_0_30px_rgba(var(--primary),0.4)] ${isMurtazaMode && isElectron ? 'border border-border rounded-3xl px-8 sm:px-12 py-3 sm:py-4 bg-background/20 backdrop-blur-sm' : ''}`}>
                         {formatTime(textDuration)}
                     </div>
 
