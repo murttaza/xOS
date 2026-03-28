@@ -10,6 +10,10 @@ const MAX_TIMER_SECONDS = 86400; // 24-hour cap
 // doesn't re-restore them from Supabase during the async removal window.
 const recentlyStoppedTimers = new Set<number>();
 
+// Tracks timers recently started locally so syncTimers doesn't remove them
+// before the initial push to Supabase has completed.
+const recentlyStartedTimers = new Set<number>();
+
 export interface SessionSlice {
     sessions: Session[];
     dailyLog: DailyLog | null;
@@ -187,10 +191,14 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
         try {
             remoteTimers = await api.getActiveTimers();
         } catch {
-            // If Supabase fetch fails, keep local timers
+            // If Supabase fetch fails, keep local timers as-is
+            return;
         }
 
-        // Merge: remote timers + any local timers not in remote (push them to Supabase)
+        // Build set of remote task IDs for quick lookup
+        const remoteIds = new Set(remoteTimers.map(t => t.taskId));
+
+        // Start with remote timers (Supabase is source of truth)
         const merged: Record<number, string> = {};
         for (const t of remoteTimers) {
             // Skip timers the user just stopped locally — they may still be in
@@ -199,12 +207,14 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
                 merged[t.taskId] = t.startTime;
             }
         }
+
+        // For local-only timers: only keep them if they were just started
+        // (push might still be in flight). Otherwise, another device stopped
+        // them — let them go.
         for (const [id, startTime] of Object.entries(localStartTimes)) {
             const taskId = Number(id);
-            if (!merged[taskId]) {
+            if (!remoteIds.has(taskId) && recentlyStartedTimers.has(taskId)) {
                 merged[taskId] = startTime;
-                // Local timer missing from Supabase — push it up
-                api.setActiveTimer(taskId, startTime).catch(() => {});
             }
         }
 
@@ -223,6 +233,12 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
             await state.stopTaskTimer(taskId);
         } else {
             const now = new Date().toISOString();
+
+            // Protect this timer from being removed by syncTimers before
+            // the Supabase push completes
+            recentlyStartedTimers.add(taskId);
+            setTimeout(() => recentlyStartedTimers.delete(taskId), 15000);
+
             set((state) => ({
                 activeTimers: { ...state.activeTimers, [taskId]: 0 },
                 timerStartTimes: { ...state.timerStartTimes, [taskId]: now }
