@@ -205,7 +205,8 @@ export function FocusMode() {
                 initial={{ opacity: 0, x: -50 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 }}
-                className="hidden lg:flex absolute left-0 top-24 bottom-24 w-64 no-drag items-center bg-gradient-to-r from-background to-transparent z-0"
+                className="hidden lg:flex absolute left-0 top-24 bottom-24 w-64 no-drag items-center z-0"
+                style={{ WebkitMaskImage: 'linear-gradient(to right, black 50%, transparent 100%)', maskImage: 'linear-gradient(to right, black 50%, transparent 100%)' }}
             >
                 <div className="w-full h-full opacity-60 hover:opacity-100 transition-opacity duration-150">
                     <AudioVisualizer
