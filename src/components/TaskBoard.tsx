@@ -210,7 +210,7 @@ export function TaskBoard() {
     const [isMobileExpanded, setIsMobileExpanded] = useState(true);
 
     const todayStr = getLocalDateString(new Date());
-    const completedTodayCount = completedTasks.filter(t => t.completedAt && t.completedAt.startsWith(todayStr)).length;
+    const completedTodayCount = completedTasks.filter(t => t.completedAt && getLocalDateString(new Date(t.completedAt)) === todayStr).length;
 
     const handleTitleClick = useCallback(() => {
         if (window.innerWidth < 1024) {

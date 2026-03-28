@@ -59,6 +59,10 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
     addSession: async (session) => {
         await api.addSession(session);
 
+        // Fetch fresh stats from Supabase before computing XP to avoid
+        // stale local state overwriting values updated by another device.
+        await get().fetchStats();
+
         // Calculate XP and update stats
         const state = get();
         const task = state.tasks.find(t => t.id === session.taskId);
@@ -126,6 +130,9 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
     },
 
     togglePrayer: async (prayerName: string) => {
+        // Fetch fresh stats before computing prayer XP
+        await get().fetchStats();
+
         const state = get();
         const today = getLocalDateString();
         let log = state.dailyLog;

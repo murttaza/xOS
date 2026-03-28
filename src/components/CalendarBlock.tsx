@@ -6,7 +6,7 @@ import { startOfMonth, endOfMonth, format, addMonths, subMonths, startOfWeek, en
 import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn, safeJSONParse } from "@/lib/utils";
+import { cn, safeJSONParse, getLocalDateString } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 
 const WEEK_DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
@@ -87,7 +87,7 @@ export function CalendarBlock() {
     );
 
     const completedTasksOnDay = useMemo(() => {
-        return tasks.filter(t => t.isComplete && t.completedAt && t.completedAt.startsWith(selectedDateStr));
+        return tasks.filter(t => t.isComplete && t.completedAt && getLocalDateString(new Date(t.completedAt)) === selectedDateStr);
     }, [tasks, selectedDateStr]);
 
     const completedPrayers = useMemo(() => {
@@ -116,7 +116,7 @@ export function CalendarBlock() {
         sessions.forEach(s => set.add(s.dateLogged));
         tasks.forEach(t => {
             if (t.isComplete && t.completedAt) {
-                set.add(t.completedAt.substring(0, 10));
+                set.add(getLocalDateString(new Date(t.completedAt)));
             }
         });
         return set;
