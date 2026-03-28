@@ -1,7 +1,7 @@
 -- Multi-user support: add user_id column and per-user RLS policies
 -- Run this in the Supabase SQL Editor after 001_initial_schema.sql
 
--- Add user_id to all tables
+-- Step 1: Add user_id to all tables
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
 ALTER TABLE sessions ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
 ALTER TABLE daily_logs ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
@@ -12,16 +12,7 @@ ALTER TABLE subjects ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users
 ALTER TABLE notes ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
 ALTER TABLE streaks ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id);
 
--- Fix stats primary key: statName is no longer globally unique (multiple users have "Fitness")
-ALTER TABLE stats DROP CONSTRAINT IF EXISTS stats_pkey;
-ALTER TABLE stats ADD PRIMARY KEY ("statName", user_id);
-
--- Fix daily_logs primary key: date is no longer globally unique
-ALTER TABLE daily_logs DROP CONSTRAINT IF EXISTS daily_logs_pkey;
-ALTER TABLE daily_logs ADD PRIMARY KEY (date, user_id);
-
--- Backfill existing data: assign all current rows to the first user
--- (Replace with your actual user ID if needed, or run this after checking)
+-- Step 2: Backfill FIRST (before PK changes, since PK requires NOT NULL)
 DO $$
 DECLARE
     first_user UUID;
@@ -40,7 +31,14 @@ BEGIN
     END IF;
 END $$;
 
--- Make user_id NOT NULL after backfill (with default for new rows)
+-- Step 3: Now safe to change PKs (user_id is populated)
+ALTER TABLE stats DROP CONSTRAINT IF EXISTS stats_pkey;
+ALTER TABLE stats ADD PRIMARY KEY ("statName", user_id);
+
+ALTER TABLE daily_logs DROP CONSTRAINT IF EXISTS daily_logs_pkey;
+ALTER TABLE daily_logs ADD PRIMARY KEY (date, user_id);
+
+-- Step 4: Set defaults for new rows
 ALTER TABLE tasks ALTER COLUMN user_id SET DEFAULT auth.uid();
 ALTER TABLE sessions ALTER COLUMN user_id SET DEFAULT auth.uid();
 ALTER TABLE daily_logs ALTER COLUMN user_id SET DEFAULT auth.uid();
@@ -51,7 +49,7 @@ ALTER TABLE subjects ALTER COLUMN user_id SET DEFAULT auth.uid();
 ALTER TABLE notes ALTER COLUMN user_id SET DEFAULT auth.uid();
 ALTER TABLE streaks ALTER COLUMN user_id SET DEFAULT auth.uid();
 
--- Drop old permissive policies
+-- Step 5: Drop old permissive policies
 DROP POLICY IF EXISTS "Authenticated full access" ON tasks;
 DROP POLICY IF EXISTS "Authenticated full access" ON sessions;
 DROP POLICY IF EXISTS "Authenticated full access" ON daily_logs;
@@ -62,7 +60,7 @@ DROP POLICY IF EXISTS "Authenticated full access" ON subjects;
 DROP POLICY IF EXISTS "Authenticated full access" ON notes;
 DROP POLICY IF EXISTS "Authenticated full access" ON streaks;
 
--- Create per-user RLS policies
+-- Step 6: Create per-user RLS policies
 CREATE POLICY "Users own their data" ON tasks FOR ALL TO authenticated
     USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 CREATE POLICY "Users own their data" ON sessions FOR ALL TO authenticated
@@ -82,7 +80,7 @@ CREATE POLICY "Users own their data" ON notes FOR ALL TO authenticated
 CREATE POLICY "Users own their data" ON streaks FOR ALL TO authenticated
     USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 
--- Create index on user_id for performance
+-- Step 7: Indexes
 CREATE INDEX IF NOT EXISTS idx_tasks_user_id ON tasks(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_stats_user_id ON stats(user_id);
@@ -91,7 +89,7 @@ CREATE INDEX IF NOT EXISTS idx_subjects_user_id ON subjects(user_id);
 CREATE INDEX IF NOT EXISTS idx_notes_user_id ON notes(user_id);
 CREATE INDEX IF NOT EXISTS idx_streaks_user_id ON streaks(user_id);
 
--- Update rename_stat function to be user-scoped
+-- Step 8: Update rename_stat function to be user-scoped
 CREATE OR REPLACE FUNCTION rename_stat(old_name TEXT, new_name TEXT)
 RETURNS void
 LANGUAGE plpgsql
@@ -119,7 +117,7 @@ BEGIN
 END;
 $$;
 
--- New users need default stats. Create a trigger to seed them on signup.
+-- Step 9: Auto-seed default stats for new signups
 CREATE OR REPLACE FUNCTION seed_new_user_stats()
 RETURNS TRIGGER
 LANGUAGE plpgsql
