@@ -39,17 +39,25 @@ export function BudgetTargets({ categories, targets, transactions, selectedMonth
         if (isNaN(parsed) || parsed <= 0) return;
         onSetTarget({ categoryId, month: selectedMonth, limitAmount: parsed });
         setEditingId(null);
-        setAddingCategoryId(null);
         setNewAmount('');
         setEditAmount('');
+        // After saving, pick the next category without a target (if any)
+        const remaining = categoriesWithoutTargets.filter(c => c.id !== categoryId);
+        if (remaining.length > 0) {
+            setAddingCategoryId(remaining[0].id!);
+        } else {
+            setAddingCategoryId(null);
+        }
     };
+
+    const categoriesWithTargets = expenseCategories.filter(c => targetMap.has(c.id!));
 
     return (
         <div className="space-y-4">
             <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Budget Targets</h3>
 
-            <div className="space-y-2">
-                {expenseCategories.filter(c => targetMap.has(c.id!)).map(cat => {
+            <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                {categoriesWithTargets.map(cat => {
                     const target = targetMap.get(cat.id!)!;
                     const spent = spendingMap.get(cat.id!) || 0;
                     const limit = Number(target.limitAmount);
@@ -61,7 +69,8 @@ export function BudgetTargets({ categories, targets, transactions, selectedMonth
                         <div key={cat.id} className="bg-secondary rounded-xl p-3 space-y-2">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
+                                    <span className="text-sm">{cat.icon}</span>
+                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }} />
                                     <span className="text-sm font-medium">{cat.name}</span>
                                 </div>
                                 <Button
@@ -121,7 +130,7 @@ export function BudgetTargets({ categories, targets, transactions, selectedMonth
             </div>
 
             {/* No targets empty state */}
-            {expenseCategories.filter(c => targetMap.has(c.id!)).length === 0 && (
+            {categoriesWithTargets.length === 0 && (
                 <div className="text-center py-6 text-muted-foreground text-sm">
                     No budget targets set yet
                 </div>
@@ -138,7 +147,7 @@ export function BudgetTargets({ categories, targets, transactions, selectedMonth
                                 className="w-full h-12 bg-background border border-input rounded-md px-3 text-sm text-foreground"
                             >
                                 {categoriesWithoutTargets.map(c => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                    <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
                                 ))}
                             </select>
                             <div className="flex items-center gap-2">
