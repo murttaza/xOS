@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { BudgetCategory } from '@/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -34,6 +34,17 @@ export function CategoryManager({ open, onOpenChange, categories, onCreate, onUp
     const [color, setColor] = useState(DEFAULT_COLORS[0]);
     const [icon, setIcon] = useState('circle-dot');
     const [isIncome, setIsIncome] = useState(0);
+    const nameInputRef = useRef<HTMLInputElement>(null);
+
+    const isEditing = isCreating || editingCategory;
+
+    // Force focus the name input when entering create/edit mode (fixes Electron frameless window focus issues)
+    useEffect(() => {
+        if (isEditing) {
+            const timer = setTimeout(() => nameInputRef.current?.focus(), 50);
+            return () => clearTimeout(timer);
+        }
+    }, [isEditing]);
 
     const expenseCategories = categories.filter(c => !c.isIncome);
     const incomeCategories = categories.filter(c => c.isIncome);
@@ -86,8 +97,6 @@ export function CategoryManager({ open, onOpenChange, categories, onCreate, onUp
         }
     };
 
-    const isEditing = isCreating || editingCategory;
-
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-lg max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:w-full max-sm:rounded-none max-sm:border-0 max-sm:p-0 flex flex-col">
@@ -119,11 +128,11 @@ export function CategoryManager({ open, onOpenChange, categories, onCreate, onUp
                             <div className="space-y-1.5">
                                 <Label className="text-xs">Name</Label>
                                 <Input
+                                    ref={nameInputRef}
                                     value={name}
                                     onChange={e => setName(e.target.value)}
                                     placeholder="Category name"
                                     className="h-12"
-                                    autoFocus
                                 />
                             </div>
 

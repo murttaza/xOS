@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Transaction, BudgetTarget } from '@/types';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { Progress } from '../ui/progress';
 
 interface BudgetDashboardProps {
@@ -49,32 +49,37 @@ export function BudgetDashboard({ transactions, budgetTargets }: BudgetDashboard
         return map;
     }, [budgetTargets]);
 
+    const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2 });
+
     return (
         <div className="space-y-4">
-            {/* Summary Cards */}
-            <div className="grid grid-cols-3 gap-2">
-                <div className="bg-secondary rounded-xl p-3 text-center">
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                        <TrendingUp className="h-3 w-3 text-green-500" />
-                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Income</span>
+            {/* Net Balance Card */}
+            <div className="bg-secondary rounded-2xl p-4">
+                <p className="text-xs text-muted-foreground font-medium mb-1">Net Balance</p>
+                <p className={`text-3xl font-bold tabular-nums ${net >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    {net >= 0 ? '+' : ''}{fmt(net)}
+                </p>
+
+                {/* Income / Expense row */}
+                <div className="flex items-center gap-6 mt-3 pt-3 border-t border-border/50">
+                    <div className="flex items-center gap-2">
+                        <div className="h-7 w-7 rounded-full bg-green-500/15 flex items-center justify-center">
+                            <ArrowUpRight className="h-3.5 w-3.5 text-green-500" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Income</p>
+                            <p className="text-sm font-semibold text-green-500 tabular-nums">${fmt(totalIncome)}</p>
+                        </div>
                     </div>
-                    <p className="text-lg font-bold text-green-500">${totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
-                </div>
-                <div className="bg-secondary rounded-xl p-3 text-center">
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                        <TrendingDown className="h-3 w-3 text-red-500" />
-                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Expenses</span>
+                    <div className="flex items-center gap-2">
+                        <div className="h-7 w-7 rounded-full bg-red-500/15 flex items-center justify-center">
+                            <ArrowDownRight className="h-3.5 w-3.5 text-red-500" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Expenses</p>
+                            <p className="text-sm font-semibold text-red-500 tabular-nums">${fmt(totalExpenses)}</p>
+                        </div>
                     </div>
-                    <p className="text-lg font-bold text-red-500">${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
-                </div>
-                <div className="bg-secondary rounded-xl p-3 text-center">
-                    <div className="flex items-center justify-center gap-1 mb-1">
-                        <Minus className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Net</span>
-                    </div>
-                    <p className={`text-lg font-bold ${net >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                        {net >= 0 ? '+' : ''}${net.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </p>
                 </div>
             </div>
 
@@ -93,12 +98,12 @@ export function BudgetDashboard({ transactions, budgetTargets }: BudgetDashboard
                                 <div key={cat.categoryId} className="space-y-1">
                                     <div className="flex items-center justify-between text-xs">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }} />
+                                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }} />
                                             <span className="text-foreground">{cat.name}</span>
                                         </div>
                                         <span className={`font-medium ${isOverBudget ? 'text-red-500' : 'text-muted-foreground'}`}>
-                                            ${cat.spent.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                            {limit && <span className="text-muted-foreground/60"> / ${limit.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>}
+                                            ${fmt(cat.spent)}
+                                            {limit && <span className="text-muted-foreground/60"> / ${fmt(limit)}</span>}
                                         </span>
                                     </div>
                                     {limit && (
@@ -115,7 +120,7 @@ export function BudgetDashboard({ transactions, budgetTargets }: BudgetDashboard
             )}
 
             {categoryBreakdown.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground text-sm">
+                <div className="text-center py-6 text-muted-foreground text-sm">
                     No transactions this month
                 </div>
             )}
