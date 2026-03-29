@@ -41,13 +41,7 @@ export function BudgetTargets({ categories, targets, transactions, selectedMonth
         setEditingId(null);
         setNewAmount('');
         setEditAmount('');
-        // After saving, pick the next category without a target (if any)
-        const remaining = categoriesWithoutTargets.filter(c => c.id !== categoryId);
-        if (remaining.length > 0) {
-            setAddingCategoryId(remaining[0].id!);
-        } else {
-            setAddingCategoryId(null);
-        }
+        setAddingCategoryId(null);
     };
 
     const categoriesWithTargets = expenseCategories.filter(c => targetMap.has(c.id!));
@@ -137,56 +131,61 @@ export function BudgetTargets({ categories, targets, transactions, selectedMonth
             )}
 
             {/* Add Target */}
-            {categoriesWithoutTargets.length > 0 && (
-                <div>
-                    {addingCategoryId ? (
-                        <div className="bg-secondary rounded-xl p-3 space-y-3">
-                            <select
-                                value={addingCategoryId}
-                                onChange={e => setAddingCategoryId(Number(e.target.value))}
-                                className="w-full h-12 bg-background border border-input rounded-md px-3 text-sm text-foreground"
-                            >
-                                {categoriesWithoutTargets.map(c => (
-                                    <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-                                ))}
-                            </select>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm text-muted-foreground">$</span>
-                                <Input
-                                    type="number"
-                                    step="0.01"
-                                    value={newAmount}
-                                    onChange={e => setNewAmount(e.target.value)}
-                                    placeholder="Monthly limit"
-                                    className="h-12 flex-1"
-                                    autoFocus
-                                    onKeyDown={e => {
-                                        if (e.key === 'Enter') handleSaveTarget(addingCategoryId, newAmount);
-                                        if (e.key === 'Escape') setAddingCategoryId(null);
-                                    }}
-                                />
-                            </div>
-                            <div className="flex gap-2">
-                                <Button variant="outline" className="flex-1 h-11" onClick={() => setAddingCategoryId(null)}>
-                                    Cancel
-                                </Button>
-                                <Button className="flex-1 h-11" onClick={() => handleSaveTarget(addingCategoryId, newAmount)}>
-                                    Set Target
-                                </Button>
-                            </div>
+            <div>
+                {addingCategoryId ? (
+                    <div className="bg-secondary rounded-xl p-3 space-y-3">
+                        <select
+                            value={addingCategoryId}
+                            onChange={e => setAddingCategoryId(Number(e.target.value))}
+                            className="w-full h-12 bg-background border border-input rounded-md px-3 text-sm text-foreground"
+                        >
+                            {expenseCategories.map(c => (
+                                <option key={c.id} value={c.id}>
+                                    {c.icon} {c.name}{targetMap.has(c.id!) ? ' (update)' : ''}
+                                </option>
+                            ))}
+                        </select>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">$</span>
+                            <Input
+                                type="number"
+                                step="0.01"
+                                value={newAmount}
+                                onChange={e => setNewAmount(e.target.value)}
+                                placeholder="Monthly limit"
+                                className="h-12 flex-1"
+                                autoFocus
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter') handleSaveTarget(addingCategoryId, newAmount);
+                                    if (e.key === 'Escape') setAddingCategoryId(null);
+                                }}
+                            />
                         </div>
-                    ) : (
+                        <div className="flex gap-2">
+                            <Button variant="outline" className="flex-1 h-11" onClick={() => setAddingCategoryId(null)}>
+                                Cancel
+                            </Button>
+                            <Button className="flex-1 h-11" onClick={() => handleSaveTarget(addingCategoryId, newAmount)}>
+                                Set Target
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    expenseCategories.length > 0 && (
                         <Button
                             variant="outline"
                             className="w-full h-11"
-                            onClick={() => setAddingCategoryId(categoriesWithoutTargets[0]?.id || null)}
+                            onClick={() => {
+                                const first = categoriesWithoutTargets[0] || expenseCategories[0];
+                                setAddingCategoryId(first?.id || null);
+                            }}
                         >
                             <Plus className="h-4 w-4 mr-2" />
                             Add Budget Target
                         </Button>
-                    )}
-                </div>
-            )}
+                    )
+                )}
+            </div>
 
             {/* Manage Categories */}
             {onOpenCategoryManager && (
