@@ -93,7 +93,7 @@ export function BudgetMode() {
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.3, ease: 'easeOut' }}
                     className={cn(
-                        "fixed inset-0 z-[55] text-foreground overflow-hidden flex flex-col font-sans no-drag",
+                        "fixed inset-0 z-[45] text-foreground overflow-hidden flex flex-col font-sans no-drag",
                         "bg-background"
                     )}
                 >
