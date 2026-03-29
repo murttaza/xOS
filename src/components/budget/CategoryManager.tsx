@@ -56,21 +56,25 @@ export function CategoryManager({ open, onOpenChange, categories, onCreate, onUp
         setIsIncome(cat.isIncome);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!name.trim()) return;
-        if (editingCategory) {
-            onUpdate({ ...editingCategory, name: name.trim(), color, icon, isIncome });
-        } else {
-            onCreate({
-                name: name.trim(),
-                color,
-                icon,
-                isIncome,
-                orderIndex: categories.filter(c => c.isIncome === isIncome).length,
-            });
+        try {
+            if (editingCategory) {
+                await onUpdate({ ...editingCategory, name: name.trim(), color, icon, isIncome });
+            } else {
+                await onCreate({
+                    name: name.trim(),
+                    color,
+                    icon,
+                    isIncome,
+                    orderIndex: categories.filter(c => c.isIncome === isIncome).length,
+                });
+            }
+            setEditingCategory(null);
+            setIsCreating(false);
+        } catch (err) {
+            console.error('Failed to save category:', err);
         }
-        setEditingCategory(null);
-        setIsCreating(false);
     };
 
     const handleDelete = (id: number) => {

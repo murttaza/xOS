@@ -42,12 +42,22 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     },
 
     createBudgetCategory: async (category) => {
-        await api.createBudgetCategory(category);
+        try {
+            await api.createBudgetCategory(category);
+        } catch (err) {
+            console.error('createBudgetCategory failed:', err);
+            throw err;
+        }
         await get().fetchBudgetCategories();
     },
 
     updateBudgetCategory: async (category) => {
-        await api.updateBudgetCategory(category);
+        try {
+            await api.updateBudgetCategory(category);
+        } catch (err) {
+            console.error('updateBudgetCategory failed:', err);
+            throw err;
+        }
         await get().fetchBudgetCategories();
     },
 

@@ -434,14 +434,18 @@ export const supabaseBackend: ApiBackend = {
     },
 
     createBudgetCategory: async (category) => {
-        return throwOnError(await supabase.from('budget_categories').insert({
+        const result = await supabase.from('budget_categories').insert({
             name: category.name,
             icon: category.icon,
             color: category.color,
             isIncome: category.isIncome,
             parentId: category.parentId || null,
             orderIndex: category.orderIndex,
-        }));
+        }).select();
+        if (result.error) {
+            console.error('Supabase createBudgetCategory error:', result.error);
+        }
+        return throwOnError(result);
     },
 
     updateBudgetCategory: async (category) => {
