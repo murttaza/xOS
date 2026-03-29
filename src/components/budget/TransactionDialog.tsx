@@ -130,7 +130,7 @@ export function TransactionDialog({ open, onOpenChange, categories, transaction,
                             >
                                 <option value="">Select category...</option>
                                 {filteredCategories.map(c => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                    <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
                                 ))}
                             </select>
                         </div>

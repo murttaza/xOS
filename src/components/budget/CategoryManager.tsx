@@ -21,10 +21,12 @@ const DEFAULT_COLORS = [
 ];
 
 const ICON_OPTIONS = [
-    'utensils', 'car', 'home', 'zap', 'tv', 'shopping-bag',
-    'heart-pulse', 'graduation-cap', 'sparkles', 'circle-dot',
-    'briefcase', 'laptop', 'trending-up', 'plus-circle',
-    'plane', 'gift', 'coffee', 'music', 'dumbbell', 'book',
+    '\u{1F354}', '\u{1F697}', '\u{1F3E0}', '\u{26A1}', '\u{1F4FA}', '\u{1F6CD}\uFE0F',
+    '\u{1FA7A}', '\u{1F393}', '\u{2728}', '\u{1F4B0}',
+    '\u{1F4BC}', '\u{1F4BB}', '\u{1F4C8}', '\u{2795}',
+    '\u{2708}\uFE0F', '\u{1F381}', '\u{2615}', '\u{1F3B5}', '\u{1F4AA}', '\u{1F4DA}',
+    '\u{1F6D2}', '\u{1F48A}', '\u{1F3AE}', '\u{1F4B3}', '\u{1F4E6}', '\u{1F37D}\uFE0F',
+    '\u{1F46A}', '\u{1F4B5}', '\u{1F3D7}\uFE0F', '\u{1F4F1}',
 ];
 
 export function CategoryManager({ open, onOpenChange, categories, onCreate, onUpdate, onDelete }: CategoryManagerProps) {
@@ -32,7 +34,7 @@ export function CategoryManager({ open, onOpenChange, categories, onCreate, onUp
     const [isCreating, setIsCreating] = useState(false);
     const [name, setName] = useState('');
     const [color, setColor] = useState(DEFAULT_COLORS[0]);
-    const [icon, setIcon] = useState('circle-dot');
+    const [icon, setIcon] = useState('\u{1F4B0}');
     const [isIncome, setIsIncome] = useState(0);
     const nameInputRef = useRef<HTMLInputElement>(null);
 
@@ -54,7 +56,7 @@ export function CategoryManager({ open, onOpenChange, categories, onCreate, onUp
         setEditingCategory(null);
         setName('');
         setColor(DEFAULT_COLORS[Math.floor(Math.random() * DEFAULT_COLORS.length)]);
-        setIcon('circle-dot');
+        setIcon('\u{1F4B0}');
         setIsIncome(0);
     };
 
@@ -157,7 +159,7 @@ export function CategoryManager({ open, onOpenChange, categories, onCreate, onUp
                                         <button
                                             key={i}
                                             onClick={() => setIcon(i)}
-                                            className={`px-3 py-2 text-xs rounded-lg border transition-colors ${icon === i ? 'bg-primary text-primary-foreground border-primary' : 'bg-secondary border-border text-muted-foreground'}`}
+                                            className={`w-10 h-10 text-lg rounded-lg border transition-colors flex items-center justify-center ${icon === i ? 'bg-primary/20 border-primary scale-110' : 'bg-secondary border-border'}`}
                                         >
                                             {i}
                                         </button>
@@ -180,9 +182,9 @@ export function CategoryManager({ open, onOpenChange, categories, onCreate, onUp
                                 <div className="space-y-1">
                                     {expenseCategories.map(cat => (
                                         <div key={cat.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary transition-colors">
-                                            <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                                            <span className="text-lg shrink-0">{cat.icon}</span>
+                                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
                                             <span className="text-sm flex-1">{cat.name}</span>
-                                            <span className="text-[10px] text-muted-foreground/50">{cat.icon}</span>
                                             <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => startEdit(cat)}>
                                                 <Pencil className="h-4 w-4" />
                                             </Button>
@@ -200,9 +202,9 @@ export function CategoryManager({ open, onOpenChange, categories, onCreate, onUp
                                 <div className="space-y-1">
                                     {incomeCategories.map(cat => (
                                         <div key={cat.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary transition-colors">
-                                            <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                                            <span className="text-lg shrink-0">{cat.icon}</span>
+                                            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
                                             <span className="text-sm flex-1">{cat.name}</span>
-                                            <span className="text-[10px] text-muted-foreground/50">{cat.icon}</span>
                                             <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => startEdit(cat)}>
                                                 <Pencil className="h-4 w-4" />
                                             </Button>
