@@ -99,31 +99,44 @@ export function BudgetMode() {
                 >
                     {/* Header */}
                     <div
-                        className="flex items-center justify-between px-3 sm:px-6 lg:px-8 py-3 lg:py-4 border-b border-border/50 shrink-0"
+                        className="shrink-0 border-b border-border/50"
                         style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)' }}
                     >
-                        <div className="flex items-center gap-2">
-                            {/* Mobile back button */}
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-9 w-9 lg:hidden"
-                                onClick={toggleBudgetMode}
-                            >
-                                <ArrowLeft className="h-5 w-5" />
-                            </Button>
-                            {/* Desktop title */}
-                            <div className="hidden lg:flex items-center gap-3">
-                                <Wallet className="h-5 w-5 text-primary" />
-                                <h2 className="text-lg font-bold tracking-tight">Budget</h2>
+                        {/* Top bar: back + title + month (desktop) + controls */}
+                        <div className="flex items-center justify-between px-3 sm:px-6 lg:px-8 py-3 lg:py-4">
+                            <div className="flex items-center gap-2">
+                                {/* Mobile back button */}
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9 lg:hidden"
+                                    onClick={toggleBudgetMode}
+                                >
+                                    <ArrowLeft className="h-5 w-5" />
+                                </Button>
+                                {/* Mobile title */}
+                                <span className="text-base font-semibold lg:hidden">Budget</span>
+                                {/* Desktop title */}
+                                <div className="hidden lg:flex items-center gap-3">
+                                    <Wallet className="h-5 w-5 text-primary" />
+                                    <h2 className="text-lg font-bold tracking-tight">Budget</h2>
+                                </div>
+                            </div>
+
+                            {/* Desktop month selector in header */}
+                            <div className="hidden lg:block">
+                                <MonthSelector selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <ModeToggle />
+                                <WindowControls />
                             </div>
                         </div>
 
-                        <MonthSelector selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
-
-                        <div className="flex items-center gap-2">
-                            <ModeToggle />
-                            <WindowControls />
+                        {/* Mobile month selector - own row below header */}
+                        <div className="lg:hidden flex justify-center px-3 pb-3">
+                            <MonthSelector selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
                         </div>
                     </div>
 
