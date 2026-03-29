@@ -50,7 +50,7 @@ export function BudgetTargets({ categories, targets, transactions, selectedMonth
         <div className="space-y-4">
             <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Budget Targets</h3>
 
-            <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-[200px] overflow-y-auto no-scrollbar">
                 {categoriesWithTargets.map(cat => {
                     const target = targetMap.get(cat.id!)!;
                     const spent = spendingMap.get(cat.id!) || 0;
