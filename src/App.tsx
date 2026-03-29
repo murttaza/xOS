@@ -72,7 +72,7 @@ function App() {
   const [_windowSize, setWindowSize] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  const APP_VERSION = __APP_VERSION__ || '5.0.0';
+  const APP_VERSION = (__APP_VERSION__ || '5.0.0').split('.')[0];
 
   // Window focus state for pausing background work
   const isWindowFocused = useWindowFocus();
@@ -381,6 +381,19 @@ function App() {
                           <li className="flex gap-2"><span className="text-primary/60">•</span>Track streaks & progress in Year Mode</li>
                         </ul>
                       </div>
+                      {!isElectron && (
+                        <div className="border-t border-border pt-3 hidden sm:block">
+                          <a
+                            href="https://github.com/murttaza/xOS/releases/latest"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            Download Desktop App
+                          </a>
+                        </div>
+                      )}
                     </div>
                   </PopoverContent>
                 </Popover>

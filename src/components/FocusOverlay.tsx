@@ -138,7 +138,7 @@ export function FocusOverlay() {
                                                 exit={{ opacity: 0, x: -10 }}
                                                 className="text-[10px] font-mono text-muted-foreground"
                                             >
-                                                v{__APP_VERSION__ || '4.0.1'}
+                                                v{(__APP_VERSION__ || '5.0.0').split('.')[0]}
                                             </motion.span>
                                         )}
                                     </AnimatePresence>
