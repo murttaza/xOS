@@ -307,7 +307,7 @@ export const NotesMode = () => {
                         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-accent/5 dark:bg-accent/10 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/4" />
                     </div>
                     {/* Top Bar - Drag Area */}
-                    <div className="px-3 sm:px-6 pt-3 sm:pt-4 pb-1 sm:pb-2 bg-transparent z-20">
+                    <div className="px-3 sm:px-6 pb-1 sm:pb-2 bg-transparent z-20" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)' }}>
                         <header className={cn(
                             "rounded-2xl px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center backdrop-blur-md drag relative transition-all",
                             isMurtazaMode ? 'bg-background/90 border border-border shadow-lg shadow-black/10' : 'glass'
