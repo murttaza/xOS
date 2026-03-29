@@ -5,6 +5,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { getLocalDateString } from '@/lib/utils';
+import { useTheme } from '@/components/ThemeProvider';
 
 interface TransactionDialogProps {
     open: boolean;
@@ -23,6 +24,8 @@ const PAYMENT_METHODS = [
 ];
 
 export function TransactionDialog({ open, onOpenChange, categories, transaction, onSave }: TransactionDialogProps) {
+    const { theme } = useTheme();
+    const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     const [isIncome, setIsIncome] = useState(0);
     const [amount, setAmount] = useState('');
     const [categoryId, setCategoryId] = useState<number | ''>('');
@@ -138,12 +141,13 @@ export function TransactionDialog({ open, onOpenChange, categories, transaction,
                         {/* Date */}
                         <div className="space-y-1.5">
                             <Label htmlFor="date" className="text-xs">Date</Label>
-                            <Input
+                            <input
                                 id="date"
                                 type="date"
                                 value={date}
                                 onChange={e => setDate(e.target.value)}
-                                className="h-12"
+                                className="w-full h-12 bg-background border border-input rounded-md px-3 text-sm text-foreground cursor-pointer"
+                                style={{ colorScheme: isDark ? 'dark' : 'light' }}
                                 required
                             />
                         </div>
