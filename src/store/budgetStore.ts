@@ -43,19 +43,18 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
 
     createBudgetCategory: async (category) => {
         await api.createBudgetCategory(category);
-        get().fetchBudgetCategories();
+        await get().fetchBudgetCategories();
     },
 
     updateBudgetCategory: async (category) => {
         await api.updateBudgetCategory(category);
-        get().fetchBudgetCategories();
+        await get().fetchBudgetCategories();
     },
 
     deleteBudgetCategory: async (id) => {
         await api.deleteBudgetCategory(id);
-        get().fetchBudgetCategories();
-        // Refresh transactions in case any were deleted
-        get().fetchTransactions();
+        await get().fetchBudgetCategories();
+        await get().fetchTransactions();
     },
 
     fetchTransactions: async (month?) => {
@@ -100,17 +99,17 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
             console.error('Failed to award budget XP', e);
         }
 
-        get().fetchTransactions();
+        await get().fetchTransactions();
     },
 
     updateTransaction: async (tx) => {
         await api.updateTransaction(tx);
-        get().fetchTransactions();
+        await get().fetchTransactions();
     },
 
     deleteTransaction: async (id) => {
         await api.deleteTransaction(id);
-        get().fetchTransactions();
+        await get().fetchTransactions();
     },
 
     fetchBudgetTargets: async (month?) => {
@@ -121,12 +120,12 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
 
     setBudgetTarget: async (target) => {
         await api.setBudgetTarget(target);
-        get().fetchBudgetTargets();
+        await get().fetchBudgetTargets();
     },
 
     deleteBudgetTarget: async (id) => {
         await api.deleteBudgetTarget(id);
-        get().fetchBudgetTargets();
+        await get().fetchBudgetTargets();
     },
 
     setSelectedMonth: (month) => {
