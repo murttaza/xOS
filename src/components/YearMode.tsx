@@ -208,7 +208,7 @@ export function YearMode() {
                     transition={{ duration: 0.3, ease: 'easeOut' }}
                     className="fixed inset-0 z-[100] bg-background flex overflow-y-auto overflow-x-hidden no-scrollbar no-drag"
                 >
-                    <div className="fixed top-3 right-3 sm:top-6 sm:right-6 z-50 flex items-center gap-2">
+                    <div className="fixed right-3 sm:right-6 z-50 flex items-center gap-2" style={{ top: 'max(env(safe-area-inset-top, 0px), 12px)' }}>
                         <ModeToggle />
                         <Button
                             variant="ghost"
