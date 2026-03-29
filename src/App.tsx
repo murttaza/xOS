@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, lazy, Suspense } from 'react';
 import { useTaskTimer } from './hooks/useTaskTimer';
 import { TaskBoard } from './components/TaskBoard';
 import { StatsBlock } from './components/StatsBlock';
@@ -12,8 +12,9 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { ThemeProvider } from './components/ThemeProvider';
 import { ModeToggle } from './components/ModeToggle';
-import { NotesMode } from './components/NotesMode';
-import { YearMode } from './components/YearMode';
+
+const NotesMode = lazy(() => import('./components/NotesMode').then(m => ({ default: m.NotesMode })));
+const YearMode = lazy(() => import('./components/YearMode').then(m => ({ default: m.YearMode })));
 
 import { HeaderPrayers } from './components/HeaderPrayers';
 import { FocusMode } from './components/FocusMode';
@@ -153,7 +154,7 @@ function App() {
   useEffect(() => {
     if (!isElectron) return;
     const removeSizeListener = window.ipcRenderer.on('window-size-state', (_, size: unknown) => {
-      setWindowSize(size as number);
+      setWindowSize(prev => prev === (size as number) ? prev : (size as number));
     });
     return () => {
       removeSizeListener();
@@ -183,8 +184,8 @@ function App() {
     return (
       <ThemeProvider defaultTheme="dark" storageKey="mos-theme">
         <FocusOverlay />
-        <NotesMode />
-        <YearMode />
+        <Suspense><NotesMode /></Suspense>
+        <Suspense><YearMode /></Suspense>
 
         <AnimatePresence>
           {isTransitioning && (
@@ -436,8 +437,8 @@ function App() {
           </div>
         </div>
       )}
-      <NotesMode />
-      <YearMode />
+      <Suspense><NotesMode /></Suspense>
+      <Suspense><YearMode /></Suspense>
 
       <AnimatePresence>
         {isTransitioning && (

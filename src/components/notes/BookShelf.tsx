@@ -70,7 +70,8 @@ interface BookShelfProps {
     onNewLibrary: () => void;
 }
 
-const TOTAL_SPINES = 300;
+const SPINES_PER_LIBRARY = 300;
+const PLACEHOLDER_PADDING = 6; // empty slots after last subject to fill the row + a few extra
 
 export const BookShelf = ({
     subjects,
@@ -79,21 +80,35 @@ export const BookShelf = ({
     onCreateSubjectAt,
     onNewLibrary,
 }: BookShelfProps) => {
-    const allSpines = useMemo(() => Array.from({ length: TOTAL_SPINES }), []);
+    const libraryOffset = currentLibraryIndex * SPINES_PER_LIBRARY;
 
-    // Create a map for faster subject lookup
-    const subjectMap = useMemo(() => {
-        const map = new Map<number, Subject>();
-        subjects.forEach(s => map.set(s.orderIndex, s));
-        return map;
-    }, [subjects]);
+    // Get subjects in this library, sorted by orderIndex
+    const librarySubjects = useMemo(() =>
+        subjects
+            .filter(s => s.orderIndex >= libraryOffset && s.orderIndex < libraryOffset + SPINES_PER_LIBRARY)
+            .sort((a, b) => a.orderIndex - b.orderIndex),
+        [subjects, libraryOffset]
+    );
+
+    // Build a sparse list: real subjects at their positions + placeholder padding after the last one
+    const spines = useMemo(() => {
+        const subjectMap = new Map<number, Subject>();
+        librarySubjects.forEach(s => subjectMap.set(s.orderIndex - libraryOffset, s));
+
+        const maxIndex = librarySubjects.length > 0
+            ? Math.max(...librarySubjects.map(s => s.orderIndex - libraryOffset))
+            : -1;
+        const totalSlots = maxIndex + 1 + PLACEHOLDER_PADDING;
+
+        return Array.from({ length: totalSlots }, (_, i) => ({
+            index: i,
+            subject: subjectMap.get(i) || null,
+        }));
+    }, [librarySubjects, libraryOffset]);
 
     return (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(60px,1fr))] md:grid-cols-[repeat(auto-fill,minmax(80px,1fr))] gap-x-2 gap-y-12 items-end justify-items-center pb-20 no-drag">
-            {allSpines.map((_, index) => {
-                const libraryOffset = currentLibraryIndex * TOTAL_SPINES;
-                const subject = subjectMap.get(libraryOffset + index);
-
+            {spines.map(({ index, subject }) => {
                 if (subject) {
                     return (
                         <BookSpine

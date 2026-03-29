@@ -298,7 +298,7 @@ export const NotesMode = () => {
                     exit={{ opacity: 0 }}
                     className={cn(
                         "fixed inset-0 z-[55] text-foreground overflow-hidden flex flex-col font-sans no-drag",
-                        isMurtazaMode ? "bg-transparent backdrop-blur-3xl" : "bg-background/95"
+                        isMurtazaMode ? "bg-transparent backdrop-blur-lg" : "bg-background/95"
                     )}
                 >
                     {!isMurtazaMode && (
@@ -311,7 +311,7 @@ export const NotesMode = () => {
                     {/* Top Bar - Drag Area */}
                     <div className="px-3 sm:px-6 pt-3 sm:pt-4 pb-1 sm:pb-2 bg-transparent z-20">
                         <header className={cn(
-                            "rounded-2xl px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center backdrop-blur-xl drag relative transition-all",
+                            "rounded-2xl px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center backdrop-blur-md drag relative transition-all",
                             isMurtazaMode ? 'bg-background/90 border border-border shadow-lg shadow-black/10' : 'glass'
                         )}>
                             <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -393,7 +393,7 @@ export const NotesMode = () => {
                     </div>
 
                     {/* Footer Navigation for Libraries */}
-                    <div className="h-12 border-t border-border/50 bg-background/50 backdrop-blur-md z-10 flex items-center justify-between px-3 sm:px-6 no-drag">
+                    <div className="h-12 border-t border-border/50 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-between px-3 sm:px-6 no-drag">
                         <div className="flex-1" />
                         <div className="flex gap-1.5 sm:gap-2">
                             {Array.from({ length: visibleLibrariesCount }).map((_, idx) => (

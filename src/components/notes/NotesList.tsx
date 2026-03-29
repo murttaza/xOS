@@ -61,10 +61,14 @@ export const NotesList = ({
         setIsEditing(false);
     };
 
-    const filteredNotes = useMemo(() => notes.filter(n =>
-        (n.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-        (n.content?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-    ), [notes, searchTerm]);
+    const filteredNotes = useMemo(() => {
+        if (!searchTerm) return notes;
+        const term = searchTerm.toLowerCase();
+        return notes.filter(n =>
+            (n.title?.toLowerCase() || '').includes(term) ||
+            (n.content?.substring(0, 200).toLowerCase() || '').includes(term)
+        );
+    }, [notes, searchTerm]);
 
     return (
         <>
@@ -155,7 +159,7 @@ export const NotesList = ({
 
             {/* Edit Subject Overlay */}
             {isEditing && (
-                <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-8 no-drag">
+                <div className="absolute inset-0 z-50 bg-background/80 flex items-center justify-center p-8 no-drag">
                     <div className="bg-card border border-border p-8 rounded-2xl w-full max-w-md shadow-2xl space-y-6 animate-in zoom-in-95 duration-150">
                         <h3 className="text-xl font-bold flex items-center gap-2">
                             <Edit2 className="h-5 w-5 text-primary" /> Edit Book Details
