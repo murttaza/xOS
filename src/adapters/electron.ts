@@ -68,6 +68,19 @@ export const electronBackend: ApiBackend = {
     removeActiveTimer: async () => {},
     sessionExistsForTimer: async () => false,
 
+    // Budget (not used in Electron — Supabase is the backend)
+    getBudgetCategories: async () => [],
+    createBudgetCategory: async () => {},
+    updateBudgetCategory: async () => {},
+    deleteBudgetCategory: async () => {},
+    getTransactions: async () => [],
+    addTransaction: async () => {},
+    updateTransaction: async () => {},
+    deleteTransaction: async () => {},
+    getBudgetTargets: async () => [],
+    setBudgetTarget: async () => {},
+    deleteBudgetTarget: async () => {},
+
     // Export
     exportAllData: () => window.ipcRenderer.invoke(IpcChannels.ExportAllData),
 } as ApiBackend;

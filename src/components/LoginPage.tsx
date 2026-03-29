@@ -18,14 +18,17 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
         setLoading(true);
 
         if (isSignUp) {
-            const { error } = await supabase.auth.signUp({ email, password });
+            const { data, error } = await supabase.auth.signUp({ email, password });
             if (error) {
                 setError(error.message);
+                setLoading(false);
+            } else if (data.session) {
+                onLogin();
             } else {
-                setSuccess('Account created! Check your email to confirm, then sign in.');
+                setSuccess('Account created! Sign in to continue.');
                 setIsSignUp(false);
+                setLoading(false);
             }
-            setLoading(false);
         } else {
             const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) {

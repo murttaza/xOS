@@ -1,4 +1,4 @@
-import type { Task, Session, Stat, DailyLog, DevItem, RepeatingTask, Subject, Note, Streak } from '../types';
+import type { Task, Session, Stat, DailyLog, DevItem, RepeatingTask, Subject, Note, Streak, BudgetCategory, Transaction, BudgetTarget } from '../types';
 
 export interface ApiBackend {
     // Tasks
@@ -63,6 +63,23 @@ export interface ApiBackend {
     setActiveTimer: (taskId: number, startTime: string) => Promise<unknown>;
     removeActiveTimer: (taskId: number) => Promise<unknown>;
     sessionExistsForTimer: (taskId: number, startTime: string) => Promise<boolean>;
+
+    // Budget Categories
+    getBudgetCategories: () => Promise<BudgetCategory[]>;
+    createBudgetCategory: (category: Omit<BudgetCategory, 'id'>) => Promise<unknown>;
+    updateBudgetCategory: (category: BudgetCategory) => Promise<unknown>;
+    deleteBudgetCategory: (id: number) => Promise<unknown>;
+
+    // Budget Transactions
+    getTransactions: (month: string) => Promise<Transaction[]>;
+    addTransaction: (tx: Omit<Transaction, 'id'>) => Promise<unknown>;
+    updateTransaction: (tx: Transaction) => Promise<unknown>;
+    deleteTransaction: (id: number) => Promise<unknown>;
+
+    // Budget Targets
+    getBudgetTargets: (month: string) => Promise<BudgetTarget[]>;
+    setBudgetTarget: (target: Omit<BudgetTarget, 'id'>) => Promise<unknown>;
+    deleteBudgetTarget: (id: number) => Promise<unknown>;
 
     // Export
     exportAllData: () => Promise<unknown>;

@@ -99,3 +99,13 @@ export function migrateXPToNewCurve(
 export function getLocalDateString(date: Date = new Date()): string {
     return format(date, "yyyy-MM-dd");
 }
+
+export function calculateBudgetXP(isFirstTransactionOfDay: boolean): number {
+    const baseXP = 50;
+    const dailyBonus = isFirstTransactionOfDay ? 100 : 0;
+    return baseXP + dailyBonus;
+}
+
+export function getLocalMonthString(date: Date = new Date()): string {
+    return format(date, "yyyy-MM");
+}

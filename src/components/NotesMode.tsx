@@ -298,16 +298,14 @@ export const NotesMode = () => {
                     exit={{ opacity: 0 }}
                     className={cn(
                         "fixed inset-0 z-[55] text-foreground overflow-hidden flex flex-col font-sans no-drag",
-                        isMurtazaMode ? "bg-transparent backdrop-blur-lg" : "bg-background/95"
+                        "bg-background"
                     )}
                 >
-                    {!isMurtazaMode && (
-                        <div className="absolute inset-0 -z-10 pointer-events-none">
-                            <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-background/95" />
-                            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 dark:bg-primary/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/4" />
-                            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-accent/5 dark:bg-accent/10 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/4" />
-                        </div>
-                    )}
+                    <div className="absolute inset-0 -z-10 pointer-events-none">
+                        <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-background/95" />
+                        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 dark:bg-primary/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/4" />
+                        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-accent/5 dark:bg-accent/10 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/4" />
+                    </div>
                     {/* Top Bar - Drag Area */}
                     <div className="px-3 sm:px-6 pt-3 sm:pt-4 pb-1 sm:pb-2 bg-transparent z-20">
                         <header className={cn(

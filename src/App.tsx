@@ -15,6 +15,7 @@ import { ModeToggle } from './components/ModeToggle';
 
 const NotesMode = lazy(() => import('./components/NotesMode').then(m => ({ default: m.NotesMode })));
 const YearMode = lazy(() => import('./components/YearMode').then(m => ({ default: m.YearMode })));
+const BudgetMode = lazy(() => import('./components/BudgetMode').then(m => ({ default: m.BudgetMode })));
 
 import { HeaderPrayers } from './components/HeaderPrayers';
 import { FocusMode } from './components/FocusMode';
@@ -30,7 +31,7 @@ import { Input } from './components/ui/input';
 import { Button } from './components/ui/button';
 import { Switch } from './components/ui/switch';
 import { Label } from './components/ui/label';
-import { Settings2, HelpCircle, Download, BookOpen, CalendarDays, LogOut } from 'lucide-react';
+import { Settings2, HelpCircle, Download, BookOpen, CalendarDays, LogOut, Wallet } from 'lucide-react';
 import { api } from './api';
 import { supabase } from './lib/supabase';
 
@@ -42,7 +43,8 @@ function App() {
     isMurtazaMode, setIsMurtazaMode,
     isHardcoreMode, setIsHardcoreMode,
     osPrefix, setOsPrefix,
-    toggleNotesMode, toggleYearMode,
+    toggleNotesMode, toggleYearMode, toggleBudgetMode,
+    fetchBudgetCategories,
   } = useStore(useShallow(state => ({
     fetchTasks: state.fetchTasks,
     fetchStats: state.fetchStats,
@@ -59,6 +61,8 @@ function App() {
     syncTimers: state.syncTimers,
     toggleNotesMode: state.toggleNotesMode,
     toggleYearMode: state.toggleYearMode,
+    toggleBudgetMode: state.toggleBudgetMode,
+    fetchBudgetCategories: state.fetchBudgetCategories,
   })));
 
   const isFocusMode = useStore(state => state.isFocusMode);
@@ -84,6 +88,7 @@ function App() {
       fetchDevItems(),
       fetchRepeatingTasks(),
       syncTimers(),
+      fetchBudgetCategories(),
     ]).then(() => {
       checkMissedTasks();
       setIsLoading(false);
@@ -145,11 +150,15 @@ function App() {
     const removeYearListener = window.ipcRenderer.on('toggle-year-mode', () => {
       toggleYearMode();
     });
+    const removeBudgetListener = window.ipcRenderer.on('toggle-budget-mode', () => {
+      toggleBudgetMode();
+    });
     return () => {
       removeListener();
       removeYearListener();
+      removeBudgetListener();
     };
-  }, [toggleNotesMode, toggleYearMode]);
+  }, [toggleNotesMode, toggleYearMode, toggleBudgetMode]);
 
   useEffect(() => {
     if (!isElectron) return;
@@ -186,6 +195,7 @@ function App() {
         <FocusOverlay />
         <Suspense><NotesMode /></Suspense>
         <Suspense><YearMode /></Suspense>
+        <Suspense><BudgetMode /></Suspense>
 
         <AnimatePresence>
           {isTransitioning && (
@@ -232,7 +242,7 @@ function App() {
       {isFocusMode ? (
         <FocusMode />
       ) : (
-        <div className={`h-[100dvh] relative overflow-y-auto lg:overflow-hidden bg-background/95 rounded-none border border-border shadow-2xl no-scrollbar`} style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className={`h-[100dvh] relative overflow-x-hidden overflow-y-auto lg:overflow-hidden bg-background/95 rounded-none border border-border shadow-2xl no-scrollbar`} style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
           {/* Drag Bar — Electron only */}
           {isElectron && <div className="w-full h-2.5 drag shrink-0 fixed top-0 left-0 right-0 z-[100]" />}
 
@@ -243,7 +253,7 @@ function App() {
             <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-accent/5 dark:bg-accent/10 rounded-full blur-[50px] translate-y-1/2 -translate-x-1/4" />
           </div>
 
-          <div className={`relative max-w-screen-2xl mx-auto w-full h-full flex flex-col ${isMurtazaMode ? 'bg-transparent' : 'bg-transparent'} text-foreground p-3 sm:p-4 lg:p-6 gap-4 sm:gap-4 lg:gap-8 font-sans selection:bg-primary/20 selection:text-primary transition-colors duration-150 overflow-y-auto lg:overflow-hidden no-scrollbar`}>
+          <div className={`relative max-w-screen-2xl mx-auto w-full h-full flex flex-col ${isMurtazaMode ? 'bg-transparent' : 'bg-transparent'} text-foreground p-3 sm:p-4 lg:p-6 gap-4 sm:gap-4 lg:gap-8 font-sans selection:bg-primary/20 selection:text-primary transition-colors duration-150 overflow-x-hidden overflow-y-auto lg:overflow-hidden no-scrollbar`}>
             {/* Header */}
             <motion.header
               initial={{ opacity: 0, y: -20 }}
@@ -347,6 +357,10 @@ function App() {
                             <kbd className="px-2 py-0.5 text-[10px] font-mono bg-muted rounded border border-border text-muted-foreground">Ctrl + Num1</kbd>
                           </div>
                           <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">Budget Mode</span>
+                            <kbd className="px-2 py-0.5 text-[10px] font-mono bg-muted rounded border border-border text-muted-foreground">Ctrl + Num2</kbd>
+                          </div>
+                          <div className="flex items-center justify-between">
                             <span className="text-xs text-muted-foreground">Focus Mode</span>
                             <span className="text-[10px] text-muted-foreground/60 italic">via active timer</span>
                           </div>
@@ -390,6 +404,15 @@ function App() {
                       title="Year Mode"
                     >
                       <CalendarDays className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 lg:h-7 lg:w-7 rounded-full opacity-70 hover:opacity-100 transition-opacity"
+                      onClick={() => toggleBudgetMode()}
+                      title="Budget Mode"
+                    >
+                      <Wallet className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
                     </Button>
                   </>
                 )}
@@ -439,6 +462,7 @@ function App() {
       )}
       <Suspense><NotesMode /></Suspense>
       <Suspense><YearMode /></Suspense>
+      <Suspense><BudgetMode /></Suspense>
 
       <AnimatePresence>
         {isTransitioning && (

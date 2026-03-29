@@ -107,13 +107,11 @@
     }
 }
 
-/* Enhanced Glassmorphism & Effects */
+/* Solid card effects (no blur/transparency) */
 @utility glass {
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--backdrop-blur, 12px)) saturate(180%);
+    background: hsl(var(--card));
     border: 1px solid var(--glass-border);
-    box-shadow: inset 0 1px 0 0 var(--glass-highlight),
-        var(--glass-shadow);
+    box-shadow: var(--glass-shadow);
 }
 
 @utility glass-card {
@@ -241,6 +239,13 @@
     html.web body {
         overflow: auto;
         overflow-x: hidden;
+        overscroll-behavior-x: none;
+    }
+
+    /* Lock mobile web to vertical-only touch scrolling */
+    html.web {
+        overscroll-behavior-x: none;
+        touch-action: pan-y;
     }
 
     ::-webkit-scrollbar {

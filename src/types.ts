@@ -90,3 +90,38 @@ export interface Streak {
     isPaused: number; // 0 or 1
     createdAt?: string;
 }
+
+export interface BudgetCategory {
+    id?: number;
+    name: string;
+    icon: string;
+    color: string;
+    isIncome: number; // 0 or 1
+    parentId?: number | null;
+    orderIndex: number;
+}
+
+export interface Transaction {
+    id?: number;
+    amount: number;
+    categoryId: number;
+    isIncome: number; // 0 or 1
+    date: string; // YYYY-MM-DD
+    paymentMethod: string;
+    notes: string;
+    isRecurring: number; // 0 or 1
+    recurringRule?: { type: 'monthly' | 'weekly'; dayOfMonth?: number; dayOfWeek?: number };
+    createdAt?: string;
+    // Joined fields for display
+    categoryName?: string;
+    categoryColor?: string;
+    categoryIcon?: string;
+}
+
+export interface BudgetTarget {
+    id?: number;
+    categoryId: number;
+    month: string; // YYYY-MM
+    limitAmount: number;
+    categoryName?: string;
+}

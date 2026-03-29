@@ -537,6 +537,13 @@ app.whenReady().then(() => {
     win?.focus();
   });
 
+  // Global Shortcut for Budget Mode (Ctrl + numpad 2)
+  globalShortcut.register('CommandOrControl+num2', () => {
+    win?.webContents.send('toggle-budget-mode');
+    if (win?.isMinimized()) win.restore();
+    win?.focus();
+  });
+
   createWindow()
 
   // Auto-update: check for updates via GitHub Releases

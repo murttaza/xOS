@@ -19,6 +19,9 @@ export interface UiSlice {
     isYearMode: boolean;
     toggleYearMode: () => void;
 
+    isBudgetMode: boolean;
+    toggleBudgetMode: () => void;
+
     isTransitioning: boolean;
     triggerTransition: (action: () => void) => Promise<void>;
 
@@ -44,7 +47,7 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
 
     isFocusMode: false,
     setIsFocusMode: (isFocusMode) => {
-        get().triggerTransition(() => set({ isFocusMode, isNotesMode: false, isYearMode: false }));
+        get().triggerTransition(() => set({ isFocusMode, isNotesMode: false, isYearMode: false, isBudgetMode: false }));
     },
 
     isMurtazaMode: true,
@@ -57,12 +60,17 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
 
     isNotesMode: false,
     toggleNotesMode: () => {
-        get().triggerTransition(() => set(state => ({ isNotesMode: !state.isNotesMode, isYearMode: false })));
+        get().triggerTransition(() => set(state => ({ isNotesMode: !state.isNotesMode, isYearMode: false, isBudgetMode: false })));
     },
 
     isYearMode: false,
     toggleYearMode: () => {
-        get().triggerTransition(() => set((state) => ({ isYearMode: !state.isYearMode, isNotesMode: false })));
+        get().triggerTransition(() => set((state) => ({ isYearMode: !state.isYearMode, isNotesMode: false, isBudgetMode: false })));
+    },
+
+    isBudgetMode: false,
+    toggleBudgetMode: () => {
+        get().triggerTransition(() => set((state) => ({ isBudgetMode: !state.isBudgetMode, isNotesMode: false, isYearMode: false })));
     },
 
     osPrefix: 'm',

@@ -426,9 +426,145 @@ export const supabaseBackend: ApiBackend = {
         return (data?.length ?? 0) > 0;
     },
 
+    // ── Budget Categories ─────────────────────────────────────────
+    getBudgetCategories: async () => {
+        return throwOnError(
+            await supabase.from('budget_categories').select('*').order('isIncome').order('orderIndex')
+        );
+    },
+
+    createBudgetCategory: async (category) => {
+        return throwOnError(await supabase.from('budget_categories').insert({
+            name: category.name,
+            icon: category.icon,
+            color: category.color,
+            isIncome: category.isIncome,
+            parentId: category.parentId || null,
+            orderIndex: category.orderIndex,
+        }));
+    },
+
+    updateBudgetCategory: async (category) => {
+        return throwOnError(
+            await supabase.from('budget_categories').update({
+                name: category.name,
+                icon: category.icon,
+                color: category.color,
+                isIncome: category.isIncome,
+                parentId: category.parentId || null,
+                orderIndex: category.orderIndex,
+            }).eq('id', category.id!)
+        );
+    },
+
+    deleteBudgetCategory: async (id) => {
+        // Also delete associated transactions and targets
+        await supabase.from('budget_transactions').delete().eq('categoryId', id);
+        await supabase.from('budget_targets').delete().eq('categoryId', id);
+        return throwOnError(await supabase.from('budget_categories').delete().eq('id', id));
+    },
+
+    // ── Budget Transactions ──────────────────────────────────────
+    getTransactions: async (month) => {
+        const { data: transactions, error } = await supabase
+            .from('budget_transactions')
+            .select('*')
+            .like('date', `${month}%`)
+            .order('date', { ascending: false })
+            .order('id', { ascending: false });
+
+        if (error) throw error;
+        if (!transactions || transactions.length === 0) return [];
+
+        // Merge category info
+        const categoryIds = [...new Set(transactions.map((t: any) => t.categoryId))];
+        const { data: categories } = await supabase
+            .from('budget_categories')
+            .select('id, name, color, icon')
+            .in('id', categoryIds);
+
+        const catMap = new Map((categories || []).map((c: any) => [c.id, c]));
+
+        return transactions.map((tx: any) => {
+            const cat = catMap.get(tx.categoryId);
+            return { ...tx, categoryName: cat?.name, categoryColor: cat?.color, categoryIcon: cat?.icon };
+        });
+    },
+
+    addTransaction: async (tx) => {
+        return throwOnError(await supabase.from('budget_transactions').insert({
+            amount: tx.amount,
+            categoryId: tx.categoryId,
+            isIncome: tx.isIncome,
+            date: tx.date,
+            paymentMethod: tx.paymentMethod || null,
+            notes: tx.notes || null,
+            isRecurring: tx.isRecurring || 0,
+            recurringRule: tx.recurringRule || null,
+            createdAt: new Date().toISOString(),
+        }));
+    },
+
+    updateTransaction: async (tx) => {
+        return throwOnError(
+            await supabase.from('budget_transactions').update({
+                amount: tx.amount,
+                categoryId: tx.categoryId,
+                isIncome: tx.isIncome,
+                date: tx.date,
+                paymentMethod: tx.paymentMethod || null,
+                notes: tx.notes || null,
+                isRecurring: tx.isRecurring || 0,
+                recurringRule: tx.recurringRule || null,
+            }).eq('id', tx.id!)
+        );
+    },
+
+    deleteTransaction: async (id) => {
+        return throwOnError(await supabase.from('budget_transactions').delete().eq('id', id));
+    },
+
+    // ── Budget Targets ───────────────────────────────────────────
+    getBudgetTargets: async (month) => {
+        const { data: targets, error } = await supabase
+            .from('budget_targets')
+            .select('*')
+            .eq('month', month);
+
+        if (error) throw error;
+        if (!targets || targets.length === 0) return [];
+
+        const categoryIds = [...new Set(targets.map((t: any) => t.categoryId))];
+        const { data: categories } = await supabase
+            .from('budget_categories')
+            .select('id, name')
+            .in('id', categoryIds);
+
+        const catMap = new Map((categories || []).map((c: any) => [c.id, c]));
+
+        return targets.map((t: any) => {
+            const cat = catMap.get(t.categoryId);
+            return { ...t, categoryName: cat?.name };
+        });
+    },
+
+    setBudgetTarget: async (target) => {
+        return throwOnError(
+            await supabase.from('budget_targets').upsert({
+                categoryId: target.categoryId,
+                month: target.month,
+                limitAmount: target.limitAmount,
+            }, { onConflict: 'categoryId,month,user_id' })
+        );
+    },
+
+    deleteBudgetTarget: async (id) => {
+        return throwOnError(await supabase.from('budget_targets').delete().eq('id', id));
+    },
+
     // ── Export ──────────────────────────────────────────────────
     exportAllData: async () => {
-        const [tasks, sessions, stats, dailyLogs, devItems, repeatingTasks, subjects, notes, streaks] = await Promise.all([
+        const [tasks, sessions, stats, dailyLogs, devItems, repeatingTasks, subjects, notes, streaks, budgetCategories, budgetTransactions, budgetTargets] = await Promise.all([
             supabase.from('tasks').select('*'),
             supabase.from('sessions').select('*'),
             supabase.from('stats').select('*'),
@@ -438,6 +574,9 @@ export const supabaseBackend: ApiBackend = {
             supabase.from('subjects').select('*'),
             supabase.from('notes').select('*'),
             supabase.from('streaks').select('*'),
+            supabase.from('budget_categories').select('*'),
+            supabase.from('budget_transactions').select('*'),
+            supabase.from('budget_targets').select('*'),
         ]);
         return {
             tasks: tasks.data || [],
@@ -449,6 +588,9 @@ export const supabaseBackend: ApiBackend = {
             subjects: subjects.data || [],
             notes: notes.data || [],
             streaks: streaks.data || [],
+            budgetCategories: budgetCategories.data || [],
+            budgetTransactions: budgetTransactions.data || [],
+            budgetTargets: budgetTargets.data || [],
             exportedAt: new Date().toISOString(),
         };
     },
