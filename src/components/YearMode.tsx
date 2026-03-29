@@ -220,13 +220,13 @@ export function YearMode() {
                         </Button>
                     </div>
 
-                    <div className="flex flex-col lg:flex-row w-full min-h-full p-3 sm:p-4 lg:p-8 gap-3 lg:gap-8 pb-8 lg:pb-8">
+                    <div className="flex flex-col lg:flex-row w-full min-h-full p-3 sm:p-4 lg:p-8 gap-3 lg:gap-8 pb-8 lg:pb-8" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)' }}>
                         {/* Left Column - Dots Grid */}
                         <div className="group w-full lg:w-1/2 lg:h-full min-h-0 lg:min-h-[500px] flex flex-col items-center justify-center p-2 sm:p-4 lg:p-8 lg:border-r border-b lg:border-b-0 border-border/50 relative transition-colors duration-150 hover:bg-muted/10 pb-4 lg:pb-8">
                             {/* Subtle Hover Glow */}
                             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none bg-[radial-gradient(ellipse_at_center,hsl(var(--foreground)/0.03)_0%,transparent_60%)]" />
 
-                            <div className="absolute top-3 left-3 sm:top-8 sm:left-8 flex items-center gap-3 z-50 no-drag">
+                            <div className="absolute left-3 sm:left-8 flex items-center gap-3 z-50 no-drag" style={{ top: 'max(env(safe-area-inset-top, 0px), 12px)' }}>
                                 <Button
                                     variant={viewState === 'days' ? "default" : "outline"}
                                     size="sm"
