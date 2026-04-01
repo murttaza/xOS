@@ -27,4 +27,4 @@ jobs:
       - name: Build & publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run build
+        run: tsc && vite build && electron-builder --publish always
