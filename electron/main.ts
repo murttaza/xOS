@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, desktopCapturer } from 'electron'
+import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, desktopCapturer, nativeTheme } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import db from './db'
@@ -29,6 +29,9 @@ let win: BrowserWindow | null
 // Stop Chromium from throwing 'Failing CreateMapBlock' and other cache-related errors on dev reload
 app.commandLine.appendSwitch('disable-http-cache');
 app.commandLine.appendSwitch('disk-cache-size', '0');
+
+// Force dark mode at the native level — transparent window looks broken in light mode
+nativeTheme.themeSource = 'dark';
 
 function createWindow() {
   win = new BrowserWindow({
@@ -75,6 +78,22 @@ function createWindow() {
     win?.webContents.send('window-maximized', win?.isMaximized())
     win?.webContents.send('window-focus-state', win?.isFocused())
   })
+
+  // DevTools shortcut: Ctrl+Shift+I
+  win.webContents.on('before-input-event', (_event, input) => {
+    if (input.control && input.shift && input.key === 'I') {
+      win?.webContents.toggleDevTools();
+    }
+  });
+
+  // Log any renderer crash or failure
+  win.webContents.on('render-process-gone', (_event, details) => {
+    console.error('Renderer process gone:', details);
+  });
+
+  win.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
+    console.error('Failed to load:', errorCode, errorDescription);
+  });
 
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL)
