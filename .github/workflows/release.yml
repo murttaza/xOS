@@ -42,6 +42,9 @@ jobs:
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
 
       - name: Build
+        env:
+          VITE_SUPABASE_URL: https://wzsylueaydrjdpyrpsjh.supabase.co
+          VITE_SUPABASE_ANON_KEY: sb_publishable_F08DcFWkcrMYGirI0dPaGA_Q2BvrBEB
         run: npx tsc && npx vite build
 
       - name: Package & publish
