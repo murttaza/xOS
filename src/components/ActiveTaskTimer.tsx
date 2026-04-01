@@ -1,7 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Pause, Square, Maximize2 } from "lucide-react";
+import { Pause, Square, Maximize2, ChevronDown, ChevronUp } from "lucide-react";
 import { useStore } from "@/store";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -19,6 +19,7 @@ export function ActiveTaskTimer() {
     const setIsFocusMode = useStore(state => state.setIsFocusMode);
     const stopTaskTimer = useStore(state => state.stopTaskTimer);
     const toggleTaskTimer = useStore(state => state.toggleTaskTimer);
+    const [isMinimized, setIsMinimized] = useState(false);
 
     // Memoize task map for O(1) lookups
     const taskMap = useMemo(() => {
@@ -31,6 +32,38 @@ export function ActiveTaskTimer() {
 
     // Hide timer if no active timers OR if a book is open in library mode
     if (activeTaskIds.length === 0 || (isNotesMode && currentSubjectId !== null)) return null;
+
+    // Minimized: tiny floating pill
+    if (isMinimized) {
+        const firstTaskId = activeTaskIds[0];
+        const firstDuration = activeTimers[firstTaskId] || 0;
+        return (
+            <div
+                className={`fixed left-1/2 -translate-x-1/2 z-[100] no-drag pointer-events-none transition-all duration-150 ${isNotesMode ? 'bottom-20' : 'bottom-4'}`}
+                style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+            >
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="pointer-events-auto"
+                >
+                    <button
+                        onClick={() => setIsMinimized(false)}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full glass border border-border shadow-lg backdrop-blur-2xl hover:border-primary/40 transition-all active:scale-95"
+                    >
+                        <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse-soft shadow-[0_0_6px_hsl(var(--primary))]" />
+                        <span className="text-sm font-bold tabular-nums text-primary">
+                            {formatTime(firstDuration)}
+                        </span>
+                        {activeTaskIds.length > 1 && (
+                            <span className="text-[10px] text-muted-foreground">+{activeTaskIds.length - 1}</span>
+                        )}
+                        <ChevronUp className="h-3 w-3 text-muted-foreground" />
+                    </button>
+                </motion.div>
+            </div>
+        );
+    }
 
     return (
         <div
@@ -78,6 +111,15 @@ export function ActiveTaskTimer() {
 
                                     <div className="flex gap-1 sm:gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                                         <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-9 w-9 sm:h-12 sm:w-12 rounded-full hover:bg-muted transition-all hover:scale-[1.08] active:scale-[0.92]"
+                                            onClick={() => setIsMinimized(true)}
+                                            title="Minimize timer"
+                                        >
+                                            <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                        </Button>
+                                        <Button
                                             variant="outline"
                                             size="icon"
                                             className="h-9 w-9 sm:h-12 sm:w-12 rounded-full border-2 border-primary/30 bg-primary/5 hover:bg-primary/15 hover:text-primary hover:border-primary/50 transition-all shadow-[0_0_12px_-3px_hsl(var(--primary)/0.3)] hover:scale-[1.08] active:scale-[0.92]"
@@ -96,7 +138,7 @@ export function ActiveTaskTimer() {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-9 w-9 sm:h-12 sm:w-12 rounded-full hover:bg-muted transition-all hover:scale-[1.08] active:scale-[0.92]"
+                                            className="h-9 w-9 sm:h-12 sm:w-12 rounded-full hover:bg-muted transition-all hover:scale-[1.08] active:scale-[0.92] hidden sm:flex"
                                             onClick={() => setIsFocusMode(true)}
                                         >
                                             <Maximize2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />

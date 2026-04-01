@@ -3,7 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Plus, Eye, ChevronDown } from "lucide-react";
+import { Plus, Eye, ChevronDown, Repeat } from "lucide-react";
 import { useStore } from "@/store";
 import { TaskDialog } from "./TaskDialog";
 import { TaskItem } from "./TaskItem";
@@ -44,7 +44,6 @@ export function TaskBoard() {
     const [activePage, setActivePage] = useState(0);
     const [showRepeatingMobile, setShowRepeatingMobile] = useState(false);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const lastTapRef = useRef<number>(0);
 
     const isOnRepeating = window.innerWidth < 1024 ? showRepeatingMobile : activePage === 1;
 
@@ -214,16 +213,7 @@ export function TaskBoard() {
 
     const handleTitleClick = useCallback(() => {
         if (window.innerWidth < 1024) {
-            const now = Date.now();
-            if (now - lastTapRef.current < 400) {
-                // Double tap: toggle repeating tasks
-                setShowRepeatingMobile(prev => !prev);
-                lastTapRef.current = 0;
-            } else {
-                // Single tap: toggle collapse
-                setIsMobileExpanded(prev => !prev);
-                lastTapRef.current = now;
-            }
+            setIsMobileExpanded(prev => !prev);
         } else {
             scrollToPage(activePage === 0 ? 1 : 0);
         }
@@ -231,46 +221,67 @@ export function TaskBoard() {
 
     return (
         <Card className="lg:h-full flex flex-col border-none shadow-none bg-transparent">
-            <CardHeader className="flex flex-row items-center justify-between px-3 sm:px-4 pt-4 sm:pt-6 pb-3 sm:pb-4 gap-2">
-                <div
-                    className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity group min-w-0"
-                    onClick={handleTitleClick}
-                >
-                    <CardTitle className="text-lg sm:text-xl font-bold tracking-tight select-none flex items-center gap-2 sm:gap-3">
-                        <span className="lg:hidden">{showRepeatingMobile ? "Repeating" : "Tasks"}</span>
-                        <span className="hidden lg:inline">{activePage === 0 ? "Tasks" : "Repeating"}</span>
-                        <ChevronDown className={`h-4 w-4 lg:hidden transition-transform ${isMobileExpanded ? 'rotate-180' : ''}`} />
-                        {!showRepeatingMobile && completedTodayCount > 0 && (
-                            <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full border border-green-500/20 font-medium max-lg:hidden">
-                                {completedTodayCount} done today
-                            </span>
+            <CardHeader className="flex flex-col px-3 sm:px-4 pt-4 sm:pt-6 pb-3 sm:pb-4 gap-2">
+                <div className="flex flex-row items-center justify-between gap-2">
+                    <div
+                        className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity group min-w-0"
+                        onClick={handleTitleClick}
+                    >
+                        <CardTitle className="text-lg sm:text-xl font-bold tracking-tight select-none flex items-center gap-2 sm:gap-3">
+                            <span className="lg:hidden">{showRepeatingMobile ? "Repeating" : "Tasks"}</span>
+                            <span className="hidden lg:inline">{activePage === 0 ? "Tasks" : "Repeating"}</span>
+                            <ChevronDown className={`h-4 w-4 lg:hidden transition-transform ${isMobileExpanded ? 'rotate-180' : ''}`} />
+                            {!showRepeatingMobile && completedTodayCount > 0 && (
+                                <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full border border-green-500/20 font-medium max-lg:hidden">
+                                    {completedTodayCount} done today
+                                </span>
+                            )}
+                        </CardTitle>
+                        <div className="hidden lg:flex flex-col gap-1 ml-1 group-hover:gap-1.5 transition-all">
+                            <div className={`h-1.5 w-1.5 rounded-full transition-colors ${activePage === 0 ? "bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-muted-foreground/40"}`} />
+                            <div className={`h-1.5 w-1.5 rounded-full transition-colors ${activePage === 1 ? "bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-muted-foreground/40"}`} />
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                        {!isOnRepeating && (
+                            <Button variant="ghost" size="icon" onClick={() => setIsAllTasksOpen(true)} className="h-8 w-8 text-muted-foreground/70 hover:text-foreground hover:bg-muted transition-colors">
+                                <Eye className="h-4 w-4" />
+                            </Button>
                         )}
-                    </CardTitle>
-                    <div className="hidden lg:flex flex-col gap-1 ml-1 group-hover:gap-1.5 transition-all">
-                        <div className={`h-1.5 w-1.5 rounded-full transition-colors ${activePage === 0 ? "bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-muted-foreground/40"}`} />
-                        <div className={`h-1.5 w-1.5 rounded-full transition-colors ${activePage === 1 ? "bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-muted-foreground/40"}`} />
+                        <Button
+                            size="sm"
+                            onClick={handleAddClick}
+                            className="group relative overflow-hidden bg-muted/50 text-foreground border border-border hover:border-primary/50 shadow-none transition-all duration-150 hover:scale-105 active:scale-95 px-3 sm:px-4 h-8 sm:h-9 text-xs sm:text-sm"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-blue-600/80 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-150 ease-in-out" />
+                            <span className="relative z-10 flex items-center font-medium">
+                                <Plus className="h-4 w-4 mr-1 sm:mr-2 group-hover:rotate-90 transition-transform duration-150" />
+                                Add {isOnRepeating ? "Repeat" : "Task"}
+                            </span>
+                        </Button>
                     </div>
                 </div>
-                <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                    {!isOnRepeating && (
-                        <Button variant="ghost" size="icon" onClick={() => setIsAllTasksOpen(true)} className="h-8 w-8 text-muted-foreground/70 hover:text-foreground hover:bg-muted transition-colors">
-                            <Eye className="h-4 w-4" />
-                        </Button>
-                    )}
-                    <Button
-                        size="sm"
-                        onClick={handleAddClick}
-                        className="group relative overflow-hidden bg-muted/50 text-foreground border border-border hover:border-primary/50 shadow-none transition-all duration-150 hover:scale-105 active:scale-95 px-3 sm:px-4 h-8 sm:h-9 text-xs sm:text-sm"
+                {/* Mobile tab switcher */}
+                <div className="flex lg:hidden gap-1 bg-muted/50 rounded-lg p-0.5">
+                    <button
+                        onClick={() => setShowRepeatingMobile(false)}
+                        className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md transition-all ${!showRepeatingMobile ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}
                     >
-                        <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-blue-600/80 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-150 ease-in-out" />
-                        <span className="relative z-10 flex items-center font-medium">
-                            <Plus className="h-4 w-4 mr-1 sm:mr-2 group-hover:rotate-90 transition-transform duration-150" />
-                            Add {isOnRepeating ? "Repeat" : "Task"}
-                        </span>
-                    </Button>
+                        Tasks
+                        {completedTodayCount > 0 && !showRepeatingMobile && (
+                            <span className="text-[9px] bg-green-500/15 text-green-400 px-1.5 py-0.5 rounded-full font-medium">{completedTodayCount}</span>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setShowRepeatingMobile(true)}
+                        className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md transition-all ${showRepeatingMobile ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}
+                    >
+                        <Repeat className="h-3 w-3" />
+                        Repeating
+                    </button>
                 </div>
             </CardHeader>
-            <CardContent className={`${(isMobileExpanded || showRepeatingMobile) ? 'flex' : 'hidden'} lg:flex flex-1 px-0 overflow-hidden flex-col relative`}>
+            <CardContent className={`${isMobileExpanded ? 'flex' : 'hidden'} lg:flex flex-1 px-0 overflow-hidden flex-col relative`}>
                 <div
                     ref={scrollContainerRef}
                     onScroll={handleScroll}
