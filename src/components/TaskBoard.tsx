@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,23 +41,17 @@ export function TaskBoard() {
     const [untimedTaskToComplete, setUntimedTaskToComplete] = useState<Task | null>(null);
     const [manualDuration, setManualDuration] = useState("30");
 
-    const [activePage, setActivePage] = useState(0);
-    const [showRepeatingMobile, setShowRepeatingMobile] = useState(false);
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-    const isOnRepeating = window.innerWidth < 1024 ? showRepeatingMobile : activePage === 1;
+    const [showRepeating, setShowRepeating] = useState(false);
 
     const handleAddClick = useCallback(() => {
-        const isMobile = window.innerWidth < 1024;
-        const onRepeating = isMobile ? showRepeatingMobile : activePage === 1;
-        if (onRepeating) {
+        if (showRepeating) {
             setEditingRepeatingTask(null);
             setIsRepeatingDialogOpen(true);
         } else {
             setEditingTask(null);
             setIsDialogOpen(true);
         }
-    }, [activePage, showRepeatingMobile]);
+    }, [showRepeating]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -186,25 +180,6 @@ export function TaskBoard() {
         return { datedTasks: dated, looseTasks: loose, completedTasks: completed };
     }, [tasks]);
 
-    const handleScroll = () => {
-        if (scrollContainerRef.current) {
-            const scrollTop = scrollContainerRef.current.scrollTop;
-            const height = scrollContainerRef.current.offsetHeight;
-            const page = Math.round(scrollTop / height);
-            setActivePage(page);
-        }
-    };
-
-    const scrollToPage = (page: number) => {
-        if (scrollContainerRef.current) {
-            const height = scrollContainerRef.current.offsetHeight;
-            scrollContainerRef.current.scrollTo({
-                top: page * height,
-                behavior: 'smooth'
-            });
-        }
-    };
-
     const [isAllTasksOpen, setIsAllTasksOpen] = useState(false);
     const [isMobileExpanded, setIsMobileExpanded] = useState(true);
 
@@ -214,36 +189,24 @@ export function TaskBoard() {
     const handleTitleClick = useCallback(() => {
         if (window.innerWidth < 1024) {
             setIsMobileExpanded(prev => !prev);
-        } else {
-            scrollToPage(activePage === 0 ? 1 : 0);
         }
-    }, [activePage]);
+    }, []);
 
     return (
         <Card className="lg:h-full flex flex-col border-none shadow-none bg-transparent">
             <CardHeader className="flex flex-col px-3 sm:px-4 pt-4 sm:pt-6 pb-3 sm:pb-4 gap-2">
                 <div className="flex flex-row items-center justify-between gap-2">
                     <div
-                        className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity group min-w-0"
+                        className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity group min-w-0 lg:cursor-default"
                         onClick={handleTitleClick}
                     >
                         <CardTitle className="text-lg sm:text-xl font-bold tracking-tight select-none flex items-center gap-2 sm:gap-3">
-                            <span className="lg:hidden">{showRepeatingMobile ? "Repeating" : "Tasks"}</span>
-                            <span className="hidden lg:inline">{activePage === 0 ? "Tasks" : "Repeating"}</span>
+                            {showRepeating ? "Repeating" : "Tasks"}
                             <ChevronDown className={`h-4 w-4 lg:hidden transition-transform ${isMobileExpanded ? 'rotate-180' : ''}`} />
-                            {!showRepeatingMobile && completedTodayCount > 0 && (
-                                <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full border border-green-500/20 font-medium max-lg:hidden">
-                                    {completedTodayCount} done today
-                                </span>
-                            )}
                         </CardTitle>
-                        <div className="hidden lg:flex flex-col gap-1 ml-1 group-hover:gap-1.5 transition-all">
-                            <div className={`h-1.5 w-1.5 rounded-full transition-colors ${activePage === 0 ? "bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-muted-foreground/40"}`} />
-                            <div className={`h-1.5 w-1.5 rounded-full transition-colors ${activePage === 1 ? "bg-primary shadow-[0_0_8px_rgba(59,130,246,0.5)]" : "bg-muted-foreground/40"}`} />
-                        </div>
                     </div>
                     <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                        {!isOnRepeating && (
+                        {!showRepeating && (
                             <Button variant="ghost" size="icon" onClick={() => setIsAllTasksOpen(true)} className="h-8 w-8 text-muted-foreground/70 hover:text-foreground hover:bg-muted transition-colors">
                                 <Eye className="h-4 w-4" />
                             </Button>
@@ -256,25 +219,25 @@ export function TaskBoard() {
                             <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-blue-600/80 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-150 ease-in-out" />
                             <span className="relative z-10 flex items-center font-medium">
                                 <Plus className="h-4 w-4 mr-1 sm:mr-2 group-hover:rotate-90 transition-transform duration-150" />
-                                Add {isOnRepeating ? "Repeat" : "Task"}
+                                Add {showRepeating ? "Repeat" : "Task"}
                             </span>
                         </Button>
                     </div>
                 </div>
-                {/* Mobile tab switcher */}
-                <div className="flex lg:hidden gap-1 bg-muted/50 rounded-lg p-0.5">
+                {/* Tab switcher — all screen sizes */}
+                <div className="flex gap-1 bg-muted/50 rounded-lg p-0.5">
                     <button
-                        onClick={() => setShowRepeatingMobile(false)}
-                        className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md transition-all ${!showRepeatingMobile ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}
+                        onClick={() => setShowRepeating(false)}
+                        className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md transition-all ${!showRepeating ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}
                     >
                         Tasks
-                        {completedTodayCount > 0 && !showRepeatingMobile && (
+                        {completedTodayCount > 0 && !showRepeating && (
                             <span className="text-[9px] bg-green-500/15 text-green-400 px-1.5 py-0.5 rounded-full font-medium">{completedTodayCount}</span>
                         )}
                     </button>
                     <button
-                        onClick={() => setShowRepeatingMobile(true)}
-                        className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md transition-all ${showRepeatingMobile ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}
+                        onClick={() => setShowRepeating(true)}
+                        className={`flex-1 flex items-center justify-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md transition-all ${showRepeating ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}
                     >
                         <Repeat className="h-3 w-3" />
                         Repeating
@@ -282,59 +245,56 @@ export function TaskBoard() {
                 </div>
             </CardHeader>
             <CardContent className={`${isMobileExpanded ? 'flex' : 'hidden'} lg:flex flex-1 px-0 overflow-hidden flex-col relative`}>
-                <div
-                    ref={scrollContainerRef}
-                    onScroll={handleScroll}
-                    className="flex-1 overflow-y-auto overflow-x-hidden lg:snap-y lg:snap-mandatory flex flex-col no-scrollbar"
-                    style={{ scrollBehavior: 'smooth' }}
-                >
-                    {/* Page 1: Task List */}
-                    <div className={`w-full lg:min-h-full lg:snap-center flex-col ${showRepeatingMobile ? 'hidden lg:flex' : 'flex'}`}>
-                        <div className="flex-1 lg:overflow-y-auto no-scrollbar px-3 sm:px-4">
-                            <Accordion type="single" collapsible defaultValue="dated" className="w-full space-y-4">
-                                <TaskSection
-                                    value="dated"
-                                    label="Dated Tasks"
-                                    tasks={datedTasks}
-                                    activeTimerIds={activeTimerIds}
-                                    emptyMessage="No dated tasks."
-                                    onToggleTimer={handleToggleTimer}
-                                    onEdit={handleEditClick}
-                                    onDelete={deleteTask}
-                                    onComplete={handleComplete}
-                                />
+                <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col no-scrollbar">
+                    {/* Task List */}
+                    {!showRepeating && (
+                        <div className="w-full flex flex-col">
+                            <div className="flex-1 lg:overflow-y-auto no-scrollbar px-3 sm:px-4">
+                                <Accordion type="single" collapsible defaultValue="dated" className="w-full space-y-4">
+                                    <TaskSection
+                                        value="dated"
+                                        label="Dated Tasks"
+                                        tasks={datedTasks}
+                                        activeTimerIds={activeTimerIds}
+                                        emptyMessage="No dated tasks."
+                                        onToggleTimer={handleToggleTimer}
+                                        onEdit={handleEditClick}
+                                        onDelete={deleteTask}
+                                        onComplete={handleComplete}
+                                    />
 
-                                <TaskSection
-                                    value="loose"
-                                    label="Loose Tasks"
-                                    tasks={looseTasks}
-                                    activeTimerIds={activeTimerIds}
-                                    emptyMessage="No loose tasks."
-                                    onToggleTimer={handleToggleTimer}
-                                    onEdit={handleEditClick}
-                                    onDelete={deleteTask}
-                                    onComplete={handleComplete}
-                                />
+                                    <TaskSection
+                                        value="loose"
+                                        label="Loose Tasks"
+                                        tasks={looseTasks}
+                                        activeTimerIds={activeTimerIds}
+                                        emptyMessage="No loose tasks."
+                                        onToggleTimer={handleToggleTimer}
+                                        onEdit={handleEditClick}
+                                        onDelete={deleteTask}
+                                        onComplete={handleComplete}
+                                    />
 
-                                <CompletedTasks
-                                    completedTasks={completedTasks}
-                                    onEdit={handleEditClick}
-                                    onDelete={deleteTask}
-                                    onUncomplete={handleUncomplete}
-                                />
-                            </Accordion>
+                                    <CompletedTasks
+                                        completedTasks={completedTasks}
+                                        onEdit={handleEditClick}
+                                        onDelete={deleteTask}
+                                        onUncomplete={handleUncomplete}
+                                    />
+                                </Accordion>
+                            </div>
                         </div>
-                    </div>
+                    )}
 
-                    {/* Page 2: Repeating Tasks — mobile: shown via double-tap only; desktop: snap scroll */}
-                    <div className={`${showRepeatingMobile ? 'block' : 'hidden'} lg:block`}>
+                    {/* Repeating Tasks */}
+                    {showRepeating && (
                         <RepeatingTasksPage
                             repeatingTasks={repeatingTasks}
                             onEdit={handleRepeatingEdit}
                             onDelete={deleteRepeatingTask}
                             onToggleActive={handleRepeatingToggleActive}
                         />
-                    </div>
+                    )}
                 </div>
             </CardContent>
 
