@@ -109,3 +109,32 @@ export function calculateBudgetXP(isFirstTransactionOfDay: boolean): number {
 export function getLocalMonthString(date: Date = new Date()): string {
     return format(date, "yyyy-MM");
 }
+
+const STAT_PALETTE: Array<{ bg: string; rgb: string }> = [
+    { bg: "bg-sky-400", rgb: "56,189,248" },
+    { bg: "bg-violet-400", rgb: "167,139,250" },
+    { bg: "bg-rose-400", rgb: "251,113,133" },
+    { bg: "bg-teal-400", rgb: "45,212,191" },
+    { bg: "bg-amber-400", rgb: "251,191,36" },
+    { bg: "bg-indigo-400", rgb: "129,140,248" },
+    { bg: "bg-fuchsia-400", rgb: "232,121,249" },
+    { bg: "bg-lime-400", rgb: "163,230,53" },
+    { bg: "bg-cyan-400", rgb: "34,211,238" },
+    { bg: "bg-orange-400", rgb: "251,146,60" },
+];
+
+export function getStatColor(statName: string): { bg: string; rgb: string } {
+    if (!statName) return { bg: "bg-gray-400", rgb: "156,163,175" };
+    let hash = 0;
+    for (let i = 0; i < statName.length; i++) {
+        hash = statName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return STAT_PALETTE[Math.abs(hash) % STAT_PALETTE.length];
+}
+
+export function getTaskBarStyle(difficulty: number, statRgb: string): Record<string, string> {
+    if (difficulty < 3) return {};
+    const spread = { 3: 6, 4: 8, 5: 12 }[difficulty] || 6;
+    const opacity = { 3: 0.4, 4: 0.6, 5: 0.8 }[difficulty] || 0.4;
+    return { boxShadow: `0 0 ${spread}px rgba(${statRgb}, ${opacity})` };
+}

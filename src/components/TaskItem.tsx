@@ -4,7 +4,7 @@ import { api } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Play, Pause, Edit, Trash, CheckCircle2, Clock, Trophy, TimerOff, BookOpen, AlertCircle } from "lucide-react";
-import { cn, calculateSessionXP, getLocalDateString } from "@/lib/utils";
+import { cn, calculateSessionXP, getLocalDateString, getStatColor, getTaskBarStyle } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useStore } from "@/store";
@@ -24,13 +24,8 @@ export const TaskItem = memo(function TaskItem({ task, isActive, isTimerRunning,
 
     const updateTask = useStore(state => state.updateTask);
 
-    const difficultyColor = {
-        1: "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]",
-        2: "bg-emerald-600 shadow-[0_0_8px_rgba(5,150,105,0.5)]",
-        3: "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]",
-        4: "bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]",
-        5: "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]",
-    }[task.difficulty] || "bg-gray-500";
+    const statColor = getStatColor(task.statTarget?.[0] || "");
+    const barGlow = useMemo(() => getTaskBarStyle(task.difficulty, statColor.rgb), [task.difficulty, statColor.rgb]);
 
     const loadHistory = async () => {
         if (sessions.length > 0) return;
@@ -95,7 +90,7 @@ export const TaskItem = memo(function TaskItem({ task, isActive, isTimerRunning,
                     )}
 
                     <div className="flex items-center gap-2 sm:gap-3 overflow-hidden flex-1 relative z-10">
-                        <div className={cn("w-1.5 h-10 rounded-full transition-colors shrink-0", difficultyColor)} title={`Difficulty: ${task.difficulty}`} />
+                        <div className={cn("w-1.5 h-10 rounded-full transition-colors shrink-0", statColor.bg)} style={barGlow} title={`${task.statTarget?.[0] || 'General'} • Difficulty ${task.difficulty}`} />
                         <div className="flex flex-col flex-1 overflow-hidden pr-1">
                             <h3 className={cn("font-medium truncate text-sm transition-colors",
                                 task.isComplete && "line-through text-muted-foreground",
@@ -161,7 +156,7 @@ export const TaskItem = memo(function TaskItem({ task, isActive, isTimerRunning,
             <DialogContent className="sm:max-w-[600px] max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:w-full max-sm:rounded-none max-sm:border-0 max-sm:p-0 bg-popover/95 backdrop-blur-xl border-border text-foreground shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
                 <DialogHeader className="pb-4 border-b border-border shrink-0 max-sm:px-4 max-sm:pt-4">
                     <DialogTitle className="text-lg sm:text-xl font-light tracking-wide flex items-center gap-3">
-                        <div className={cn("w-2 h-6 rounded-full shrink-0", difficultyColor)} />
+                        <div className={cn("w-2 h-6 rounded-full shrink-0", statColor.bg)} style={barGlow} />
                         <span className="truncate">{task.title}</span>
                         {task.noteId && (
                             <Button variant="outline" size="sm" onClick={handleOpenNote} className="ml-auto bg-blue-500/10 border-blue-500/20 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300 text-xs px-2 h-7 group shrink-0">
