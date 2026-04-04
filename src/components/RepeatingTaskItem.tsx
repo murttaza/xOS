@@ -3,7 +3,7 @@ import { RepeatingTask } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Edit, Trash, Repeat, CheckCircle2, Flame } from "lucide-react";
-import { cn, getLocalDateString, getStatColor, getTaskBarStyle } from "@/lib/utils";
+import { cn, getLocalDateString, getStatColor, getDifficultyPulse } from "@/lib/utils";
 import { useStore } from "@/store";
 import { startOfWeek, addDays, format, isSameDay } from "date-fns";
 
@@ -54,7 +54,7 @@ export const RepeatingTaskItem = memo(function RepeatingTaskItem({ task, onEdit,
     }, [task, relatedTasks, todayDate, todayDayOfWeek]);
 
     const statColor = getStatColor(task.statTarget?.[0] || "");
-    const barGlow = useMemo(() => getTaskBarStyle(task.difficulty, statColor.rgb), [task.difficulty, statColor.rgb]);
+    const pulse = useMemo(() => getDifficultyPulse(task.difficulty, statColor.rgb), [task.difficulty, statColor.rgb]);
 
     const getRepeatText = () => {
         if (task.repeatType === 'daily') return "Daily";
@@ -123,7 +123,7 @@ export const RepeatingTaskItem = memo(function RepeatingTaskItem({ task, onEdit,
                 (isWeeklyDoneForRemainingDays && task.repeatType === 'weekly') && "opacity-50 grayscale-[0.5]"
             )}>
                 <div className="flex items-center gap-3 overflow-hidden flex-1">
-                    <div className={cn("w-1 h-8 rounded-full", statColor.bg)} style={barGlow} title={`${task.statTarget?.[0] || 'General'} • Difficulty ${task.difficulty}`} />
+                    <div className={cn("w-1 h-8 rounded-full", statColor.bg, pulse.className)} style={pulse.style} title={`${task.statTarget?.[0] || 'General'} • Difficulty ${task.difficulty}`} />
                     <div className="flex flex-col overflow-hidden">
                         <div className="flex items-center gap-2">
                             <h3 className={cn("font-medium truncate text-sm", !task.isActive && "line-through text-muted-foreground")}>

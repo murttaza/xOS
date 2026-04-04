@@ -472,9 +472,10 @@ app.whenReady().then(() => {
   ipcMain.on('set-window-size', (_, newState: number) => {
     if (!win) return;
     if (newState === windowSizeState) return;
-    
+
     windowSizeState = newState;
-    const display = screen.getPrimaryDisplay();
+    const winBounds = win.getBounds();
+    const display = screen.getDisplayNearestPoint({ x: winBounds.x, y: winBounds.y });
     // Use workArea to avoid overlapping with the taskbar
     const { width, height, x, y } = display.workArea;
     
@@ -521,7 +522,8 @@ app.whenReady().then(() => {
   ipcMain.on('set-overlay-mode', (_, enable) => {
     win?.setResizable(true);
     if (enable) {
-      const display = screen.getPrimaryDisplay();
+      const winBounds = win!.getBounds();
+      const display = screen.getDisplayNearestPoint({ x: winBounds.x, y: winBounds.y });
       const { x, y, width, height } = display.bounds; // Use bounds to cover entire screen including taskbar
       // Ideally use setContentProtection or similar if we wanted to be super aggressive, but alwaysOnTop is usually enough.
       win?.setAspectRatio(0);

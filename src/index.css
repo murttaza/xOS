@@ -71,6 +71,18 @@
         }
     }
 
+    @keyframes bar-pulse {
+
+        0%,
+        100% {
+            box-shadow: 0 0 4px var(--bar-glow);
+        }
+
+        50% {
+            box-shadow: 0 0 12px var(--bar-glow);
+        }
+    }
+
     @keyframes shimmer {
         0% {
             background-position: -200% center;
@@ -294,6 +306,18 @@
 @layer utilities {
     .animate-pulse-soft {
         animation: pulse-soft 6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    .bar-pulse-slow {
+        animation: bar-pulse 4s ease-in-out infinite;
+    }
+
+    .bar-pulse-mid {
+        animation: bar-pulse 2.5s ease-in-out infinite;
+    }
+
+    .bar-pulse-fast {
+        animation: bar-pulse 1.5s ease-in-out infinite;
     }
 
     .transition-smooth {

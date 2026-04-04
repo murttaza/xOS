@@ -132,9 +132,8 @@ export function getStatColor(statName: string): { bg: string; rgb: string } {
     return STAT_PALETTE[Math.abs(hash) % STAT_PALETTE.length];
 }
 
-export function getTaskBarStyle(difficulty: number, statRgb: string): Record<string, string> {
-    if (difficulty < 3) return {};
-    const spread = { 3: 6, 4: 8, 5: 12 }[difficulty] || 6;
-    const opacity = { 3: 0.4, 4: 0.6, 5: 0.8 }[difficulty] || 0.4;
-    return { boxShadow: `0 0 ${spread}px rgba(${statRgb}, ${opacity})` };
+export function getDifficultyPulse(difficulty: number, statRgb: string): { className: string; style: Record<string, string> } {
+    if (difficulty < 3) return { className: "", style: {} };
+    const pulseClass = { 3: "bar-pulse-slow", 4: "bar-pulse-mid", 5: "bar-pulse-fast" }[difficulty] || "";
+    return { className: pulseClass, style: { "--bar-glow": `rgba(${statRgb}, 0.7)` } as Record<string, string> };
 }
