@@ -64,6 +64,28 @@ export const IpcChannels = {
 
   // Export
   ExportAllData: 'export-all-data',
+
+  // Multi-window coordination
+  DataChanged: 'data-changed',
+  RequestAppState: 'request-app-state',
+  AppStateResponse: 'app-state-response',
+  OpenFullApp: 'open-full-app',
+
+  // Command Palette
+  TogglePalette: 'toggle-palette',
+
+  // Auto-Launch
+  SetAutoLaunch: 'set-auto-launch',
+  GetAutoLaunch: 'get-auto-launch',
+
+  // Idle Detection
+  IdleTimerPaused: 'idle:timer-paused',
+  IdleReturnPrompt: 'idle:return-prompt',
+  IdleReturnResponse: 'idle:return-response',
+
+  // Notifications
+  SetNotificationPrefs: 'set-notification-prefs',
+  GetNotificationPrefs: 'get-notification-prefs',
 } as const;
 
 /** Union of all IPC channel name strings */

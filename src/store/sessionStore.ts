@@ -81,8 +81,15 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
             const streakCount = repeatingTask?.streak ?? 0;
 
             // Check if this is the first session of the day
+            // Use the session being added rather than stale local state which may only
+            // contain sessions from the currently viewed date range
             const today = getLocalDateString();
-            const isFirstSessionOfDay = !state.sessions.some(s => s.dateLogged === today);
+            let isFirstSessionOfDay = !state.sessions.some(s => s.dateLogged === today && s.startTime !== session.startTime);
+            // Double-check with server data for accuracy
+            try {
+                const todaySessions = await api.getSessionsByDate(today);
+                isFirstSessionOfDay = todaySessions.length <= 1; // 1 = the session we just inserted
+            } catch { /* fallback to local check above */ }
 
             const xpEarned = calculateSessionXP(session.duration_minutes, task.difficulty, {
                 streakCount,
@@ -190,8 +197,9 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
         let remoteTimers: { taskId: number; startTime: string }[] = [];
         try {
             remoteTimers = await api.getActiveTimers();
-        } catch {
+        } catch (err) {
             // If Supabase fetch fails, keep local timers as-is
+            console.error('syncTimers: failed to fetch remote timers', err);
             return;
         }
 

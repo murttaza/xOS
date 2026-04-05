@@ -1,28 +1,14 @@
 import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, desktopCapturer, nativeTheme } from 'electron'
-import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import db from './db'
 import { IpcChannels } from '../src/shared/ipc-types'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-
-// The built directory structure
-//
-// ├─┬─┬ dist
-// │ │ └── index.html
-// │ │
-// │ ├─┬ dist-electron
-// │ │ ├── main.js
-// │ │ └── preload.mjs
-// │
-process.env.APP_ROOT = path.join(__dirname, '..')
-
-// 🚧 Use ['ENV_NAME'] avoid vite:define plugin - Vite@2.x
-export const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
-export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
-export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
-
-process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
+import { __dirname, VITE_DEV_SERVER_URL, RENDERER_DIST } from './paths'
+import { togglePaletteWindow, hidePalette } from './palette-window'
+import { toggleWidgetWindow } from './widget-window'
+import { createTray, updateTrayState, requestAppState, destroyTray } from './tray'
+import { setAutoLaunch, getAutoLaunch } from './auto-launch'
+import { loadPrefs, savePrefs, getPrefs, startBreakReminders, startStreakWarnings, scheduleDailyBriefing, stopAllNotificationTimers } from './notifications'
+import { startIdleMonitor, stopIdleMonitor } from './idle-monitor'
 
 let win: BrowserWindow | null
 
@@ -37,7 +23,7 @@ function createWindow() {
   win = new BrowserWindow({
     width: 1200,
     height: 800,
-    icon: path.join(process.env.VITE_PUBLIC, 'favicon.ico'),
+    icon: path.join(process.env.VITE_PUBLIC || '', 'favicon.ico'),
     autoHideMenuBar: true,
     transparent: true,
     frame: false,
@@ -520,28 +506,31 @@ app.whenReady().then(() => {
   })
 
   ipcMain.on('set-overlay-mode', (_, enable) => {
-    win?.setResizable(true);
+    if (!win || win.isDestroyed()) return;
+    // Make window invisible during resize — opacity is instant, no animation
+    win.setOpacity(0);
+    win.setResizable(true);
     if (enable) {
-      const winBounds = win!.getBounds();
+      const winBounds = win.getBounds();
       const display = screen.getDisplayNearestPoint({ x: winBounds.x, y: winBounds.y });
-      const { x, y, width, height } = display.bounds; // Use bounds to cover entire screen including taskbar
-      // Ideally use setContentProtection or similar if we wanted to be super aggressive, but alwaysOnTop is usually enough.
-      win?.setAspectRatio(0);
-      if (win?.isMaximized()) win?.unmaximize();
-      win?.setBounds({ x, y, width, height });
-      win?.setAlwaysOnTop(true, 'screen-saver');
-      // Default to "click-through" so user can click other apps
-      win?.setIgnoreMouseEvents(true, { forward: true });
+      const { x, y, width, height } = display.bounds;
+      win.setAspectRatio(0);
+      if (win.isMaximized()) win.unmaximize();
+      win.setBounds({ x, y, width, height });
+      win.setAlwaysOnTop(true, 'screen-saver');
+      win.setIgnoreMouseEvents(true, { forward: true });
     } else {
       windowSizeState = 0;
-      win?.setAspectRatio(1200 / 800);
-      win?.setSize(1200, 800);
-      win?.center();
-      win?.setAlwaysOnTop(false);
-      win?.setIgnoreMouseEvents(false);
-      win?.webContents.send('window-size-state', 0);
+      win.setAspectRatio(1200 / 800);
+      win.setAlwaysOnTop(false);
+      win.setIgnoreMouseEvents(false);
+      win.setSize(1200, 800);
+      win.center();
+      win.webContents.send('window-size-state', 0);
     }
-    win?.setResizable(false);
+    win.setResizable(false);
+    // Restore visibility after all properties are set
+    win.setOpacity(1);
   });
 
   // Global Shortcut for Notes Mode
@@ -565,7 +554,117 @@ app.whenReady().then(() => {
     win?.focus();
   });
 
+  // Global Shortcut for Command Palette (Ctrl+Space)
+  globalShortcut.register('CommandOrControl+Space', () => {
+    const preloadPath = path.join(__dirname, 'preload.mjs');
+    togglePaletteWindow(preloadPath);
+  });
+
+  // ── Multi-window data-changed broadcast ───────────────────────
+  ipcMain.on(IpcChannels.DataChanged, (event, payload) => {
+    // Broadcast to all windows except the sender
+    const senderId = event.sender.id;
+    BrowserWindow.getAllWindows().forEach(w => {
+      if (w.webContents.id !== senderId && !w.isDestroyed()) {
+        w.webContents.send(IpcChannels.DataChanged, payload);
+      }
+    });
+    // Also refresh tray state
+    refreshTrayState();
+  });
+
+  // ── Palette IPC handlers ──────────────────────────────────────
+  ipcMain.on('hide-palette', () => {
+    hidePalette();
+  });
+
+  // ── Open full app (from tray/widget) ──────────────────────────
+  ipcMain.on(IpcChannels.OpenFullApp, () => {
+    if (win && !win.isDestroyed()) {
+      if (win.isMinimized()) win.restore();
+      win.show();
+      win.focus();
+    }
+  });
+
+  // ── Auto-launch IPC ───────────────────────────────────────────
+  ipcMain.handle(IpcChannels.SetAutoLaunch, (_, enabled: boolean) => {
+    setAutoLaunch(enabled);
+  });
+
+  ipcMain.handle(IpcChannels.GetAutoLaunch, () => {
+    return getAutoLaunch();
+  });
+
+  // ── Notification prefs IPC ────────────────────────────────────
+  ipcMain.handle(IpcChannels.SetNotificationPrefs, (_, prefs) => {
+    savePrefs(prefs);
+  });
+
+  ipcMain.handle(IpcChannels.GetNotificationPrefs, () => {
+    return getPrefs();
+  });
+
+  // ── Idle return response ──────────────────────────────────────
+  ipcMain.on(IpcChannels.IdleReturnResponse, () => {
+    // The renderer handles the actual timer logic;
+    // this is just for any future main-process tracking
+  });
+
   createWindow()
+
+  // ── System Tray ───────────────────────────────────────────────
+  const preloadPath = path.join(__dirname, 'preload.mjs');
+  const iconDir = process.env.VITE_PUBLIC!;
+
+  createTray(iconDir, {
+    onToggleWidget: () => toggleWidgetWindow(preloadPath),
+    onOpenPalette: () => togglePaletteWindow(preloadPath),
+    onToggleTimer: () => {
+      if (win && !win.isDestroyed()) win.webContents.send('tray-toggle-timer');
+    },
+    onOpenApp: () => {
+      if (win && !win.isDestroyed()) {
+        if (win.isMinimized()) win.restore();
+        win.show();
+        win.focus();
+      }
+    },
+    onQuit: () => app.quit(),
+  });
+
+  // ── Tray state refresh ────────────────────────────────────────
+  const refreshTrayState = async () => {
+    if (!win || win.isDestroyed()) return;
+    const state = await requestAppState(win);
+    if (state) updateTrayState(state, iconDir);
+  };
+
+  // Refresh tray every 60s (lightweight — just one IPC roundtrip)
+  setInterval(refreshTrayState, 60000);
+  // Initial refresh once main window is ready
+  win?.webContents.once('did-finish-load', () => {
+    setTimeout(refreshTrayState, 3000); // Small delay for store to hydrate
+  });
+
+  // ── Notifications ─────────────────────────────────────────────
+  loadPrefs();
+  const getAppState = () => {
+    if (!win || win.isDestroyed()) return Promise.resolve(null);
+    return requestAppState(win);
+  };
+  startBreakReminders(getAppState);
+  startStreakWarnings(getAppState);
+  scheduleDailyBriefing(getAppState);
+
+  // ── Idle Monitor ──────────────────────────────────────────────
+  startIdleMonitor(
+    () => win && !win.isDestroyed() ? win : null,
+    async () => {
+      const state = await getAppState();
+      return state?.hasActiveTimer ?? false;
+    },
+  );
 
   // Auto-update: check for updates via GitHub Releases
   try {
@@ -581,4 +680,7 @@ app.whenReady().then(() => {
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()
+  destroyTray()
+  stopAllNotificationTimers()
+  stopIdleMonitor()
 })

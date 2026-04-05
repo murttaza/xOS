@@ -38,6 +38,7 @@ export interface UiSlice {
 export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get) => ({
     isTransitioning: false,
     triggerTransition: async (action) => {
+        if (get().isTransitioning) return; // Prevent stacking transitions
         set({ isTransitioning: true });
         await new Promise(r => setTimeout(r, 300));
         action();
@@ -52,7 +53,8 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
 
     isMurtazaMode: true,
     setIsMurtazaMode: (isMurtazaMode) => {
-        get().triggerTransition(() => set({ isMurtazaMode }));
+        // Skip transition for overlay mode — instant switch, no black screen
+        set({ isMurtazaMode });
     },
 
     isHardcoreMode: false,

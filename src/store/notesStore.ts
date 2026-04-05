@@ -44,7 +44,14 @@ export const createNotesSlice: StateCreator<AppState, [], [], NotesSlice> = (set
         const newSubject = { ...subject, id: tempId } as Subject;
         set(state => ({ subjects: [...state.subjects, newSubject] }));
 
-        await api.createSubject(subject);
+        try {
+            await api.createSubject(subject);
+        } catch (error) {
+            // Rollback: remove the temp subject from state
+            set(state => ({ subjects: state.subjects.filter(s => s.id !== tempId) }));
+            console.error('Failed to create subject:', error);
+            return;
+        }
         get().fetchSubjects();
     },
 

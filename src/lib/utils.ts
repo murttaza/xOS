@@ -50,7 +50,7 @@ export function calculateLevelFromXP(currentXP: number, currentLevel: number): {
     let level = currentLevel;
     let xpNeeded = calculateXPNeeded(level);
 
-    while (xp >= xpNeeded) {
+    while (xp >= xpNeeded && level < 1000) {
         xp -= xpNeeded;
         level++;
         xpNeeded = calculateXPNeeded(level);
@@ -85,7 +85,7 @@ export function migrateXPToNewCurve(
 
     let level = 1;
     let remaining = totalXP;
-    while (remaining >= newCurve(level)) {
+    while (remaining >= newCurve(level) && level < 1000) {
         remaining -= newCurve(level);
         level++;
     }

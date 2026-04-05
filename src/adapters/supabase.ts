@@ -275,7 +275,10 @@ export const supabaseBackend: ApiBackend = {
 
     deleteSubject: async (id) => {
         // Also delete associated notes (Supabase doesn't have ON DELETE CASCADE by default)
-        await supabase.from('notes').delete().eq('subjectId', id);
+        const notesResult = await supabase.from('notes').delete().eq('subjectId', id);
+        if (notesResult.error) {
+            console.error('Failed to delete notes for subject', id, notesResult.error);
+        }
         return throwOnError(await supabase.from('subjects').delete().eq('id', id));
     },
 
@@ -335,30 +338,25 @@ export const supabaseBackend: ApiBackend = {
     },
 
     searchNotes: async (query) => {
-        const pattern = `%${query}%`;
-        // Fetch matching notes
+        // Escape special PostgREST filter characters to prevent malformed queries
+        const escaped = query.replace(/[%_\\]/g, c => `\\${c}`);
+        const pattern = `%${escaped}%`;
+        // Use chained ilike filters joined with .or() to avoid string interpolation issues
         const { data: notes, error } = await supabase
             .from('notes')
-            .select('*')
+            .select('*, subjects(title, color)')
             .or(`title.ilike.${pattern},content.ilike.${pattern}`)
             .order('updatedAt', { ascending: false });
 
         if (error) throw error;
         if (!notes || notes.length === 0) return [];
 
-        // Fetch subjects for the matched notes
-        const subjectIds = [...new Set(notes.map((n: any) => n.subjectId))];
-        const { data: subjectsData } = await supabase
-            .from('subjects')
-            .select('id, title, color')
-            .in('id', subjectIds);
-
-        const subjectMap = new Map((subjectsData || []).map((s: any) => [s.id, s]));
-
-        return notes.map((note: any) => {
-            const subject = subjectMap.get(note.subjectId);
-            return { ...note, subjectTitle: subject?.title, subjectColor: subject?.color };
-        });
+        return notes.map((note: any) => ({
+            ...note,
+            subjectTitle: note.subjects?.title,
+            subjectColor: note.subjects?.color,
+            subjects: undefined, // Remove nested object from result
+        }));
     },
 
     // ── Streaks ────────────────────────────────────────────────
@@ -461,8 +459,10 @@ export const supabaseBackend: ApiBackend = {
 
     deleteBudgetCategory: async (id) => {
         // Also delete associated transactions and targets
-        await supabase.from('budget_transactions').delete().eq('categoryId', id);
-        await supabase.from('budget_targets').delete().eq('categoryId', id);
+        const txResult = await supabase.from('budget_transactions').delete().eq('categoryId', id);
+        if (txResult.error) console.error('Failed to delete transactions for category', id, txResult.error);
+        const targetResult = await supabase.from('budget_targets').delete().eq('categoryId', id);
+        if (targetResult.error) console.error('Failed to delete targets for category', id, targetResult.error);
         return throwOnError(await supabase.from('budget_categories').delete().eq('id', id));
     },
 
@@ -470,7 +470,7 @@ export const supabaseBackend: ApiBackend = {
     getTransactions: async (month) => {
         const { data: transactions, error } = await supabase
             .from('budget_transactions')
-            .select('*')
+            .select('*, budget_categories(name, color, icon)')
             .like('date', `${month}%`)
             .order('date', { ascending: false })
             .order('id', { ascending: false });
@@ -478,19 +478,13 @@ export const supabaseBackend: ApiBackend = {
         if (error) throw error;
         if (!transactions || transactions.length === 0) return [];
 
-        // Merge category info
-        const categoryIds = [...new Set(transactions.map((t: any) => t.categoryId))];
-        const { data: categories } = await supabase
-            .from('budget_categories')
-            .select('id, name, color, icon')
-            .in('id', categoryIds);
-
-        const catMap = new Map((categories || []).map((c: any) => [c.id, c]));
-
-        return transactions.map((tx: any) => {
-            const cat = catMap.get(tx.categoryId);
-            return { ...tx, categoryName: cat?.name, categoryColor: cat?.color, categoryIcon: cat?.icon };
-        });
+        return transactions.map((tx: any) => ({
+            ...tx,
+            categoryName: tx.budget_categories?.name,
+            categoryColor: tx.budget_categories?.color,
+            categoryIcon: tx.budget_categories?.icon,
+            budget_categories: undefined,
+        }));
     },
 
     addTransaction: async (tx) => {
@@ -530,24 +524,17 @@ export const supabaseBackend: ApiBackend = {
     getBudgetTargets: async (month) => {
         const { data: targets, error } = await supabase
             .from('budget_targets')
-            .select('*')
+            .select('*, budget_categories(name)')
             .eq('month', month);
 
         if (error) throw error;
         if (!targets || targets.length === 0) return [];
 
-        const categoryIds = [...new Set(targets.map((t: any) => t.categoryId))];
-        const { data: categories } = await supabase
-            .from('budget_categories')
-            .select('id, name')
-            .in('id', categoryIds);
-
-        const catMap = new Map((categories || []).map((c: any) => [c.id, c]));
-
-        return targets.map((t: any) => {
-            const cat = catMap.get(t.categoryId);
-            return { ...t, categoryName: cat?.name };
-        });
+        return targets.map((t: any) => ({
+            ...t,
+            categoryName: t.budget_categories?.name,
+            budget_categories: undefined,
+        }));
     },
 
     setBudgetTarget: async (target) => {

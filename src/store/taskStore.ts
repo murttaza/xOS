@@ -133,6 +133,10 @@ export const createTaskSlice: StateCreator<AppState, [], [], TaskSlice> = (set, 
             const tasksToSpawn: Omit<Task, 'id'>[] = [];
             const repeatingTasksToUpdate: RepeatingTask[] = [];
 
+            // Fetch current tasks to check for duplicates (prevents re-spawn if
+            // lastGeneratedDate update failed on a previous run)
+            const existingTasks = get().tasks;
+
             for (const rt of repeatingTasks as unknown as RawRepeatingTask[]) {
                 try {
                     const task = parseRawRepeatingTask(rt);
@@ -144,6 +148,13 @@ export const createTaskSlice: StateCreator<AppState, [], [], TaskSlice> = (set, 
                             shouldSpawn = true;
                         } else if (task.repeatType === 'weekly' && Array.isArray(task.repeatDays) && task.repeatDays.includes(dayOfWeek)) {
                             shouldSpawn = true;
+                        }
+
+                        // Guard: don't spawn if a task from this RT already exists for today
+                        if (shouldSpawn && existingTasks.some(t => t.repeatingTaskId === task.id && t.dueDate === today)) {
+                            // Task already exists — just update lastGeneratedDate
+                            repeatingTasksToUpdate.push({ ...task, lastGeneratedDate: today });
+                            shouldSpawn = false;
                         }
 
                         if (shouldSpawn) {

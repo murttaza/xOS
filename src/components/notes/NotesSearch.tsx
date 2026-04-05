@@ -1,3 +1,4 @@
+import { useState, useRef } from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
@@ -16,14 +17,23 @@ export const NotesSearch = ({
     searchResults,
     onResultClick,
 }: NotesSearchProps) => {
+    const [isFocused, setIsFocused] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+
     return (
-        <div className="relative w-full bg-secondary/50 rounded-full border border-border/50 backdrop-blur-md shadow-lg shadow-black/5 flex items-center px-4 py-1.5 transition-all">
+        <div
+            className="relative w-full bg-secondary/50 rounded-full border border-border/50 backdrop-blur-md shadow-lg shadow-black/5 flex items-center px-4 py-1.5 transition-all cursor-text"
+            onClick={() => inputRef.current?.focus()}
+        >
             <Search className="h-4 w-4 text-muted-foreground mr-2 shrink-0" />
             <Input
-                className="w-full bg-transparent border-none shadow-none h-7 px-0 text-sm text-foreground focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60"
-                placeholder={globalSearch ? "" : "Search across all notebooks..."}
+                ref={inputRef}
+                className="w-full bg-transparent border-none shadow-none h-8 px-0 text-sm text-foreground focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/60 caret-primary"
+                placeholder={isFocused || globalSearch ? "" : "Search across all notebooks..."}
                 value={globalSearch}
                 onChange={(e) => onGlobalSearchChange(e.target.value)}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
             />
             {/* Search Results Dropdown */}
             {globalSearch && searchResults.length > 0 && (

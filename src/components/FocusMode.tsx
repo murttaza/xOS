@@ -88,6 +88,8 @@ export function FocusMode() {
                     gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
                     osc.start();
                     osc.stop(audioCtx.currentTime + 1.5);
+                    // Close AudioContext after playback to prevent memory leak
+                    osc.onended = () => audioCtx.close();
                 } catch (e) {
                     // Audio context may fail in some environments
                 }
@@ -129,7 +131,8 @@ export function FocusMode() {
         const matchingPreset = POMODORO_PRESETS.find(p => p * 60 === pomodoroTime);
         if (matchingPreset) pomodoroDurationRef.current = matchingPreset * 60;
     }
-    const pomodoroProgress = Math.max(0, ((pomodoroDurationRef.current - pomodoroTime) / pomodoroDurationRef.current) * 100);
+    const safeDuration = pomodoroDurationRef.current || 1;
+    const pomodoroProgress = Math.max(0, ((safeDuration - pomodoroTime) / safeDuration) * 100);
 
     return (
         <motion.div

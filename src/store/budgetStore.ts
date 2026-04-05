@@ -78,13 +78,17 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
 
         // Award Finance XP
         try {
+            // Fetch both stats and transactions fresh to avoid stale data
             await get().fetchStats();
+            await get().fetchTransactions();
             const state = get();
             const financeStat = state.stats.find(s => s.statName === 'Finance');
 
             if (financeStat) {
                 const today = getLocalDateString();
-                const isFirstOfDay = !state.transactions.some(t => t.date === today);
+                // Check if only 1 transaction exists for today (the one we just added)
+                const todayCount = state.transactions.filter(t => t.date === today).length;
+                const isFirstOfDay = todayCount <= 1;
                 const xpEarned = calculateBudgetXP(isFirstOfDay);
                 const { newXP, newLevel } = calculateLevelFromXP(
                     financeStat.currentXP + xpEarned,

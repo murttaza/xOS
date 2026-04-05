@@ -4,7 +4,7 @@ import electron from 'vite-plugin-electron/simple'
 import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   test: {
     globals: true,
     environment: 'jsdom',
@@ -18,6 +18,19 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // Multi-page entries for production build only (palette + widget secondary windows)
+  // In dev, Vite serves all HTML files from the project root directly
+  ...(command === 'build' ? {
+    build: {
+      rollupOptions: {
+        input: {
+          main: path.resolve(__dirname, 'index.html'),
+          palette: path.resolve(__dirname, 'palette.html'),
+          widget: path.resolve(__dirname, 'widget.html'),
+        },
+      },
+    },
+  } : {}),
   plugins: [
     react(),
     electron({
@@ -49,4 +62,4 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['better-sqlite3'],
   },
-})
+}))

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { Subject, Note } from '../types';
-import { Book, Trash2, ArrowLeft } from 'lucide-react';
+import { Book, Trash2, ArrowLeft, Zap } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { cn } from '../lib/utils';
@@ -13,6 +13,7 @@ import { BookShelf } from './notes/BookShelf';
 import { NotesList } from './notes/NotesList';
 import { NoteEditor } from './notes/NoteEditor';
 import { NotesSearch } from './notes/NotesSearch';
+import { QuickNotesView } from './notes/QuickNotesView';
 
 // --- Constants ---
 
@@ -229,6 +230,7 @@ export const NotesMode = () => {
     const [newSubjectTitle, setNewSubjectTitle] = useState('');
     const [creatingSubjectIndex, setCreatingSubjectIndex] = useState<number>(0);
     const [currentLibraryIndex, setCurrentLibraryIndex] = useState(0);
+    const [quickNotesSubjectId, setQuickNotesSubjectId] = useState<number | null>(null);
 
     useEffect(() => {
         if (isNotesMode) {
@@ -284,6 +286,19 @@ export const NotesMode = () => {
         setGlobalSearch('');
     };
 
+    const handleOpenQuickNotes = async () => {
+        let quickNotes = subjects.find(s => s.title === 'Quick Notes');
+        if (!quickNotes) {
+            await createSubject({ title: 'Quick Notes', color: '#ef4444', orderIndex: 0 });
+            await fetchSubjects();
+            const updated = useStore.getState().subjects;
+            quickNotes = updated.find(s => s.title === 'Quick Notes');
+        }
+        if (quickNotes?.id) {
+            setQuickNotesSubjectId(quickNotes.id);
+        }
+    };
+
     // Calculate how many libraries we effectively have data for
     const maxOrderIndex = subjects.length > 0 ? Math.max(...subjects.map(s => s.orderIndex)) : 0;
     const dataLibrariesCount = Math.floor(maxOrderIndex / TOTAL_SPINES) + 1;
@@ -337,6 +352,15 @@ export const NotesMode = () => {
                             </div>
 
                             <div className="flex items-center gap-4 no-drag justify-end flex-1 min-w-0">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={handleOpenQuickNotes}
+                                    className="h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                                >
+                                    <Zap className="h-3 w-3" />
+                                    <span className="hidden sm:inline">Quick Notes</span>
+                                </Button>
                                 <ModeToggle />
                                 <WindowControls />
                             </div>
@@ -429,6 +453,23 @@ export const NotesMode = () => {
                                 subject={currentSubject}
                                 onClose={closeSubject}
                             />
+                        )}
+                    </AnimatePresence>
+
+                    {/* Quick Notes Overlay */}
+                    <AnimatePresence>
+                        {quickNotesSubjectId && (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.15 }}
+                            >
+                                <QuickNotesView
+                                    subjectId={quickNotesSubjectId}
+                                    onClose={() => setQuickNotesSubjectId(null)}
+                                />
+                            </motion.div>
                         )}
                     </AnimatePresence>
                 </motion.div>
