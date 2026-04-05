@@ -299,10 +299,16 @@ export const NotesMode = () => {
         }
     };
 
-    // Calculate how many libraries we effectively have data for
-    const maxOrderIndex = subjects.length > 0 ? Math.max(...subjects.map(s => s.orderIndex)) : 0;
-    const dataLibrariesCount = Math.floor(maxOrderIndex / TOTAL_SPINES) + 1;
-    const visibleLibrariesCount = Math.max(dataLibrariesCount, currentLibraryIndex + 1);
+    // Only show library tabs for libraries that actually contain subjects (plus current)
+    const libraryIndicesWithSubjects = useMemo(() => {
+        const libs = new Set<number>();
+        subjects.forEach(s => libs.add(Math.floor(s.orderIndex / TOTAL_SPINES)));
+        // Always include library 0 so there's at least one tab
+        libs.add(0);
+        // Include the currently viewed library
+        libs.add(currentLibraryIndex);
+        return [...libs].sort((a, b) => a - b);
+    }, [subjects, currentLibraryIndex]);
 
     return (
         <AnimatePresence>
@@ -418,7 +424,7 @@ export const NotesMode = () => {
                     <div className="h-12 border-t border-border/50 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-between px-3 sm:px-6 no-drag">
                         <div className="flex-1" />
                         <div className="flex gap-1.5 sm:gap-2">
-                            {Array.from({ length: visibleLibrariesCount }).map((_, idx) => (
+                            {libraryIndicesWithSubjects.map(idx => (
                                 <button
                                     key={idx}
                                     onClick={() => setCurrentLibraryIndex(idx)}

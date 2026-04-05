@@ -39,8 +39,10 @@ export function TaskDialog({ open, onOpenChange, onSubmit, initialTask }: TaskDi
     const [time, setTime] = useState<string>("");
 
     useEffect(() => {
-        api.searchNotes("").then(notes => setAllNotes(notes));
-    }, []);
+        if (open) {
+            api.searchNotes("").then(notes => setAllNotes(notes)).catch(() => {});
+        }
+    }, [open]);
 
     useEffect(() => {
         if (initialTask) {

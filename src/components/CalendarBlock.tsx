@@ -2,8 +2,8 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { CardContent } from "@/components/ui/card";
 
 import { useStore } from "@/store";
-import { startOfMonth, endOfMonth, format, addMonths, subMonths, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isToday } from "date-fns";
-import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import { startOfMonth, endOfMonth, format, addMonths, subMonths, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, isToday, subWeeks } from "date-fns";
+import { ChevronLeft, ChevronRight, ChevronDown, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn, safeJSONParse, getLocalDateString } from "@/lib/utils";
@@ -23,6 +23,7 @@ export function CalendarBlock() {
     const [journalText, setJournalText] = useState("");
     const [windowSize, setWindowSize] = useState(0);
     const [isMobileExpanded, setIsMobileExpanded] = useState(false);
+    const [showWeekRecap, setShowWeekRecap] = useState(false);
 
     useEffect(() => {
         if (!window.ipcRenderer) return;
@@ -122,6 +123,45 @@ export function CalendarBlock() {
         return set;
     }, [sessions, tasks]);
 
+    // Week recap computations
+    const weekRecap = useMemo(() => {
+        const now = new Date();
+        const thisWeekStart = getLocalDateString(startOfWeek(now, { weekStartsOn: 0 }));
+        const thisWeekEnd = getLocalDateString(endOfWeek(now, { weekStartsOn: 0 }));
+        const lastWeekStart = getLocalDateString(startOfWeek(subWeeks(now, 1), { weekStartsOn: 0 }));
+        const lastWeekEnd = getLocalDateString(endOfWeek(subWeeks(now, 1), { weekStartsOn: 0 }));
+
+        // This week stats
+        const thisWeekSessions = sessions.filter(s => s.dateLogged >= thisWeekStart && s.dateLogged <= thisWeekEnd);
+        const thisWeekMinutes = thisWeekSessions.reduce((a, s) => a + s.duration_minutes, 0);
+        const thisWeekCompleted = tasks.filter(t => t.isComplete && t.completedAt && getLocalDateString(new Date(t.completedAt)) >= thisWeekStart && getLocalDateString(new Date(t.completedAt)) <= thisWeekEnd);
+        const thisWeekActiveDays = new Set(thisWeekSessions.map(s => s.dateLogged)).size;
+
+        // Last week stats
+        const lastWeekSessions = sessions.filter(s => s.dateLogged >= lastWeekStart && s.dateLogged <= lastWeekEnd);
+        const lastWeekMinutes = lastWeekSessions.reduce((a, s) => a + s.duration_minutes, 0);
+        const lastWeekCompleted = tasks.filter(t => t.isComplete && t.completedAt && getLocalDateString(new Date(t.completedAt)) >= lastWeekStart && getLocalDateString(new Date(t.completedAt)) <= lastWeekEnd);
+
+        // Top tasks worked on this week (by session count)
+        const taskSessionCount = new Map<number, number>();
+        thisWeekSessions.forEach(s => {
+            taskSessionCount.set(s.taskId, (taskSessionCount.get(s.taskId) || 0) + s.duration_minutes);
+        });
+        const topTasks = [...taskSessionCount.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([taskId, mins]) => ({ title: getTaskTitle(taskId), minutes: mins }));
+
+        return {
+            thisWeekMinutes,
+            thisWeekCompletedCount: thisWeekCompleted.length,
+            thisWeekActiveDays,
+            lastWeekMinutes,
+            lastWeekCompletedCount: lastWeekCompleted.length,
+            topTasks,
+        };
+    }, [sessions, tasks, getTaskTitle]);
+
     return (
         <div className="flex flex-col lg:h-full overflow-hidden lg:bg-gradient-to-br lg:from-card lg:to-secondary/10">
             {/* Header - collapsible on mobile */}
@@ -143,9 +183,20 @@ export function CalendarBlock() {
                     )}
                 </div>
 
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors hidden lg:flex" onClick={(e) => { e.stopPropagation(); nextMonth(); }}>
-                    <ChevronRight className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn("h-8 w-8 rounded-full transition-colors hidden lg:flex", showWeekRecap ? "bg-primary/15 text-primary" : "hover:bg-primary/10 hover:text-primary")}
+                        onClick={(e) => { e.stopPropagation(); setShowWeekRecap(prev => !prev); }}
+                        title="Week Overview"
+                    >
+                        <TrendingUp className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors hidden lg:flex" onClick={(e) => { e.stopPropagation(); nextMonth(); }}>
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
+                </div>
             </div>
 
             <CardContent className={`${isMobileExpanded ? 'block' : 'hidden'} lg:flex flex-1 min-h-0 overflow-hidden p-4 pt-0 flex-col gap-6`}>
@@ -188,6 +239,71 @@ export function CalendarBlock() {
                         })}
                     </div>
                 </div>
+
+                {/* Week Overview */}
+                <AnimatePresence>
+                    {showWeekRecap && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden shrink-0"
+                        >
+                            <div className="bg-secondary/20 rounded-2xl p-4 border border-border/40 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">This Week</h3>
+                                    {weekRecap.lastWeekMinutes > 0 && (
+                                        <span className={cn(
+                                            "text-[10px] font-medium px-2 py-0.5 rounded-full",
+                                            weekRecap.thisWeekMinutes >= weekRecap.lastWeekMinutes
+                                                ? "bg-green-500/10 text-green-500"
+                                                : "bg-orange-500/10 text-orange-500"
+                                        )}>
+                                            {weekRecap.thisWeekMinutes >= weekRecap.lastWeekMinutes ? '+' : ''}
+                                            {Math.round(((weekRecap.thisWeekMinutes - weekRecap.lastWeekMinutes) / Math.max(weekRecap.lastWeekMinutes, 1)) * 100)}% vs last week
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Stats row */}
+                                <div className="grid grid-cols-3 gap-3">
+                                    <div className="text-center">
+                                        <div className="text-lg font-bold text-primary leading-none">
+                                            {Math.floor(weekRecap.thisWeekMinutes / 60)}h {weekRecap.thisWeekMinutes % 60}m
+                                        </div>
+                                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Focused</div>
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-lg font-bold text-foreground leading-none">
+                                            {weekRecap.thisWeekCompletedCount}
+                                        </div>
+                                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Completed</div>
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-lg font-bold text-foreground leading-none">
+                                            {weekRecap.thisWeekActiveDays}/7
+                                        </div>
+                                        <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1">Active Days</div>
+                                    </div>
+                                </div>
+
+                                {/* Top tasks */}
+                                {weekRecap.topTasks.length > 0 && (
+                                    <div className="space-y-1.5 pt-1">
+                                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Most worked on</span>
+                                        {weekRecap.topTasks.map((t, i) => (
+                                            <div key={i} className="flex items-center justify-between text-xs">
+                                                <span className="text-foreground/80 truncate flex-1">{t.title}</span>
+                                                <span className="text-muted-foreground font-mono ml-2 shrink-0">{t.minutes}m</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* Selected Day Details */}
                 <div className={`flex-1 min-h-0 flex flex-col gap-3 bg-secondary/20 rounded-2xl p-4 border border-border/40 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${windowSize === 0 ? 'max-h-[45vh]' : ''}`}>

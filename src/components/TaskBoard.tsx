@@ -12,6 +12,7 @@ import { Accordion } from "@/components/ui/accordion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RepeatingTaskDialog } from "./RepeatingTaskDialog";
 import { getLocalDateString } from "@/lib/utils";
+import { endOfWeek } from "date-fns";
 
 import { TaskSection } from "./tasks/TaskSection";
 import { RepeatingTasksPage } from "./tasks/RepeatingTasksPage";
@@ -146,23 +147,40 @@ export function TaskBoard() {
         updateTask({ ...task, isComplete: 0 });
     }, [updateTask]);
 
-    const { datedTasks, looseTasks, completedTasks } = useMemo(() => {
-        const dated: Task[] = [];
+    const { overdueTasks, todayTasks, thisWeekTasks, laterTasks, looseTasks, completedTasks } = useMemo(() => {
+        const overdue: Task[] = [];
+        const today: Task[] = [];
+        const thisWeek: Task[] = [];
+        const later: Task[] = [];
         const loose: Task[] = [];
         const completed: Task[] = [];
+
+        const todayStr = getLocalDateString(new Date());
+        const weekEnd = getLocalDateString(endOfWeek(new Date(), { weekStartsOn: 0 }));
 
         tasks.forEach(t => {
             if (t.isComplete) {
                 completed.push(t);
             } else if (t.dueDate) {
-                dated.push(t);
+                if (t.dueDate < todayStr) {
+                    overdue.push(t);
+                } else if (t.dueDate === todayStr) {
+                    today.push(t);
+                } else if (t.dueDate <= weekEnd) {
+                    thisWeek.push(t);
+                } else {
+                    later.push(t);
+                }
             } else {
                 loose.push(t);
             }
         });
 
-        // Sort dated tasks by due date ascending (overdue -> today -> future)
-        dated.sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
+        // Sort each group by due date ascending
+        overdue.sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
+        today.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+        thisWeek.sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
+        later.sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
 
         // Sort loose tasks by difficulty descending (hardest first)
         loose.sort((a, b) => (b.difficulty || 0) - (a.difficulty || 0));
@@ -177,7 +195,7 @@ export function TaskBoard() {
             return (b.id || 0) - (a.id || 0);
         });
 
-        return { datedTasks: dated, looseTasks: loose, completedTasks: completed };
+        return { overdueTasks: overdue, todayTasks: today, thisWeekTasks: thisWeek, laterTasks: later, looseTasks: loose, completedTasks: completed };
     }, [tasks]);
 
     const [isAllTasksOpen, setIsAllTasksOpen] = useState(false);
@@ -250,18 +268,59 @@ export function TaskBoard() {
                     {!showRepeating && (
                         <div className="w-full flex flex-col">
                             <div className="flex-1 lg:overflow-y-auto no-scrollbar px-3 sm:px-4">
-                                <Accordion type="single" collapsible defaultValue="dated" className="w-full space-y-4">
+                                <Accordion type="single" collapsible defaultValue={overdueTasks.length > 0 ? "overdue" : todayTasks.length > 0 ? "today" : "thisweek"} className="w-full space-y-4">
+                                    {overdueTasks.length > 0 && (
+                                        <TaskSection
+                                            value="overdue"
+                                            label="Overdue"
+                                            tasks={overdueTasks}
+                                            activeTimerIds={activeTimerIds}
+                                            emptyMessage="No overdue tasks."
+                                            onToggleTimer={handleToggleTimer}
+                                            onEdit={handleEditClick}
+                                            onDelete={deleteTask}
+                                            onComplete={handleComplete}
+                                            className="border-l-2 border-l-red-500/50"
+                                        />
+                                    )}
+
                                     <TaskSection
-                                        value="dated"
-                                        label="Dated Tasks"
-                                        tasks={datedTasks}
+                                        value="today"
+                                        label="Today"
+                                        tasks={todayTasks}
                                         activeTimerIds={activeTimerIds}
-                                        emptyMessage="No dated tasks."
+                                        emptyMessage="Nothing due today."
                                         onToggleTimer={handleToggleTimer}
                                         onEdit={handleEditClick}
                                         onDelete={deleteTask}
                                         onComplete={handleComplete}
                                     />
+
+                                    <TaskSection
+                                        value="thisweek"
+                                        label="This Week"
+                                        tasks={thisWeekTasks}
+                                        activeTimerIds={activeTimerIds}
+                                        emptyMessage="Nothing else this week."
+                                        onToggleTimer={handleToggleTimer}
+                                        onEdit={handleEditClick}
+                                        onDelete={deleteTask}
+                                        onComplete={handleComplete}
+                                    />
+
+                                    {laterTasks.length > 0 && (
+                                        <TaskSection
+                                            value="later"
+                                            label="Later"
+                                            tasks={laterTasks}
+                                            activeTimerIds={activeTimerIds}
+                                            emptyMessage="No upcoming tasks."
+                                            onToggleTimer={handleToggleTimer}
+                                            onEdit={handleEditClick}
+                                            onDelete={deleteTask}
+                                            onComplete={handleComplete}
+                                        />
+                                    )}
 
                                     <TaskSection
                                         value="loose"
@@ -319,16 +378,47 @@ export function TaskBoard() {
                         <DialogTitle className="text-xl font-light tracking-wide text-foreground/90">All Tasks</DialogTitle>
                     </DialogHeader>
                     <div className="flex-1 overflow-y-auto p-6 space-y-8">
-                        {/* Dated */}
+                        {overdueTasks.length > 0 && (
+                            <div>
+                                <h3 className="text-sm font-medium text-red-400 uppercase tracking-wider mb-4 border-b border-border pb-2">Overdue</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {overdueTasks.map(task => (
+                                        <TaskItem key={task.id} task={task} isActive={false} isTimerRunning={false} onToggleTimer={() => { }} onEdit={handleEditClick} onDelete={deleteTask} onComplete={handleComplete} />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         <div>
-                            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">Dated Tasks</h3>
+                            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">Today</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {datedTasks.map(task => (
+                                {todayTasks.map(task => (
                                     <TaskItem key={task.id} task={task} isActive={false} isTimerRunning={false} onToggleTimer={() => { }} onEdit={handleEditClick} onDelete={deleteTask} onComplete={handleComplete} />
                                 ))}
-                                {datedTasks.length === 0 && <p className="text-muted-foreground/40 italic text-sm">No dated tasks</p>}
+                                {todayTasks.length === 0 && <p className="text-muted-foreground/40 italic text-sm">Nothing due today</p>}
                             </div>
                         </div>
+
+                        <div>
+                            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">This Week</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {thisWeekTasks.map(task => (
+                                    <TaskItem key={task.id} task={task} isActive={false} isTimerRunning={false} onToggleTimer={() => { }} onEdit={handleEditClick} onDelete={deleteTask} onComplete={handleComplete} />
+                                ))}
+                                {thisWeekTasks.length === 0 && <p className="text-muted-foreground/40 italic text-sm">Nothing else this week</p>}
+                            </div>
+                        </div>
+
+                        {laterTasks.length > 0 && (
+                            <div>
+                                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">Later</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {laterTasks.map(task => (
+                                        <TaskItem key={task.id} task={task} isActive={false} isTimerRunning={false} onToggleTimer={() => { }} onEdit={handleEditClick} onDelete={deleteTask} onComplete={handleComplete} />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Loose */}
                         <div>
