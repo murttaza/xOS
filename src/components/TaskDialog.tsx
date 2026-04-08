@@ -40,7 +40,12 @@ export function TaskDialog({ open, onOpenChange, onSubmit, initialTask }: TaskDi
 
     useEffect(() => {
         if (open) {
-            api.searchNotes("").then(notes => setAllNotes(notes)).catch(() => {});
+            api.searchNotes("").then(notes => {
+                setAllNotes(notes || []);
+            }).catch((err) => {
+                console.error('Failed to fetch notes for task dialog:', err);
+                setAllNotes([]);
+            });
         }
     }, [open]);
 
@@ -54,9 +59,15 @@ export function TaskDialog({ open, onOpenChange, onSubmit, initialTask }: TaskDi
             setExistingLabels(initialTask.labels || []);
             setIsUntimed(initialTask.labels?.includes("untimed") || false);
             if (initialTask.dueDate) {
-                const parsedDate = new Date(initialTask.dueDate);
-                if (!isNaN(parsedDate.getTime())) {
-                    setDate(parsedDate);
+                // Parse as local date to avoid UTC timezone shift
+                const parts = initialTask.dueDate.split('-');
+                if (parts.length === 3) {
+                    const parsedDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+                    if (!isNaN(parsedDate.getTime())) {
+                        setDate(parsedDate);
+                    } else {
+                        setDate(undefined);
+                    }
                 } else {
                     setDate(undefined);
                 }
@@ -273,7 +284,7 @@ export function TaskDialog({ open, onOpenChange, onSubmit, initialTask }: TaskDi
                             <SelectTrigger className="bg-muted/50 border-border text-foreground h-10 sm:h-9">
                                 <SelectValue placeholder="Select a note..." />
                             </SelectTrigger>
-                            <SelectContent className="bg-popover/95 border-border text-foreground backdrop-blur-xl max-h-48 overflow-y-auto">
+                            <SelectContent className="bg-popover/95 border-border text-foreground backdrop-blur-xl max-h-48 overflow-y-auto z-[200]">
                                 <SelectItem value="none" className="text-muted-foreground/60">None</SelectItem>
                                 {allNotes.map(n => (
                                     <SelectItem key={n.id} value={String(n.id)}>

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { Subject, Note } from '../types';
-import { Book, Trash2, ArrowLeft, Zap } from 'lucide-react';
+import { Book, Trash2, ArrowLeft, Zap, Maximize2, Minimize2, PanelLeftClose, PanelLeft } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { cn } from '../lib/utils';
@@ -41,6 +41,8 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
     const [editingNote, setEditingNote] = useState<Partial<Note>>({});
     const [isSaving, setIsSaving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isMaximized, setIsMaximized] = useState(false);
 
     useEffect(() => {
         if (subject.id) fetchNotes(subject.id);
@@ -154,7 +156,12 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
             onClick={onClose}
         >
             <div
-                className="pointer-events-auto bg-card w-full max-w-6xl h-full max-h-[100dvh] md:max-h-[800px] rounded-none md:rounded-r-2xl md:rounded-l-md shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col md:flex-row overflow-hidden border border-border/50 relative no-drag"
+                className={cn(
+                    "pointer-events-auto bg-card w-full h-full rounded-none shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col md:flex-row overflow-hidden border border-border/50 relative no-drag transition-all duration-200",
+                    isMaximized
+                        ? "max-w-none max-h-none"
+                        : "max-w-6xl max-h-[100dvh] md:max-h-[800px] md:rounded-r-2xl md:rounded-l-md"
+                )}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Mobile close button */}
@@ -167,24 +174,48 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
                 </button>
 
                 {/* Notes List / Sidebar */}
-                <NotesList
-                    subject={subject}
-                    notes={notes}
-                    selectedNoteId={selectedNoteId}
-                    onSelectNote={(id) => {
-                        setSelectedNoteId(id);
-                        setEditingNote({});
-                    }}
-                    onCreateNote={handleCreateNote}
-                    onDeleteNote={handleDeleteNote}
-                    onDeleteSubject={handleDeleteSubject}
-                    searchTerm={searchTerm}
-                    onSearchChange={setSearchTerm}
-                    savePendingChanges={savePendingChanges}
-                />
+                {!isSidebarCollapsed && (
+                    <NotesList
+                        subject={subject}
+                        notes={notes}
+                        selectedNoteId={selectedNoteId}
+                        onSelectNote={(id) => {
+                            setSelectedNoteId(id);
+                            setEditingNote({});
+                        }}
+                        onCreateNote={handleCreateNote}
+                        onDeleteNote={handleDeleteNote}
+                        onDeleteSubject={handleDeleteSubject}
+                        searchTerm={searchTerm}
+                        onSearchChange={setSearchTerm}
+                        savePendingChanges={savePendingChanges}
+                    />
+                )}
 
                 {/* Note Editor Area */}
                 <div className="flex-1 flex flex-col min-h-0">
+                    {/* Toolbar: sidebar toggle + maximize */}
+                    <div className="hidden md:flex items-center gap-1 px-3 py-1.5 border-b border-border/30 shrink-0">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            onClick={() => setIsSidebarCollapsed(prev => !prev)}
+                            title={isSidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
+                        >
+                            {isSidebarCollapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            onClick={() => setIsMaximized(prev => !prev)}
+                            title={isMaximized ? "Restore size" : "Maximize"}
+                        >
+                            {isMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                        </Button>
+                    </div>
+
                     {/* Mobile back to notes list */}
                     {selectedNoteId && (
                         <button

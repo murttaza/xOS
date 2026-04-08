@@ -49,9 +49,11 @@ export function BudgetMode() {
 
     useEffect(() => {
         if (isBudgetMode) {
-            fetchBudgetCategories();
-            fetchTransactions();
-            fetchBudgetTargets();
+            Promise.all([
+                fetchBudgetCategories(),
+                fetchTransactions(),
+                fetchBudgetTargets(),
+            ]).catch(err => console.error('Budget mode failed to load data:', err));
         }
     }, [isBudgetMode, fetchBudgetCategories, fetchTransactions, fetchBudgetTargets]);
 

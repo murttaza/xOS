@@ -2,6 +2,7 @@ import { useEffect, useCallback, useState, lazy, Suspense } from 'react';
 import { useTaskTimer } from './hooks/useTaskTimer';
 import { TaskBoard } from './components/TaskBoard';
 import { StatsBlock } from './components/StatsBlock';
+import { StreaksWidget } from './components/StreaksWidget';
 import { CalendarBlock } from './components/CalendarBlock';
 import { ActiveTaskTimer } from './components/ActiveTaskTimer';
 import { useStore } from './store';
@@ -577,11 +578,16 @@ function App() {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="grid grid-cols-12 gap-3 sm:gap-4 lg:gap-6 lg:flex-1 lg:min-h-0 lg:overflow-hidden"
             >
-              {/* Left Column: Stats only */}
-              <div className="col-span-12 lg:col-span-3 lg:overflow-hidden">
-                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'glass-card'} p-0 lg:p-6 transition-all duration-150 no-drag lg:h-full overflow-y-auto no-scrollbar`}>
+              {/* Left Column: Stats + Streaks */}
+              <div className="col-span-12 lg:col-span-3 lg:overflow-hidden lg:flex lg:flex-col lg:gap-3">
+                <ReactiveBlock className={`group/stats ${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'glass-card'} p-3 lg:p-4 transition-all duration-150 no-drag shrink-0 lg:max-h-[55%] lg:overflow-y-auto no-scrollbar`}>
                   <ErrorBoundary fallbackTitle="Stats">
                     <StatsBlock />
+                  </ErrorBoundary>
+                </ReactiveBlock>
+                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'glass-card'} p-3 lg:p-4 transition-all duration-150 no-drag lg:flex-1 lg:min-h-0 flex flex-col`}>
+                  <ErrorBoundary fallbackTitle="Streaks">
+                    <StreaksWidget />
                   </ErrorBoundary>
                 </ReactiveBlock>
               </div>

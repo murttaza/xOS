@@ -1,10 +1,9 @@
-import { useState, useRef, useCallback } from "react";
-import { CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useCallback } from "react";
 import { useStore } from "@/store";
 import { Stat } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
-import { calculateXPNeeded } from "@/lib/utils";
-import { Plus, Trash2, Edit2, ChevronDown } from "lucide-react";
+import { calculateXPNeeded, getStatColor } from "@/lib/utils";
+import { Plus, Trash2, Edit2, ChevronDown, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -14,6 +13,7 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 
 export function StatsBlock() {
@@ -25,11 +25,10 @@ export function StatsBlock() {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingStat, setEditingStat] = useState<Stat | null>(null);
     const [newStatName, setNewStatName] = useState("");
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [isManaging, setIsManaging] = useState(false);
 
     const handleSave = useCallback(async () => {
         if (!newStatName.trim()) return;
-
         if (editingStat) {
             await renameStat(editingStat.statName, newStatName);
         } else {
@@ -58,126 +57,100 @@ export function StatsBlock() {
         setIsDialogOpen(true);
     }, []);
 
-    const renderStat = (stat: Stat) => {
+    const renderStat = (stat: Stat, i: number) => {
         const nextLevelXP = calculateXPNeeded(stat.currentLevel);
-        // Edge case: prevent division by zero
         const progress = nextLevelXP > 0 ? Math.min(100, (stat.currentXP / nextLevelXP) * 100) : 0;
+        const { bg, rgb } = getStatColor(stat.statName);
 
         return (
             <motion.div
                 key={stat.statName}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                className="group w-full py-2 px-1"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ delay: i * 0.03 }}
+                layout
+                className="flex items-center justify-between p-2 rounded-lg bg-background/50 border border-border/40 hover:bg-background/80 hover:border-border transition-all group/item"
             >
-                <div className="flex justify-between items-end mb-1.5">
-                    <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm text-foreground/90">{stat.statName}</span>
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
-                            Lv {stat.currentLevel}
-                        </span>
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    {/* Colored bar indicator */}
+                    <div className="relative h-7 w-1 rounded-full overflow-hidden bg-muted/30 shrink-0">
+                        <div
+                            className={cn("absolute bottom-0 w-full rounded-full", bg)}
+                            style={{ height: `${progress}%`, boxShadow: `0 0 6px rgba(${rgb}, 0.4)` }}
+                        />
                     </div>
-
-                    <div className="flex items-center gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-5 lg:w-5 text-muted-foreground hover:text-foreground" onClick={() => openEditDialog(stat)}>
-                            <Edit2 className="h-3.5 w-3.5 lg:h-3 lg:w-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-5 lg:w-5 text-muted-foreground hover:text-red-400" onClick={() => handleDelete(stat)}>
-                            <Trash2 className="h-3.5 w-3.5 lg:h-3 lg:w-3" />
-                        </Button>
-                    </div>
+                    <span className="text-sm font-medium text-foreground/90 truncate">{stat.statName}</span>
                 </div>
 
-                <div className="relative h-1.5 w-full bg-muted/50 rounded-full overflow-hidden">
-                    <div
-                        className="absolute top-0 left-0 h-full bg-primary transition-all duration-150 rounded-full"
-                        style={{ width: `${progress}%` }}
-                    />
-                </div>
-
-                <div className="flex justify-between mt-1 opacity-60 lg:opacity-0 lg:group-hover:opacity-60 transition-opacity text-[10px] text-muted-foreground">
-                    <span>{stat.currentXP.toLocaleString()} XP</span>
-                    <span>{Math.floor(progress)}%</span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                    {isManaging && (
+                        <div className="flex items-center gap-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={() => openEditDialog(stat)}>
+                                <Edit2 className="h-3 w-3" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-red-400" onClick={() => handleDelete(stat)}>
+                                <Trash2 className="h-3 w-3" />
+                            </Button>
+                        </div>
+                    )}
+                    <span className="text-[10px] font-bold text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded-full tabular-nums">
+                        Lv {stat.currentLevel}
+                    </span>
                 </div>
             </motion.div>
         );
     };
 
     return (
-        <div className="flex flex-col lg:h-full">
-            <CardHeader
-                className="py-2 px-4 lg:pb-3 lg:px-6 flex flex-row items-center justify-between space-y-0 shrink-0 cursor-pointer lg:cursor-default"
+        <>
+            {/* Mobile header */}
+            <div
+                className="lg:hidden flex items-center justify-between cursor-pointer mb-2"
                 onClick={() => setIsMobileExpanded(prev => !prev)}
             >
-                <CardTitle className="text-sm lg:text-xl font-medium lg:font-bold tracking-tight flex items-center gap-2 text-muted-foreground lg:text-foreground min-w-0">
-                    <div className="h-1.5 w-1.5 lg:h-2 lg:w-2 rounded-full bg-primary animate-pulse-soft opacity-60 lg:opacity-100 shrink-0" />
-                    Stats
-                    <ChevronDown className={`h-3.5 w-3.5 lg:hidden transition-transform opacity-50 shrink-0 ${isMobileExpanded ? 'rotate-180' : ''}`} />
-                    {!isMobileExpanded && stats.length > 0 && (
-                        <span className="text-[11px] text-muted-foreground/50 font-normal truncate lg:hidden">
-                            {stats.length} stat{stats.length !== 1 ? 's' : ''} · top: {[...stats].sort((a, b) => b.currentLevel - a.currentLevel)[0]?.statName} Lv{[...stats].sort((a, b) => b.currentLevel - a.currentLevel)[0]?.currentLevel}
-                        </span>
-                    )}
-                </CardTitle>
-                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); openAddDialog(); }} className="h-7 w-7 lg:h-8 lg:w-8 hover:bg-muted rounded-full opacity-50 hover:opacity-100 transition-opacity">
-                    <Plus className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
-                </Button>
-            </CardHeader>
-
-            <div className={`${isMobileExpanded ? 'block' : 'hidden'} lg:block relative px-4 lg:px-6 pb-0 group/container flex-1 min-h-0`}>
-                {/* Scroll Controls - Visible on hover if needed, or just indicators */}
-                {stats.length > 3 && (
-                    <>
-                        <div className="absolute top-0 left-0 right-0 h-6 bg-gradient-to-b from-background to-transparent z-10 pointer-events-none" />
-                    </>
-                )}
-
-                <div
-                    ref={scrollContainerRef}
-                    className="space-y-2 h-full overflow-y-auto scrollbar-hide pr-1"
-                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                >
-                    <AnimatePresence mode="popLayout">
-                        {stats.map((stat) => renderStat(stat))}
-                    </AnimatePresence>
-
-                    {stats.length === 0 && (
-                        <motion.p
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="text-sm text-center text-muted-foreground italic py-8"
-                        >
-                            No stats yet. Add one!
-                        </motion.p>
-                    )}
+                <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse-soft" />
+                    <span className="text-sm font-medium text-muted-foreground">Stats</span>
+                    <ChevronDown className={`h-3 w-3 text-muted-foreground/50 transition-transform ${isMobileExpanded ? 'rotate-180' : ''}`} />
                 </div>
+            </div>
+
+            {/* Desktop: controls bar */}
+            <div className="hidden lg:flex items-center justify-end gap-0.5 mb-1.5">
+                <Button variant="ghost" size="icon" onClick={() => setIsManaging(prev => !prev)} className={cn("h-6 w-6 rounded-full transition-opacity", isManaging ? "opacity-80 text-primary" : "opacity-0 group-hover/stats:opacity-40 hover:!opacity-80")}>
+                    <Settings2 className="h-3 w-3" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={openAddDialog} className="h-6 w-6 rounded-full opacity-0 group-hover/stats:opacity-40 hover:!opacity-80 transition-opacity">
+                    <Plus className="h-3 w-3" />
+                </Button>
+            </div>
+
+            {/* Stats list */}
+            <div className={`${isMobileExpanded ? 'block' : 'hidden'} lg:block space-y-1.5`}>
+                <AnimatePresence mode="popLayout">
+                    {stats.map((stat, i) => renderStat(stat, i))}
+                </AnimatePresence>
+                {stats.length === 0 && (
+                    <div className="h-16 flex flex-col items-center justify-center text-muted-foreground/50 gap-1.5">
+                        <div className="h-1 w-1 rounded-full bg-current opacity-50" />
+                        <span className="text-xs font-medium">No stats yet</span>
+                    </div>
+                )}
             </div>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="sm:max-w-[425px] bg-popover/95 backdrop-blur-xl border-border text-popover-foreground">
-                    <DialogHeader>
-                        <DialogTitle>{editingStat ? "Edit Stat" : "New Stat"}</DialogTitle>
-                    </DialogHeader>
+                    <DialogHeader><DialogTitle>{editingStat ? "Edit Stat" : "New Stat"}</DialogTitle></DialogHeader>
                     <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Input
-                                id="name"
-                                value={newStatName}
-                                onChange={(e) => setNewStatName(e.target.value)}
-                                placeholder="Stat Name (e.g. Fitness)"
-                                className="bg-muted/50 border-border text-foreground"
-                                onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-                                autoFocus
-                            />
-                        </div>
+                        <Input value={newStatName} onChange={(e) => setNewStatName(e.target.value)} placeholder="Stat Name (e.g. Fitness)" className="bg-muted/50 border-border text-foreground" onKeyDown={(e) => e.key === 'Enter' && handleSave()} autoFocus />
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="border-border text-foreground hover:bg-muted hover:text-foreground">Cancel</Button>
+                        <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                         <Button onClick={handleSave} className="bg-primary text-primary-foreground hover:bg-primary/90">Save</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </>
     );
 }

@@ -44,7 +44,7 @@ export function createTray(
   tray.setToolTip('xOS')
 
   tray.on('click', () => {
-    callbacks.onToggleWidget()
+    callbacks.onOpenApp()
   })
 
   tray.on('right-click', () => {

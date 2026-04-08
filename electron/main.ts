@@ -11,6 +11,21 @@ import { loadPrefs, savePrefs, getPrefs, startBreakReminders, startStreakWarning
 import { startIdleMonitor, stopIdleMonitor } from './idle-monitor'
 
 let win: BrowserWindow | null
+let isQuitting = false;
+
+// Single instance lock — prevents duplicate windows and enables taskbar restore
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (win && !win.isDestroyed()) {
+      if (win.isMinimized()) win.restore();
+      win.show();
+      win.focus();
+    }
+  });
+}
 
 // Stop Chromium from throwing 'Failing CreateMapBlock' and other cache-related errors on dev reload
 app.commandLine.appendSwitch('disable-http-cache');
@@ -40,6 +55,14 @@ function createWindow() {
   })
 
   win.setAspectRatio(1200 / 800)
+
+  // Minimize to tray instead of quitting when the user clicks X
+  win.on('close', (e) => {
+    if (!isQuitting) {
+      e.preventDefault();
+      win?.hide();
+    }
+  })
 
   win.on('maximize', () => {
     win?.webContents.send('window-maximized', true)
@@ -93,10 +116,8 @@ function createWindow() {
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit()
-    win = null
-  }
+  // Don't quit — the app stays alive in the system tray.
+  // Actual quit happens via tray "Quit" or app.quit().
 })
 
 app.on('activate', () => {
@@ -497,7 +518,8 @@ app.whenReady().then(() => {
 
 
   ipcMain.on('close-window', () => {
-    win?.close();
+    // Hide to tray instead of closing
+    win?.hide();
   });
 
   ipcMain.on('set-ignore-mouse-events', (event, ignore, options) => {
@@ -676,6 +698,10 @@ app.whenReady().then(() => {
   } catch {
     // electron-updater may not be available in dev mode
   }
+})
+
+app.on('before-quit', () => {
+  isQuitting = true;
 })
 
 app.on('will-quit', () => {

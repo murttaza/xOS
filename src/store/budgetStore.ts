@@ -37,8 +37,12 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     budgetFilter: { type: 'all' },
 
     fetchBudgetCategories: async () => {
-        const budgetCategories = await api.getBudgetCategories();
-        set({ budgetCategories });
+        try {
+            const budgetCategories = await api.getBudgetCategories();
+            set({ budgetCategories });
+        } catch (err) {
+            console.error('fetchBudgetCategories failed:', err);
+        }
     },
 
     createBudgetCategory: async (category) => {
@@ -68,13 +72,22 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     },
 
     fetchTransactions: async (month?) => {
-        const m = month || get().selectedMonth;
-        const transactions = await api.getTransactions(m);
-        set({ transactions });
+        try {
+            const m = month || get().selectedMonth;
+            const transactions = await api.getTransactions(m);
+            set({ transactions });
+        } catch (err) {
+            console.error('fetchTransactions failed:', err);
+        }
     },
 
     addTransaction: async (tx) => {
-        await api.addTransaction(tx);
+        try {
+            await api.addTransaction(tx);
+        } catch (err) {
+            console.error('addTransaction failed:', err);
+            throw err;
+        }
 
         // Award Finance XP
         try {
@@ -127,9 +140,13 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     },
 
     fetchBudgetTargets: async (month?) => {
-        const m = month || get().selectedMonth;
-        const budgetTargets = await api.getBudgetTargets(m);
-        set({ budgetTargets });
+        try {
+            const m = month || get().selectedMonth;
+            const budgetTargets = await api.getBudgetTargets(m);
+            set({ budgetTargets });
+        } catch (err) {
+            console.error('fetchBudgetTargets failed:', err);
+        }
     },
 
     setBudgetTarget: async (target) => {
@@ -144,8 +161,12 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
 
     setSelectedMonth: (month) => {
         set({ selectedMonth: month });
-        get().fetchTransactions(month);
-        get().fetchBudgetTargets(month);
+        // Clear stale data immediately, then fetch fresh data
+        set({ transactions: [], budgetTargets: [] });
+        Promise.all([
+            get().fetchTransactions(month),
+            get().fetchBudgetTargets(month),
+        ]).catch(err => console.error('Failed to fetch budget data for month:', month, err));
     },
 
     setBudgetFilter: (filter) => set({ budgetFilter: filter }),
