@@ -17,7 +17,7 @@ export function ReactiveBlock({ children, className }: ReactiveBlockProps) {
                 ease: [0.4, 0, 0.2, 1]
             }}
             className={cn(
-                "h-full duration-150 ease-out",
+                "lg:h-full duration-150 ease-out",
                 // Removed complex hover shadows for performance
                 className
             )}

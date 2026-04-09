@@ -32,7 +32,7 @@ import { Input } from './components/ui/input';
 import { Button } from './components/ui/button';
 import { Switch } from './components/ui/switch';
 import { Label } from './components/ui/label';
-import { Settings2, HelpCircle, Download, BookOpen, CalendarDays, LogOut, Wallet } from 'lucide-react';
+import { Settings2, HelpCircle, Download, BookOpen, CalendarDays, LogOut, Wallet, ChevronDown } from 'lucide-react';
 import { api } from './api';
 import { supabase } from './lib/supabase';
 
@@ -132,6 +132,7 @@ function App() {
   const [_windowSize, setWindowSize] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [idlePrompt, setIdlePrompt] = useState<number | null>(null);
+  const [mobileStatsOpen, setMobileStatsOpen] = useState(false);
 
   const APP_VERSION = (__APP_VERSION__ || '5.0.0').split('.')[0];
 
@@ -382,7 +383,7 @@ function App() {
             <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-accent/5 dark:bg-accent/10 rounded-full blur-[50px] translate-y-1/2 -translate-x-1/4" />
           </div>
 
-          <div className={`relative max-w-screen-2xl mx-auto w-full h-full flex flex-col ${isMurtazaMode ? 'bg-transparent' : 'bg-transparent'} text-foreground p-3 sm:p-4 lg:p-6 gap-4 sm:gap-4 lg:gap-8 font-sans selection:bg-primary/20 selection:text-primary transition-colors duration-150 overflow-x-hidden overflow-y-auto lg:overflow-hidden no-scrollbar`}>
+          <div className={`relative max-w-screen-2xl mx-auto w-full h-full flex flex-col ${isMurtazaMode ? 'bg-transparent' : 'bg-transparent'} text-foreground p-3 sm:p-4 lg:p-6 gap-2 sm:gap-4 lg:gap-8 font-sans selection:bg-primary/20 selection:text-primary transition-colors duration-150 overflow-x-hidden overflow-y-auto lg:overflow-hidden no-scrollbar`}>
             {/* Header */}
             <motion.header
               initial={{ opacity: 0, y: -20 }}
@@ -579,13 +580,39 @@ function App() {
               className="grid grid-cols-12 gap-3 sm:gap-4 lg:gap-6 lg:flex-1 lg:min-h-0 lg:overflow-hidden"
             >
               {/* Left Column: Stats + Streaks */}
-              <div className="col-span-12 lg:col-span-3 lg:overflow-hidden lg:flex lg:flex-col lg:gap-3">
-                <ReactiveBlock className={`group/stats ${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'glass-card'} p-3 lg:p-4 transition-all duration-150 no-drag shrink-0 lg:max-h-[55%] lg:overflow-y-auto no-scrollbar`}>
+              <div className="col-span-12 lg:col-span-3 lg:overflow-hidden flex flex-col gap-3">
+                {/* Mobile: single collapsible card for Stats + Streaks */}
+                <div className={`lg:hidden ${isMurtazaMode ? 'bg-background/80 border border-border rounded-2xl' : 'glass-card rounded-2xl'} transition-all duration-150 no-drag overflow-hidden`}>
+                  <button
+                    onClick={() => setMobileStatsOpen(prev => !prev)}
+                    className="w-full flex items-center justify-between px-4 py-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse-soft" />
+                      <span className="text-sm font-medium text-muted-foreground">Stats & Streaks</span>
+                    </div>
+                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/50 transition-transform duration-200 ${mobileStatsOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {mobileStatsOpen && (
+                    <div className="px-3 pb-3 space-y-3">
+                      <ErrorBoundary fallbackTitle="Stats">
+                        <StatsBlock />
+                      </ErrorBoundary>
+                      <div className="border-t border-border/30 pt-3">
+                        <ErrorBoundary fallbackTitle="Streaks">
+                          <StreaksWidget />
+                        </ErrorBoundary>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {/* Desktop: separate cards */}
+                <ReactiveBlock className={`hidden lg:block group/stats ${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'glass-card'} p-3 lg:p-4 transition-all duration-150 no-drag shrink-0 lg:max-h-[55%] lg:overflow-y-auto no-scrollbar`}>
                   <ErrorBoundary fallbackTitle="Stats">
                     <StatsBlock />
                   </ErrorBoundary>
                 </ReactiveBlock>
-                <ReactiveBlock className={`${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'glass-card'} p-3 lg:p-4 transition-all duration-150 no-drag lg:flex-1 lg:min-h-0 flex flex-col`}>
+                <ReactiveBlock className={`hidden lg:flex ${isMurtazaMode ? 'bg-background/80 border border-border rounded-3xl' : 'glass-card'} p-3 lg:p-4 transition-all duration-150 no-drag lg:flex-1 lg:min-h-0 flex-col overflow-hidden`}>
                   <ErrorBoundary fallbackTitle="Streaks">
                     <StreaksWidget />
                   </ErrorBoundary>

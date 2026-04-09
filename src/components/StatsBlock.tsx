@@ -104,18 +104,6 @@ export function StatsBlock() {
 
     return (
         <>
-            {/* Mobile header */}
-            <div
-                className="lg:hidden flex items-center justify-between cursor-pointer mb-2"
-                onClick={() => setIsMobileExpanded(prev => !prev)}
-            >
-                <div className="flex items-center gap-2">
-                    <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse-soft" />
-                    <span className="text-sm font-medium text-muted-foreground">Stats</span>
-                    <ChevronDown className={`h-3 w-3 text-muted-foreground/50 transition-transform ${isMobileExpanded ? 'rotate-180' : ''}`} />
-                </div>
-            </div>
-
             {/* Desktop: controls bar */}
             <div className="hidden lg:flex items-center justify-end gap-0.5 mb-1.5">
                 <Button variant="ghost" size="icon" onClick={() => setIsManaging(prev => !prev)} className={cn("h-6 w-6 rounded-full transition-opacity", isManaging ? "opacity-80 text-primary" : "opacity-0 group-hover/stats:opacity-40 hover:!opacity-80")}>
@@ -127,7 +115,7 @@ export function StatsBlock() {
             </div>
 
             {/* Stats list */}
-            <div className={`${isMobileExpanded ? 'block' : 'hidden'} lg:block space-y-1.5`}>
+            <div className="space-y-1.5">
                 <AnimatePresence mode="popLayout">
                     {stats.map((stat, i) => renderStat(stat, i))}
                 </AnimatePresence>

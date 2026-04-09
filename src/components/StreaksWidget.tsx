@@ -29,7 +29,7 @@ const StreakHero = memo(function StreakHero({ streak, now }: { streak: Streak; n
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className={cn(
-                "flex-1 flex flex-col items-center justify-center text-center rounded-xl border border-border/30 p-4 relative overflow-hidden",
+                "lg:flex-1 flex flex-col items-center justify-center text-center rounded-xl border border-border/30 p-4 relative overflow-hidden",
                 streak.isPaused && "opacity-40"
             )}
         >
@@ -52,7 +52,7 @@ const StreakHalf = memo(function StreakHalf({ streak, now }: { streak: Streak; n
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className={cn(
-                "flex-1 flex flex-col items-center justify-center text-center rounded-xl border border-border/30 p-3 relative overflow-hidden",
+                "lg:flex-1 flex flex-col items-center justify-center text-center rounded-xl border border-border/30 p-3 relative overflow-hidden",
                 streak.isPaused && "opacity-40"
             )}
         >
@@ -75,7 +75,7 @@ const StreakThird = memo(function StreakThird({ streak, now }: { streak: Streak;
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className={cn(
-                "flex-1 flex flex-col items-center justify-center text-center rounded-lg border border-border/30 p-2 relative overflow-hidden",
+                "lg:flex-1 flex flex-col items-center justify-center text-center rounded-lg border border-border/30 p-2 relative overflow-hidden",
                 streak.isPaused && "opacity-40"
             )}
         >
@@ -151,7 +151,7 @@ export function StreaksWidget() {
     // 2 streaks: split halves
     if (count === 2) {
         return (
-            <div className="flex gap-1.5 flex-1">
+            <div className="flex gap-1.5 lg:flex-1">
                 {sorted.map(s => <StreakHalf key={s.id} streak={s} now={now} />)}
             </div>
         );
@@ -160,7 +160,7 @@ export function StreaksWidget() {
     // 3 streaks: thirds
     if (count === 3) {
         return (
-            <div className="flex gap-1.5 flex-1">
+            <div className="flex gap-1.5 lg:flex-1">
                 {sorted.map(s => <StreakThird key={s.id} streak={s} now={now} />)}
             </div>
         );
