@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useStore } from '../../store';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronRight, Plus, X, Pencil, Trash2, ArrowUp, ArrowDown, GripVertical } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, X, Pencil, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { cn } from '../../lib/utils';
