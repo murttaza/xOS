@@ -63,6 +63,8 @@ function getLocalDate(): string {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+const _ensureWeekInFlight = new Map<number, Promise<void>>();
+
 export const createFitnessSlice: StateCreator<AppState, [], [], FitnessSlice> = (set, get) => ({
     exercises: [],
     programs: [],
@@ -198,35 +200,45 @@ export const createFitnessSlice: StateCreator<AppState, [], [], FitnessSlice> = 
     },
 
     ensureWeekSessions: async (weekNumber) => {
-        const state = get();
-        const active = state.activeProgram;
-        if (!active) return;
+        // Deduplicate concurrent calls for the same week
+        const existing = _ensureWeekInFlight.get(weekNumber);
+        if (existing) return existing;
 
-        const weekStart = state.getWeekStartDate(weekNumber);
-        const phase = state.getPhaseForWeek(weekNumber);
-        if (!phase) return;
+        const work = (async () => {
+            try {
+                const state = get();
+                const active = state.activeProgram;
+                if (!active) return;
 
-        const phaseDays = state.getDaysForPhase(phase.id);
+                const weekStart = state.getWeekStartDate(weekNumber);
+                const phase = state.getPhaseForWeek(weekNumber);
+                if (!phase) return;
 
-        // Check if sessions already exist for this week
-        const existingSessions = state.workoutSessions.filter(s => {
-            const sDate = new Date(s.scheduled_date);
-            const wStart = new Date(weekStart);
-            const wEnd = new Date(wStart);
-            wEnd.setDate(wEnd.getDate() + 6);
-            return sDate >= wStart && sDate <= wEnd;
-        });
+                const phaseDays = state.getDaysForPhase(phase.id);
 
-        if (existingSessions.length >= phaseDays.length) return;
+                // Check if sessions already exist for this week
+                const existingSessions = state.workoutSessions.filter(s => {
+                    const sDate = new Date(s.scheduled_date + 'T00:00:00');
+                    const wStart = new Date(weekStart + 'T00:00:00');
+                    const wEnd = new Date(wStart);
+                    wEnd.setDate(wEnd.getDate() + 6);
+                    return sDate >= wStart && sDate <= wEnd;
+                });
 
-        // Create sessions for missing days only
-        const existingDayIds = new Set(existingSessions.map(s => s.program_day_id));
-        const missingDays = phaseDays.filter(d => !existingDayIds.has(d.id));
+                if (existingSessions.length >= phaseDays.length) return;
 
-        if (missingDays.length > 0) {
-            await api.createWeekSessions(active.id, missingDays, weekStart);
-            await state.fetchSessions();
-        }
+                // Upsert all days for the week — DB constraint prevents duplicates
+                if (phaseDays.length > 0) {
+                    await api.createWeekSessions(active.id, phaseDays, weekStart);
+                    await get().fetchSessions();
+                }
+            } finally {
+                _ensureWeekInFlight.delete(weekNumber);
+            }
+        })();
+
+        _ensureWeekInFlight.set(weekNumber, work);
+        return work;
     },
 
     createSessionForDay: async (programDayId, date) => {

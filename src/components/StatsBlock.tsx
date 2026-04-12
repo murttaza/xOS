@@ -3,7 +3,7 @@ import { useStore } from "@/store";
 import { Stat } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { calculateXPNeeded, getStatColor } from "@/lib/utils";
-import { Plus, Trash2, Edit2, ChevronDown, Settings2 } from "lucide-react";
+import { Plus, Trash2, Edit2, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -21,7 +21,6 @@ export function StatsBlock() {
     const addStat = useStore(state => state.addStat);
     const deleteStat = useStore(state => state.deleteStat);
     const renameStat = useStore(state => state.renameStat);
-    const [isMobileExpanded, setIsMobileExpanded] = useState(false);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingStat, setEditingStat] = useState<Stat | null>(null);
     const [newStatName, setNewStatName] = useState("");

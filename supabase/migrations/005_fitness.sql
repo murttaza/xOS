@@ -86,7 +86,8 @@ CREATE TABLE IF NOT EXISTS workout_sessions (
     perceived_effort INT, -- 1-10
     notes TEXT,
     status TEXT DEFAULT 'planned', -- planned, in_progress, completed, skipped
-    created_at TIMESTAMPTZ DEFAULT now()
+    created_at TIMESTAMPTZ DEFAULT now(),
+    UNIQUE (user_program_id, program_day_id, scheduled_date)
 );
 
 CREATE TABLE IF NOT EXISTS exercise_logs (

@@ -722,7 +722,10 @@ export const supabaseBackend: ApiBackend = {
             };
         });
         return throwOnError(
-            await supabase.from('workout_sessions').insert(sessions).select('*, program_days(*)')
+            await supabase.from('workout_sessions').upsert(sessions, {
+                onConflict: 'user_program_id,program_day_id,scheduled_date',
+                ignoreDuplicates: true,
+            }).select('*, program_days(*)')
         ) as any;
     },
 
