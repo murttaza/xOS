@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../../store';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Dumbbell, Play, Plus, X, ChevronRight } from 'lucide-react';
+import { Dumbbell, Play, Plus, X, ChevronRight, Trash2, ArrowLeft, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
 
@@ -65,12 +65,20 @@ interface DayEntry {
 export function ProgramPicker() {
     const programs = useStore(s => s.programs);
     const userPrograms = useStore(s => s.userPrograms);
+    const activeProgram = useStore(s => s.activeProgram);
     const startNewProgram = useStore(s => s.startNewProgram);
     const updateProgramStatus = useStore(s => s.updateProgramStatus);
     const createCustomProgram = useStore(s => s.createCustomProgram);
+    const updateProgram = useStore(s => s.updateProgram);
+    const deleteProgram = useStore(s => s.deleteProgram);
+    const setShowProgramPicker = useStore(s => s.setShowProgramPicker);
+
     const [starting, setStarting] = useState(false);
     const [showCreate, setShowCreate] = useState(false);
-    const [step, setStep] = useState<'preset' | 'customize'>(programs.length === 0 ? 'preset' : 'preset');
+    const [step, setStep] = useState<'preset' | 'customize'>('preset');
+    const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+    const [renamingId, setRenamingId] = useState<string | null>(null);
+    const [renameValue, setRenameValue] = useState('');
 
     // Form state
     const [programName, setProgramName] = useState('');
@@ -78,6 +86,8 @@ export function ProgramPicker() {
     const [days, setDays] = useState<DayEntry[]>([]);
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState('');
+
+    const hasActiveProgram = !!activeProgram;
 
     const handleStart = async (programId: string) => {
         setStarting(true);
@@ -89,10 +99,24 @@ export function ProgramPicker() {
         const startDate = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
         await startNewProgram(programId, startDate);
         setStarting(false);
+        if (hasActiveProgram) setShowProgramPicker(false);
     };
 
     const handleResume = async (userProgramId: string) => {
         await updateProgramStatus(userProgramId, 'active');
+        if (hasActiveProgram) setShowProgramPicker(false);
+    };
+
+    const handleDelete = async (programId: string) => {
+        await deleteProgram(programId);
+        setConfirmDelete(null);
+    };
+
+    const handleRename = async (programId: string) => {
+        if (renameValue.trim()) {
+            await updateProgram(programId, { name: renameValue.trim() });
+        }
+        setRenamingId(null);
     };
 
     const applyPreset = (preset: typeof SPLIT_PRESETS[0]) => {
@@ -102,7 +126,6 @@ export function ProgramPicker() {
     };
 
     const addDay = () => {
-        // Find first available day
         const usedDays = new Set(days.map(d => d.dayOfWeek));
         const available = DAY_OPTIONS.find(o => !usedDays.has(o.value));
         if (available) {
@@ -145,6 +168,7 @@ export function ProgramPicker() {
                     focus: d.focus.trim(),
                 })),
             });
+            if (hasActiveProgram) setShowProgramPicker(false);
         } catch (err: any) {
             setError(err?.message || 'Failed to create program');
         } finally {
@@ -153,6 +177,7 @@ export function ProgramPicker() {
     };
 
     const pausedPrograms = userPrograms.filter(p => p.status === 'paused');
+    const completedPrograms = userPrograms.filter(p => p.status === 'completed' || p.status === 'abandoned');
 
     // ── Create flow ──────────────────────────────────────────────
     if (showCreate) {
@@ -165,7 +190,7 @@ export function ProgramPicker() {
                 >
                     <div className="flex items-center gap-2">
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setShowCreate(false); setStep('preset'); setDays([]); setProgramName(''); }}>
-                            <X className="h-4 w-4" />
+                            <ArrowLeft className="h-4 w-4" />
                         </Button>
                         <h2 className="text-xl font-bold">Create Your Split</h2>
                     </div>
@@ -327,16 +352,26 @@ export function ProgramPicker() {
                 className="w-full max-w-md space-y-6"
             >
                 <div className="text-center space-y-2">
+                    {hasActiveProgram && (
+                        <button
+                            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 mx-auto mb-2"
+                            onClick={() => setShowProgramPicker(false)}
+                        >
+                            <ArrowLeft className="h-3 w-3" /> Back to training
+                        </button>
+                    )}
                     <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
                         <Dumbbell className="h-8 w-8 text-primary" />
                     </div>
                     <h2 className="text-2xl font-bold">
-                        {programs.length === 0 ? 'Set Up Your Training' : 'Start a Program'}
+                        {hasActiveProgram ? 'Manage Programs' : programs.length === 0 ? 'Set Up Your Training' : 'Start a Program'}
                     </h2>
                     <p className="text-sm text-muted-foreground">
                         {programs.length === 0
                             ? 'Create a workout split to start tracking your sessions, progress and gains.'
-                            : 'Choose a training plan to begin tracking your workouts.'}
+                            : hasActiveProgram
+                                ? 'Switch to a different program, create a new one, or manage your existing plans.'
+                                : 'Choose a training plan to begin tracking your workouts.'}
                     </p>
                 </div>
 
@@ -363,23 +398,87 @@ export function ProgramPicker() {
                 {programs.length > 0 && (
                     <div className="space-y-3">
                         <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Available Programs</p>
-                        {programs.map(program => (
-                            <div key={program.id} className="border border-border rounded-xl p-4 space-y-3">
-                                <div>
-                                    <h3 className="font-semibold text-base">{program.name}</h3>
-                                    <p className="text-xs text-muted-foreground mt-1">{program.description}</p>
-                                    <p className="text-xs text-muted-foreground mt-1">{program.total_weeks} weeks</p>
+                        {programs.map(program => {
+                            const isActive = activeProgram?.program_id === program.id;
+                            const isRenaming = renamingId === program.id;
+                            const isDeleting = confirmDelete === program.id;
+
+                            return (
+                                <div key={program.id} className={cn(
+                                    "border rounded-xl p-4 space-y-3 transition-colors",
+                                    isActive ? "border-primary/40 bg-primary/5" : "border-border"
+                                )}>
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1 min-w-0">
+                                            {isRenaming ? (
+                                                <div className="flex items-center gap-2">
+                                                    <Input
+                                                        value={renameValue}
+                                                        onChange={e => setRenameValue(e.target.value)}
+                                                        onKeyDown={e => { if (e.key === 'Enter') handleRename(program.id); if (e.key === 'Escape') setRenamingId(null); }}
+                                                        className="h-8 text-sm font-semibold"
+                                                        autoFocus
+                                                    />
+                                                    <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => handleRename(program.id)}>
+                                                        <Check className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    <h3
+                                                        className="font-semibold text-base cursor-pointer hover:text-primary transition-colors"
+                                                        onClick={() => { setRenamingId(program.id); setRenameValue(program.name); }}
+                                                    >
+                                                        {program.name}
+                                                    </h3>
+                                                    {isActive && (
+                                                        <span className="text-[10px] font-medium bg-primary/10 text-primary rounded-full px-2 py-0.5">Current</span>
+                                                    )}
+                                                </div>
+                                            )}
+                                            {program.description && (
+                                                <p className="text-xs text-muted-foreground mt-1">{program.description}</p>
+                                            )}
+                                            <p className="text-xs text-muted-foreground mt-1">{program.total_weeks} weeks</p>
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                                            onClick={() => setConfirmDelete(program.id)}
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
+
+                                    <AnimatePresence>
+                                        {isDeleting && (
+                                            <motion.div
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                exit={{ opacity: 0, height: 0 }}
+                                                className="flex items-center gap-2 bg-destructive/10 rounded-lg px-3 py-2"
+                                            >
+                                                <span className="text-xs text-destructive flex-1">Delete this program and all its data?</span>
+                                                <Button size="sm" variant="destructive" className="h-6 text-xs px-2" onClick={() => handleDelete(program.id)}>Delete</Button>
+                                                <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => setConfirmDelete(null)}>Cancel</Button>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+
+                                    {!isActive && !isDeleting && (
+                                        <Button
+                                            className="w-full"
+                                            onClick={() => handleStart(program.id)}
+                                            disabled={starting}
+                                        >
+                                            <Play className="h-4 w-4 mr-2" />
+                                            {isActive ? 'Current Program' : 'Start Program'}
+                                        </Button>
+                                    )}
                                 </div>
-                                <Button
-                                    className="w-full"
-                                    onClick={() => handleStart(program.id)}
-                                    disabled={starting}
-                                >
-                                    <Play className="h-4 w-4 mr-2" />
-                                    Start Program
-                                </Button>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
 
@@ -394,6 +493,23 @@ export function ProgramPicker() {
                                 </div>
                                 <Button size="sm" variant="outline" onClick={() => handleResume(up.id)}>
                                     Resume
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {completedPrograms.length > 0 && (
+                    <div className="space-y-3 border-t border-border pt-4">
+                        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Past Programs</p>
+                        {completedPrograms.map(up => (
+                            <div key={up.id} className="flex items-center justify-between border border-border/50 rounded-lg p-3 opacity-60">
+                                <div>
+                                    <p className="text-sm font-medium">{up.program?.name || 'Program'}</p>
+                                    <p className="text-xs text-muted-foreground capitalize">{up.status}</p>
+                                </div>
+                                <Button size="sm" variant="ghost" onClick={() => handleStart(up.program_id)}>
+                                    Restart
                                 </Button>
                             </div>
                         ))}

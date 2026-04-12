@@ -25,9 +25,13 @@ export interface FitnessSlice {
 
     // UI
     fitnessTab: string;
+    fitnessTabHistory: string[];
     setFitnessTab: (tab: string) => void;
+    goBackFitnessTab: () => void;
     selectedSessionId: string | null;
     setSelectedSessionId: (id: string | null) => void;
+    showProgramPicker: boolean;
+    setShowProgramPicker: (show: boolean) => void;
 
     // Data fetching
     fetchFitnessData: () => Promise<void>;
@@ -47,6 +51,19 @@ export interface FitnessSlice {
     saveExerciseSets: (logId: string, sets: Omit<ExerciseSet, 'id' | 'exercise_log_id'>[]) => Promise<void>;
     upsertBodyMetric: (metric: Omit<BodyMetric, 'id' | 'created_at'> & { id?: string }) => Promise<void>;
     createCustomProgram: (opts: { name: string; description?: string; totalWeeks: number; days: { dayOfWeek: number; name: string; focus: string }[] }) => Promise<void>;
+
+    // Plan management
+    updateProgram: (id: string, updates: { name?: string; description?: string; total_weeks?: number }) => Promise<void>;
+    deleteProgram: (id: string) => Promise<void>;
+    addPhase: (phase: { program_id: string; name: string; week_start: number; week_end: number; rir_guidance: string; description: string; order: number }) => Promise<void>;
+    updatePhase: (id: string, updates: { name?: string; week_start?: number; week_end?: number; rir_guidance?: string; description?: string; order?: number }) => Promise<void>;
+    deletePhase: (id: string) => Promise<void>;
+    addDay: (day: { program_id: string; phase_id: string; day_of_week: number; name: string; focus: string; order: number }) => Promise<void>;
+    updateDay: (id: string, updates: { name?: string; focus?: string; day_of_week?: number; order?: number }) => Promise<void>;
+    deleteDay: (id: string) => Promise<void>;
+    addExercise: (exercise: { program_day_id: string; exercise_id?: string | null; display_name: string; type: string; prescribed_sets: string; prescribed_reps: string; notes?: string; is_loggable: boolean; order: number }) => Promise<void>;
+    updateExercise: (id: string, updates: { display_name?: string; prescribed_sets?: string; prescribed_reps?: string; notes?: string; type?: string; is_loggable?: boolean; order?: number }) => Promise<void>;
+    deleteExercise: (id: string) => Promise<void>;
 
     // Computed helpers
     getCurrentWeek: () => number;
@@ -80,9 +97,23 @@ export const createFitnessSlice: StateCreator<AppState, [], [], FitnessSlice> = 
     bodyMetrics: [],
 
     fitnessTab: 'home',
-    setFitnessTab: (tab) => set({ fitnessTab: tab }),
+    fitnessTabHistory: [],
+    setFitnessTab: (tab) => {
+        const prev = get().fitnessTab;
+        if (prev !== tab) {
+            set(s => ({ fitnessTab: tab, fitnessTabHistory: [...s.fitnessTabHistory, prev] }));
+        }
+    },
+    goBackFitnessTab: () => {
+        const history = get().fitnessTabHistory;
+        if (history.length === 0) return;
+        const prev = history[history.length - 1];
+        set({ fitnessTab: prev, fitnessTabHistory: history.slice(0, -1) });
+    },
     selectedSessionId: null,
     setSelectedSessionId: (id) => set({ selectedSessionId: id }),
+    showProgramPicker: false,
+    setShowProgramPicker: (show) => set({ showProgramPicker: show }),
 
     fetchFitnessData: async () => {
         try {
@@ -333,6 +364,73 @@ export const createFitnessSlice: StateCreator<AppState, [], [], FitnessSlice> = 
             console.error('Failed to create custom program:', err);
             throw err;
         }
+    },
+
+    // ── Plan Management ─────────────────────────────────────────
+
+    updateProgram: async (id, updates) => {
+        await api.updateProgram(id, updates);
+        await get().fetchProgramData(get().activeProgram?.program_id || id);
+        // Refresh programs list too
+        const programs = await api.getPrograms();
+        set({ programs });
+    },
+
+    deleteProgram: async (id) => {
+        await api.deleteProgram(id);
+        await get().fetchFitnessData();
+    },
+
+    addPhase: async (phase) => {
+        await api.createProgramPhase(phase);
+        await get().fetchProgramData(phase.program_id);
+    },
+
+    updatePhase: async (id, updates) => {
+        await api.updateProgramPhase(id, updates);
+        const active = get().activeProgram;
+        if (active) await get().fetchProgramData(active.program_id);
+    },
+
+    deletePhase: async (id) => {
+        await api.deleteProgramPhase(id);
+        const active = get().activeProgram;
+        if (active) await get().fetchProgramData(active.program_id);
+    },
+
+    addDay: async (day) => {
+        await api.createProgramDay(day);
+        await get().fetchProgramData(day.program_id);
+    },
+
+    updateDay: async (id, updates) => {
+        await api.updateProgramDay(id, updates);
+        const active = get().activeProgram;
+        if (active) await get().fetchProgramData(active.program_id);
+    },
+
+    deleteDay: async (id) => {
+        await api.deleteProgramDay(id);
+        const active = get().activeProgram;
+        if (active) await get().fetchProgramData(active.program_id);
+    },
+
+    addExercise: async (exercise) => {
+        await api.createProgramExercise(exercise);
+        const active = get().activeProgram;
+        if (active) await get().fetchProgramData(active.program_id);
+    },
+
+    updateExercise: async (id, updates) => {
+        await api.updateProgramExercise(id, updates);
+        const active = get().activeProgram;
+        if (active) await get().fetchProgramData(active.program_id);
+    },
+
+    deleteExercise: async (id) => {
+        await api.deleteProgramExercise(id);
+        const active = get().activeProgram;
+        if (active) await get().fetchProgramData(active.program_id);
     },
 
     // ── Computed Helpers ─────────────────────────────────────────

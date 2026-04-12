@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { cn } from '../lib/utils';
-import { ArrowLeft, Dumbbell } from 'lucide-react';
+import { ArrowLeft, Dumbbell, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { ModeToggle } from './ModeToggle';
 import { WindowControls } from './WindowControls';
@@ -31,8 +31,12 @@ export function FitnessMode() {
     const toggleFitnessMode = useStore(s => s.toggleFitnessMode);
     const fitnessTab = useStore(s => s.fitnessTab);
     const setFitnessTab = useStore(s => s.setFitnessTab);
+    const goBackFitnessTab = useStore(s => s.goBackFitnessTab);
+    const fitnessTabHistory = useStore(s => s.fitnessTabHistory);
     const fetchFitnessData = useStore(s => s.fetchFitnessData);
     const activeProgram = useStore(s => s.activeProgram);
+    const showProgramPicker = useStore(s => s.showProgramPicker);
+    const setShowProgramPicker = useStore(s => s.setShowProgramPicker);
 
     useEffect(() => {
         if (isFitnessMode) {
@@ -51,7 +55,7 @@ export function FitnessMode() {
     }, [isFitnessMode, toggleFitnessMode]);
 
     const renderContent = () => {
-        if (!activeProgram) return <ProgramPicker />;
+        if (!activeProgram || showProgramPicker) return <ProgramPicker />;
 
         switch (fitnessTab) {
             case 'today': return <TodayWorkout />;
@@ -63,6 +67,18 @@ export function FitnessMode() {
             default: return <FitnessHome />;
         }
     };
+
+    const handleBack = () => {
+        if (showProgramPicker) {
+            setShowProgramPicker(false);
+            return;
+        }
+        if (fitnessTabHistory.length > 0) {
+            goBackFitnessTab();
+        }
+    };
+
+    const canGoBack = showProgramPicker || fitnessTabHistory.length > 0;
 
     return (
         <AnimatePresence>
@@ -84,14 +100,16 @@ export function FitnessMode() {
                     >
                         <div className="flex items-center justify-between px-3 sm:px-6 lg:px-8 py-3 lg:py-4">
                             <div className="flex items-center gap-2">
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-9 w-9 lg:hidden"
-                                    onClick={toggleFitnessMode}
-                                >
-                                    <ArrowLeft className="h-5 w-5" />
-                                </Button>
+                                {canGoBack && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-9 w-9 lg:hidden"
+                                        onClick={handleBack}
+                                    >
+                                        <ArrowLeft className="h-5 w-5" />
+                                    </Button>
+                                )}
                                 <span className="text-base font-semibold lg:hidden">Fitness</span>
                                 <div className="hidden lg:flex items-center gap-3">
                                     <Dumbbell className="h-5 w-5 text-primary" />
@@ -123,6 +141,14 @@ export function FitnessMode() {
 
                             <div className="flex items-center gap-2">
                                 <ModeToggle />
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9"
+                                    onClick={toggleFitnessMode}
+                                >
+                                    <X className="h-4 w-4" />
+                                </Button>
                                 <WindowControls />
                             </div>
                         </div>

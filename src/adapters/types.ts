@@ -93,6 +93,15 @@ export interface ApiBackend {
     createProgram: (program: Pick<Program, 'name' | 'description' | 'total_weeks'> & { slug?: string }) => Promise<Program>;
     createProgramPhase: (phase: Pick<ProgramPhase, 'program_id' | 'name' | 'week_start' | 'week_end' | 'rir_guidance' | 'description' | 'order'>) => Promise<ProgramPhase>;
     createProgramDay: (day: Pick<ProgramDay, 'program_id' | 'phase_id' | 'day_of_week' | 'name' | 'focus' | 'order'>) => Promise<ProgramDay>;
+    updateProgram: (id: string, updates: Partial<Pick<Program, 'name' | 'description' | 'total_weeks'>>) => Promise<Program>;
+    deleteProgram: (id: string) => Promise<unknown>;
+    updateProgramPhase: (id: string, updates: Partial<Pick<ProgramPhase, 'name' | 'week_start' | 'week_end' | 'rir_guidance' | 'description' | 'order'>>) => Promise<ProgramPhase>;
+    deleteProgramPhase: (id: string) => Promise<unknown>;
+    updateProgramDay: (id: string, updates: Partial<Pick<ProgramDay, 'name' | 'focus' | 'day_of_week' | 'order'>>) => Promise<ProgramDay>;
+    deleteProgramDay: (id: string) => Promise<unknown>;
+    createProgramExercise: (exercise: Pick<ProgramExercise, 'program_day_id' | 'display_name' | 'type' | 'prescribed_sets' | 'prescribed_reps' | 'is_loggable' | 'order'> & { exercise_id?: string | null; notes?: string }) => Promise<ProgramExercise>;
+    updateProgramExercise: (id: string, updates: Partial<Pick<ProgramExercise, 'display_name' | 'prescribed_sets' | 'prescribed_reps' | 'notes' | 'type' | 'is_loggable' | 'order'>>) => Promise<ProgramExercise>;
+    deleteProgramExercise: (id: string) => Promise<unknown>;
 
     // User Programs
     getUserPrograms: () => Promise<UserProgram[]>;

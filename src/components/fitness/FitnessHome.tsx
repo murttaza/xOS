@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useStore } from '../../store';
 import { Button } from '../ui/button';
 import { motion } from 'framer-motion';
-import { Play, Check, Minus, ChevronRight, Calendar, TrendingUp, Dumbbell, FileText } from 'lucide-react';
+import { Play, Check, Minus, ChevronRight, Calendar, TrendingUp, Dumbbell, FileText, ArrowRightLeft } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -18,6 +18,7 @@ export function FitnessHome() {
     const ensureWeekSessions = useStore(s => s.ensureWeekSessions);
     const setFitnessTab = useStore(s => s.setFitnessTab);
     const fetchSessionDetail = useStore(s => s.fetchSessionDetail);
+    const setShowProgramPicker = useStore(s => s.setShowProgramPicker);
 
     const currentWeek = getCurrentWeek();
     const currentPhase = getPhaseForWeek(currentWeek);
@@ -63,7 +64,16 @@ export function FitnessHome() {
                             {currentPhase && <> &middot; {currentPhase.name}</>}
                         </p>
                     </div>
-                    <div className="text-right">
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground"
+                            onClick={() => setShowProgramPicker(true)}
+                            title="Switch Program"
+                        >
+                            <ArrowRightLeft className="h-4 w-4" />
+                        </Button>
                         <span className="text-2xl font-bold text-primary">{progress}%</span>
                     </div>
                 </div>

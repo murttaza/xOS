@@ -655,6 +655,62 @@ export const supabaseBackend: ApiBackend = {
         ) as any;
     },
 
+    updateProgram: async (id, updates) => {
+        return throwOnError(
+            await supabase.from('programs').update(updates).eq('id', id).select('*').single()
+        ) as any;
+    },
+
+    deleteProgram: async (id) => {
+        return throwOnError(await supabase.from('programs').delete().eq('id', id));
+    },
+
+    updateProgramPhase: async (id, updates) => {
+        return throwOnError(
+            await supabase.from('program_phases').update(updates).eq('id', id).select('*').single()
+        ) as any;
+    },
+
+    deleteProgramPhase: async (id) => {
+        return throwOnError(await supabase.from('program_phases').delete().eq('id', id));
+    },
+
+    updateProgramDay: async (id, updates) => {
+        return throwOnError(
+            await supabase.from('program_days').update(updates).eq('id', id).select('*').single()
+        ) as any;
+    },
+
+    deleteProgramDay: async (id) => {
+        return throwOnError(await supabase.from('program_days').delete().eq('id', id));
+    },
+
+    createProgramExercise: async (exercise) => {
+        return throwOnError(
+            await supabase.from('program_exercises').insert({
+                program_day_id: exercise.program_day_id,
+                exercise_id: exercise.exercise_id || null,
+                display_name: exercise.display_name,
+                type: exercise.type,
+                prescribed_sets: exercise.prescribed_sets,
+                prescribed_reps: exercise.prescribed_reps,
+                notes: exercise.notes || null,
+                is_loggable: exercise.is_loggable,
+                order: exercise.order,
+            }).select('*').single()
+        ) as any;
+    },
+
+    updateProgramExercise: async (id, updates) => {
+        return throwOnError(
+            await supabase.from('program_exercises').update(updates).eq('id', id).select('*').single()
+        ) as any;
+    },
+
+    deleteProgramExercise: async (id) => {
+        return throwOnError(await supabase.from('program_exercises').delete().eq('id', id));
+    },
+
     startProgram: async (programId, startedOn) => {
         const result = throwOnError(
             await supabase.from('user_programs').insert({
