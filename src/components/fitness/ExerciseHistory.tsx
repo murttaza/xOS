@@ -168,11 +168,11 @@ export function ExerciseHistory() {
             </div>
 
             {/* Grouped list */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-5">
+            <div className="sm:columns-2 lg:columns-3 gap-6 space-y-5 sm:space-y-0">
                 {grouped.map(([category, exs]) => {
                     const catColor = getStatColor(category);
                     return (
-                        <div key={category} className="space-y-1">
+                        <div key={category} className="space-y-1 break-inside-avoid mb-5">
                             {/* Category header */}
                             <div className="flex items-center gap-2 px-1 mb-2">
                                 <span
