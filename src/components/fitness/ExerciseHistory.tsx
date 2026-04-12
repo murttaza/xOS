@@ -153,11 +153,11 @@ export function ExerciseHistory() {
 
     // List view — grouped by category
     return (
-        <div className="p-4 sm:p-6 lg:p-8 max-w-2xl mx-auto space-y-4">
+        <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto space-y-4">
             <h2 className="text-lg font-bold">Exercise History</h2>
 
             {/* Search */}
-            <div className="relative">
+            <div className="relative max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                     placeholder="Search exercises..."
@@ -168,7 +168,7 @@ export function ExerciseHistory() {
             </div>
 
             {/* Grouped list */}
-            <div className="space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-5">
                 {grouped.map(([category, exs]) => {
                     const catColor = getStatColor(category);
                     return (
