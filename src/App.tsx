@@ -17,6 +17,7 @@ import { ModeToggle } from './components/ModeToggle';
 const NotesMode = lazy(() => import('./components/NotesMode').then(m => ({ default: m.NotesMode })));
 const YearMode = lazy(() => import('./components/YearMode').then(m => ({ default: m.YearMode })));
 const BudgetMode = lazy(() => import('./components/BudgetMode').then(m => ({ default: m.BudgetMode })));
+const FitnessMode = lazy(() => import('./components/FitnessMode').then(m => ({ default: m.FitnessMode })));
 
 import { HeaderPrayers } from './components/HeaderPrayers';
 import { FocusMode } from './components/FocusMode';
@@ -32,7 +33,7 @@ import { Input } from './components/ui/input';
 import { Button } from './components/ui/button';
 import { Switch } from './components/ui/switch';
 import { Label } from './components/ui/label';
-import { Settings2, HelpCircle, Download, BookOpen, CalendarDays, LogOut, Wallet, ChevronDown } from 'lucide-react';
+import { Settings2, HelpCircle, Download, BookOpen, CalendarDays, LogOut, Wallet, ChevronDown, Dumbbell } from 'lucide-react';
 import { api } from './api';
 import { supabase } from './lib/supabase';
 
@@ -102,7 +103,7 @@ function App() {
     isMurtazaMode, setIsMurtazaMode,
     isHardcoreMode, setIsHardcoreMode,
     osPrefix, setOsPrefix,
-    toggleNotesMode, toggleYearMode, toggleBudgetMode,
+    toggleNotesMode, toggleYearMode, toggleBudgetMode, toggleFitnessMode,
     fetchBudgetCategories,
   } = useStore(useShallow(state => ({
     fetchTasks: state.fetchTasks,
@@ -122,6 +123,7 @@ function App() {
     toggleNotesMode: state.toggleNotesMode,
     toggleYearMode: state.toggleYearMode,
     toggleBudgetMode: state.toggleBudgetMode,
+    toggleFitnessMode: state.toggleFitnessMode,
     fetchBudgetCategories: state.fetchBudgetCategories,
   })));
 
@@ -143,6 +145,8 @@ function App() {
   useTaskTimer();
 
   useEffect(() => {
+    const DEFAULT_STATS = ['Fitness', 'Mental', 'Religion', 'Finance', 'Social'];
+
     Promise.all([
       fetchTasks(),
       fetchStats(),
@@ -152,8 +156,16 @@ function App() {
       fetchStreaks(),
       syncTimers(),
       fetchBudgetCategories(),
-    ]).then(() => {
+    ]).then(async () => {
       checkMissedTasks();
+      // Seed default stats for new users (in case DB trigger didn't run)
+      const currentStats = useStore.getState().stats;
+      if (currentStats.length === 0) {
+        for (const name of DEFAULT_STATS) {
+          await api.addStat(name).catch(() => {});
+        }
+        await fetchStats();
+      }
       setIsLoading(false);
     }).catch(() => setIsLoading(false));
   }, []); // Initial fetch only - run once
@@ -219,12 +231,16 @@ function App() {
     const removeBudgetListener = window.ipcRenderer.on('toggle-budget-mode', () => {
       toggleBudgetMode();
     });
+    const removeFitnessListener = window.ipcRenderer.on('toggle-fitness-mode', () => {
+      toggleFitnessMode();
+    });
     return () => {
       removeListener();
       removeYearListener();
       removeBudgetListener();
+      removeFitnessListener();
     };
-  }, [toggleNotesMode, toggleYearMode, toggleBudgetMode]);
+  }, [toggleNotesMode, toggleYearMode, toggleBudgetMode, toggleFitnessMode]);
 
   // ── Multi-window IPC listeners (Electron only) ────────────────
   useEffect(() => {
@@ -326,6 +342,7 @@ function App() {
         <Suspense><NotesMode /></Suspense>
         <Suspense><YearMode /></Suspense>
         <Suspense><BudgetMode /></Suspense>
+        <Suspense><FitnessMode /></Suspense>
 
         <AnimatePresence>
           {isTransitioning && (
@@ -492,6 +509,10 @@ function App() {
                             <span className="text-xs text-muted-foreground">Budget Mode</span>
                             <kbd className="px-2 py-0.5 text-[10px] font-mono bg-muted rounded border border-border text-muted-foreground">Ctrl + Num2</kbd>
                           </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">Fitness Mode</span>
+                            <kbd className="px-2 py-0.5 text-[10px] font-mono bg-muted rounded border border-border text-muted-foreground">Ctrl + Num3</kbd>
+                          </div>
                           {isElectron && (
                             <div className="flex items-center justify-between">
                               <span className="text-xs text-muted-foreground">Command Palette</span>
@@ -564,6 +585,15 @@ function App() {
                       title="Budget Mode"
                     >
                       <Wallet className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 lg:h-7 lg:w-7 rounded-full opacity-70 hover:opacity-100 transition-opacity"
+                      onClick={() => toggleFitnessMode()}
+                      title="Fitness Mode"
+                    >
+                      <Dumbbell className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
                     </Button>
                   </>
                 )}
@@ -645,6 +675,7 @@ function App() {
       <Suspense><NotesMode /></Suspense>
       <Suspense><YearMode /></Suspense>
       <Suspense><BudgetMode /></Suspense>
+      <Suspense><FitnessMode /></Suspense>
 
       <AnimatePresence>
         {isTransitioning && (

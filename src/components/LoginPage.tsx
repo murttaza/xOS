@@ -20,6 +20,14 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
         if (isSignUp) {
             const { data, error } = await supabase.auth.signUp({ email, password });
             if (error) {
+                // If the error is from a DB trigger but the user was created, try signing in
+                if (error.message?.toLowerCase().includes('database')) {
+                    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+                    if (!signInError) {
+                        onLogin();
+                        return;
+                    }
+                }
                 setError(error.message);
                 setLoading(false);
             } else if (data.session) {

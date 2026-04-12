@@ -576,6 +576,13 @@ app.whenReady().then(() => {
     win?.focus();
   });
 
+  // Global Shortcut for Fitness Mode (Ctrl + numpad 3)
+  globalShortcut.register('CommandOrControl+num3', () => {
+    win?.webContents.send('toggle-fitness-mode');
+    if (win?.isMinimized()) win.restore();
+    win?.focus();
+  });
+
   // Global Shortcut for Command Palette (Ctrl+Space)
   globalShortcut.register('CommandOrControl+Space', () => {
     const preloadPath = path.join(__dirname, 'preload.mjs');

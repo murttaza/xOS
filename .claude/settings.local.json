@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npx tsc:*)",
+      "Bash(ls C:/Users/Murtaza/Documents/AntiGravity/xOS/node_modules/.bin/vite*)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsx:*)",
+      "Bash(node node_modules/vite/bin/vite.js build --config vite.config.web.ts)",
+      "Bash(gh run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npx vercel:*)",
+      "Bash(npx netlify:*)",
+      "Bash(find /c/Users/Murtaza/Documents/AntiGravity/xOS -type f -name *.sql -o -name *migration* -o -name *auth* -o -name *signup* -o -name *register*)",
+      "Bash(find /c/Users/Murtaza/Documents/AntiGravity/xOS -path */node_modules -prune -o -path */.claude -prune -o -type f \\\\\\(-name .env* -o -name supabase.json -o -name package.json \\\\\\) -print)",
+      "Bash(grep -r \"seed_new_user_stats\\\\|on_auth_user_created\\\\|create_trigger\\\\|user_created\" /c/Users/Murtaza/Documents/AntiGravity/xOS --include=*.ts --include=*.tsx --include=*.sql --include=*.js)",
+      "Bash(find /c/Users/Murtaza/Documents/AntiGravity/xOS -type f -name *.env*)",
+      "Bash(ls -la /c/Users/Murtaza/Documents/AntiGravity/xOS/*.config.* /c/Users/Murtaza/Documents/AntiGravity/xOS/vite.* /c/Users/Murtaza/Documents/AntiGravity/xOS/tsconfig.* /c/Users/Murtaza/Documents/AntiGravity/xOS/.env*)",
+      "Bash(grep -r \"autoConfirmEmail\\\\|MAILER\\\\|email.*confirm\\\\|verif\" /c/Users/Murtaza/Documents/AntiGravity/xOS --include=*.json --include=*.env* --include=*.ts)",
+      "Bash(grep -n \"auth\\\\|user\\\\|email\\\\|confirm\\\\|callback\" /c/Users/Murtaza/Documents/AntiGravity/xOS/supabase/migrations/*.sql)",
+      "Bash(find /c/Users/Murtaza/Documents/AntiGravity/xOS -name *.md -o -name *supabase* -o -name *auth*)",
+      "Bash(grep -E \"\\\\.\\(md|json|toml\\)$\")",
+      "Bash(ls -la /c/Users/Murtaza/Documents/AntiGravity/xOS/*.md)",
+      "Bash(grep -r \"emailRedirectTo\\\\|redirectTo\\\\|VITE_REDIRECT\\\\|VITE_AUTH\\\\|VITE_SITE\" /c/Users/Murtaza/Documents/AntiGravity/xOS --include=*.ts* --include=*.env* --include=*.json)",
+      "Bash(git status:*)",
+      "Bash(cat /c/Users/Murtaza/Documents/AntiGravity/xOS/release/5.0.0/*.exe)",
+      "Bash(xargs grep:*)"
+    ]
+  }
+}

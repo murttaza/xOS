@@ -83,4 +83,28 @@ export const electronBackend: ApiBackend = {
 
     // Export
     exportAllData: () => window.ipcRenderer.invoke(IpcChannels.ExportAllData),
+
+    // Fitness — Electron uses Supabase for fitness (no local SQLite)
+    getExercises: async () => [],
+    getPrograms: async () => [],
+    getProgram: async () => ({ program: {} as any, phases: [], days: [], exercises: [], principles: [] }),
+    createProgram: async () => ({} as any),
+    createProgramPhase: async () => ({} as any),
+    createProgramDay: async () => ({} as any),
+    getUserPrograms: async () => [],
+    startProgram: async () => ({} as any),
+    updateUserProgram: async () => {},
+    getSessionsForProgram: async () => [],
+    getSession: async () => ({} as any),
+    createSession: async () => ({} as any),
+    updateSession: async () => {},
+    createWeekSessions: async () => [],
+    getExerciseLogs: async () => [],
+    upsertExerciseLog: async () => ({} as any),
+    deleteExerciseLog: async () => {},
+    getExerciseSets: async () => [],
+    upsertExerciseSets: async () => [],
+    getBodyMetrics: async () => [],
+    upsertBodyMetric: async () => ({} as any),
+    getExerciseHistory: async () => [],
 } as ApiBackend;

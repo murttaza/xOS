@@ -125,3 +125,137 @@ export interface BudgetTarget {
     limitAmount: number;
     categoryName?: string;
 }
+
+// ── Fitness ──────────────────────────────────────────────────
+
+export interface Exercise {
+    id: string; // uuid
+    name: string;
+    category: string;
+    default_unit: string;
+}
+
+export interface Program {
+    id: string;
+    slug: string;
+    name: string;
+    description: string;
+    total_weeks: number;
+    created_at: string;
+}
+
+export interface ProgramPhase {
+    id: string;
+    program_id: string;
+    name: string;
+    week_start: number;
+    week_end: number;
+    rir_guidance: string;
+    description: string;
+    order: number;
+}
+
+export interface ProgramDay {
+    id: string;
+    program_id: string;
+    phase_id: string;
+    day_of_week: number; // 1=Mon ... 7=Sun
+    name: string;
+    focus: string;
+    order: number;
+}
+
+export interface ProgramExercise {
+    id: string;
+    program_day_id: string;
+    exercise_id: string | null;
+    display_name: string;
+    type: string; // strength, conditioning, mobility, core, warmup, finisher
+    prescribed_sets: string;
+    prescribed_reps: string;
+    notes: string | null;
+    is_loggable: boolean;
+    order: number;
+}
+
+export interface ProgramPrinciple {
+    id: string;
+    program_id: string;
+    title: string;
+    body: string;
+    order: number;
+}
+
+export interface UserProgram {
+    id: string;
+    user_id: string;
+    program_id: string;
+    started_on: string; // date
+    current_week: number;
+    status: 'active' | 'paused' | 'completed' | 'abandoned';
+    created_at: string;
+    // Joined
+    program?: Program;
+}
+
+export interface WorkoutSession {
+    id: string;
+    user_program_id: string;
+    program_day_id: string;
+    scheduled_date: string; // date
+    completed_at: string | null;
+    perceived_effort: number | null;
+    notes: string | null;
+    status: 'planned' | 'in_progress' | 'completed' | 'skipped';
+    created_at: string;
+    // Joined
+    program_day?: ProgramDay;
+    exercise_logs?: ExerciseLog[];
+}
+
+export interface ExerciseLog {
+    id: string;
+    session_id: string;
+    program_exercise_id: string;
+    exercise_id: string | null;
+    substituted: boolean;
+    working_weight: number | null;
+    weight_unit: string;
+    reps_hit: number | null;
+    sets_completed: number | null;
+    rir: number | null;
+    duration_seconds: number | null;
+    notes: string | null;
+    is_completed: boolean;
+    created_at: string;
+    // Joined
+    program_exercise?: ProgramExercise;
+    exercise_sets?: ExerciseSet[];
+}
+
+export interface ExerciseSet {
+    id: string;
+    exercise_log_id: string;
+    set_number: number;
+    weight: number | null;
+    reps: number | null;
+    rir: number | null;
+}
+
+export interface BodyMetric {
+    id: string;
+    user_id: string;
+    user_program_id: string | null;
+    week_number: number | null;
+    date: string;
+    body_weight: number | null;
+    weight_unit: string;
+    rhr: number | null;
+    rope_minutes: number | null;
+    rope_pace: number | null;
+    bench_top_set: string | null;
+    squat_top_set: string | null;
+    deadlift_top_set: string | null;
+    notes: string | null;
+    created_at: string;
+}

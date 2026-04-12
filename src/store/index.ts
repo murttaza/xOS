@@ -6,8 +6,9 @@ import { createStatsSlice, StatsSlice } from './statsStore';
 import { createSessionSlice, SessionSlice } from './sessionStore';
 import { createUiSlice, UiSlice } from './uiStore';
 import { createBudgetSlice, BudgetSlice } from './budgetStore';
+import { createFitnessSlice, FitnessSlice } from './fitnessStore';
 
-export type AppState = TaskSlice & NotesSlice & StatsSlice & SessionSlice & UiSlice & BudgetSlice;
+export type AppState = TaskSlice & NotesSlice & StatsSlice & SessionSlice & UiSlice & BudgetSlice & FitnessSlice;
 
 export const useStore = create<AppState>()(
     persist(
@@ -18,6 +19,7 @@ export const useStore = create<AppState>()(
             ...createSessionSlice(...a),
             ...createUiSlice(...a),
             ...createBudgetSlice(...a),
+            ...createFitnessSlice(...a),
         }),
         {
             name: 'lifeos-storage',

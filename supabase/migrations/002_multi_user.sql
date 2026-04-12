@@ -129,7 +129,11 @@ BEGIN
         ('Mental', NEW.id),
         ('Religion', NEW.id),
         ('Finance', NEW.id),
-        ('Social', NEW.id);
+        ('Social', NEW.id)
+    ON CONFLICT DO NOTHING;
+    RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+    -- Don't block signup if seeding fails; client will seed defaults
     RETURN NEW;
 END;
 $$;

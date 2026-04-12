@@ -22,6 +22,9 @@ export interface UiSlice {
     isBudgetMode: boolean;
     toggleBudgetMode: () => void;
 
+    isFitnessMode: boolean;
+    toggleFitnessMode: () => void;
+
     isTransitioning: boolean;
     triggerTransition: (action: () => void) => Promise<void>;
 
@@ -48,7 +51,7 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
 
     isFocusMode: false,
     setIsFocusMode: (isFocusMode) => {
-        get().triggerTransition(() => set({ isFocusMode, isNotesMode: false, isYearMode: false, isBudgetMode: false }));
+        get().triggerTransition(() => set({ isFocusMode, isNotesMode: false, isYearMode: false, isBudgetMode: false, isFitnessMode: false }));
     },
 
     isMurtazaMode: true,
@@ -62,17 +65,22 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
 
     isNotesMode: false,
     toggleNotesMode: () => {
-        get().triggerTransition(() => set(state => ({ isNotesMode: !state.isNotesMode, isYearMode: false, isBudgetMode: false })));
+        get().triggerTransition(() => set(state => ({ isNotesMode: !state.isNotesMode, isYearMode: false, isBudgetMode: false, isFitnessMode: false })));
     },
 
     isYearMode: false,
     toggleYearMode: () => {
-        get().triggerTransition(() => set((state) => ({ isYearMode: !state.isYearMode, isNotesMode: false, isBudgetMode: false })));
+        get().triggerTransition(() => set((state) => ({ isYearMode: !state.isYearMode, isNotesMode: false, isBudgetMode: false, isFitnessMode: false })));
     },
 
     isBudgetMode: false,
     toggleBudgetMode: () => {
-        get().triggerTransition(() => set((state) => ({ isBudgetMode: !state.isBudgetMode, isNotesMode: false, isYearMode: false })));
+        get().triggerTransition(() => set((state) => ({ isBudgetMode: !state.isBudgetMode, isNotesMode: false, isYearMode: false, isFitnessMode: false })));
+    },
+
+    isFitnessMode: false,
+    toggleFitnessMode: () => {
+        get().triggerTransition(() => set((state) => ({ isFitnessMode: !state.isFitnessMode, isNotesMode: false, isYearMode: false, isBudgetMode: false })));
     },
 
     osPrefix: 'm',

@@ -583,4 +583,240 @@ export const supabaseBackend: ApiBackend = {
             exportedAt: new Date().toISOString(),
         };
     },
+    // ── Fitness: Catalog ───────────────────────────────────────
+    getExercises: async () => {
+        return throwOnError(await supabase.from('exercises').select('*').order('name'));
+    },
+
+    getPrograms: async () => {
+        return throwOnError(await supabase.from('programs').select('*').order('created_at'));
+    },
+
+    getProgram: async (id) => {
+        const [programRes, phasesRes, daysRes, exercisesRes, principlesRes] = await Promise.all([
+            supabase.from('programs').select('*').eq('id', id).single(),
+            supabase.from('program_phases').select('*').eq('program_id', id).order('order'),
+            supabase.from('program_days').select('*').eq('program_id', id).order('order'),
+            supabase.from('program_exercises').select('*').in('program_day_id',
+                (await supabase.from('program_days').select('id').eq('program_id', id)).data?.map((d: any) => d.id) || []
+            ).order('order'),
+            supabase.from('program_principles').select('*').eq('program_id', id).order('order'),
+        ]);
+        return {
+            program: throwOnError(programRes),
+            phases: throwOnError(phasesRes),
+            days: throwOnError(daysRes),
+            exercises: throwOnError(exercisesRes),
+            principles: throwOnError(principlesRes),
+        };
+    },
+
+    // ── Fitness: User Programs ───────────────────────────────────
+    getUserPrograms: async () => {
+        return throwOnError(await supabase.from('user_programs').select('*, programs(*)').order('created_at', { ascending: false }));
+    },
+
+    createProgram: async (program) => {
+        const slug = program.slug || program.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        return throwOnError(
+            await supabase.from('programs').insert({
+                name: program.name,
+                slug,
+                description: program.description || '',
+                total_weeks: program.total_weeks,
+            }).select('*').single()
+        ) as any;
+    },
+
+    createProgramPhase: async (phase) => {
+        return throwOnError(
+            await supabase.from('program_phases').insert({
+                program_id: phase.program_id,
+                name: phase.name,
+                week_start: phase.week_start,
+                week_end: phase.week_end,
+                rir_guidance: phase.rir_guidance || '',
+                description: phase.description || '',
+                order: phase.order,
+            }).select('*').single()
+        ) as any;
+    },
+
+    createProgramDay: async (day) => {
+        return throwOnError(
+            await supabase.from('program_days').insert({
+                program_id: day.program_id,
+                phase_id: day.phase_id,
+                day_of_week: day.day_of_week,
+                name: day.name,
+                focus: day.focus || '',
+                order: day.order,
+            }).select('*').single()
+        ) as any;
+    },
+
+    startProgram: async (programId, startedOn) => {
+        const result = throwOnError(
+            await supabase.from('user_programs').insert({
+                program_id: programId,
+                started_on: startedOn,
+                current_week: 1,
+                status: 'active',
+            }).select('*').single()
+        );
+        return result as any;
+    },
+
+    updateUserProgram: async (id, updates) => {
+        return throwOnError(await supabase.from('user_programs').update(updates).eq('id', id));
+    },
+
+    // ── Fitness: Workout Sessions ────────────────────────────────
+    getSessionsForProgram: async (userProgramId) => {
+        return throwOnError(
+            await supabase.from('workout_sessions').select('*, program_days(*)')
+                .eq('user_program_id', userProgramId)
+                .order('scheduled_date')
+        );
+    },
+
+    getSession: async (id) => {
+        const session = throwOnError(
+            await supabase.from('workout_sessions').select('*, program_days(*)').eq('id', id).single()
+        );
+        const logs = throwOnError(
+            await supabase.from('exercise_logs').select('*, program_exercises(*)').eq('session_id', id).order('created_at')
+        );
+        return { ...session, program_day: session.program_days, exercise_logs: logs } as any;
+    },
+
+    createSession: async (session) => {
+        return throwOnError(
+            await supabase.from('workout_sessions').insert({
+                user_program_id: session.user_program_id,
+                program_day_id: session.program_day_id,
+                scheduled_date: session.scheduled_date,
+                status: session.status || 'planned',
+            }).select('*, program_days(*)').single()
+        ) as any;
+    },
+
+    updateSession: async (id, updates) => {
+        const doUpdate = async () => throwOnError(
+            await supabase.from('workout_sessions').update(updates).eq('id', id)
+        );
+        if (enqueueIfOffline(doUpdate)) return;
+        return withRetry(doUpdate);
+    },
+
+    createWeekSessions: async (userProgramId, programDays, weekStartDate) => {
+        const startDate = new Date(weekStartDate + 'T00:00:00');
+        const sessions = programDays.map(day => {
+            const date = new Date(startDate);
+            date.setDate(startDate.getDate() + (day.day_of_week - 1));
+            return {
+                user_program_id: userProgramId,
+                program_day_id: day.id,
+                scheduled_date: date.toISOString().split('T')[0],
+                status: 'planned',
+            };
+        });
+        return throwOnError(
+            await supabase.from('workout_sessions').insert(sessions).select('*, program_days(*)')
+        ) as any;
+    },
+
+    // ── Fitness: Exercise Logs ───────────────────────────────────
+    getExerciseLogs: async (sessionId) => {
+        return throwOnError(
+            await supabase.from('exercise_logs').select('*, program_exercises(*)')
+                .eq('session_id', sessionId).order('created_at')
+        );
+    },
+
+    upsertExerciseLog: async (log) => {
+        const payload: any = {
+            session_id: log.session_id,
+            program_exercise_id: log.program_exercise_id,
+            exercise_id: log.exercise_id,
+            substituted: log.substituted || false,
+            working_weight: log.working_weight,
+            weight_unit: log.weight_unit || 'lb',
+            reps_hit: log.reps_hit,
+            sets_completed: log.sets_completed,
+            rir: log.rir,
+            duration_seconds: log.duration_seconds,
+            notes: log.notes,
+            is_completed: log.is_completed || false,
+        };
+        if (log.id) payload.id = log.id;
+
+        const doUpsert = async () => throwOnError(
+            await supabase.from('exercise_logs').upsert(payload).select('*, program_exercises(*)').single()
+        ) as any;
+        if (enqueueIfOffline(doUpsert)) return {} as any;
+        return withRetry(doUpsert);
+    },
+
+    deleteExerciseLog: async (id) => {
+        return throwOnError(await supabase.from('exercise_logs').delete().eq('id', id));
+    },
+
+    // ── Fitness: Exercise Sets ───────────────────────────────────
+    getExerciseSets: async (logId) => {
+        return throwOnError(
+            await supabase.from('exercise_sets').select('*').eq('exercise_log_id', logId).order('set_number')
+        );
+    },
+
+    upsertExerciseSets: async (logId, sets) => {
+        // Delete existing sets and re-insert
+        await supabase.from('exercise_sets').delete().eq('exercise_log_id', logId);
+        if (sets.length === 0) return [];
+        const payload = sets.map((s, i) => ({
+            exercise_log_id: logId,
+            set_number: s.set_number ?? i + 1,
+            weight: s.weight,
+            reps: s.reps,
+            rir: s.rir,
+        }));
+        return throwOnError(await supabase.from('exercise_sets').insert(payload).select('*')) as any;
+    },
+
+    // ── Fitness: Body Metrics ────────────────────────────────────
+    getBodyMetrics: async () => {
+        return throwOnError(
+            await supabase.from('body_metrics').select('*').order('date', { ascending: false })
+        );
+    },
+
+    upsertBodyMetric: async (metric) => {
+        const payload: any = {
+            user_program_id: metric.user_program_id,
+            week_number: metric.week_number,
+            date: metric.date,
+            body_weight: metric.body_weight,
+            weight_unit: metric.weight_unit || 'lb',
+            rhr: metric.rhr,
+            rope_minutes: metric.rope_minutes,
+            rope_pace: metric.rope_pace,
+            bench_top_set: metric.bench_top_set,
+            squat_top_set: metric.squat_top_set,
+            deadlift_top_set: metric.deadlift_top_set,
+            notes: metric.notes,
+        };
+        if (metric.id) payload.id = metric.id;
+        return throwOnError(
+            await supabase.from('body_metrics').upsert(payload).select('*').single()
+        ) as any;
+    },
+
+    // ── Fitness: Exercise History ────────────────────────────────
+    getExerciseHistory: async (exerciseId) => {
+        return throwOnError(
+            await supabase.from('exercise_logs').select('*, workout_sessions(scheduled_date, status)')
+                .eq('exercise_id', exerciseId)
+                .order('created_at', { ascending: false })
+        );
+    },
 } as ApiBackend;
