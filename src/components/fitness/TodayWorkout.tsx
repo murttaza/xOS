@@ -109,14 +109,14 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, onSave, onSaveSets
         return (
             <div className={cn(
                 "border border-border/50 rounded-xl p-3 flex items-center gap-3 transition-all",
-                completed && "bg-muted/30 border-green-500/20"
+                completed && "bg-muted/30 border-green-500/20 dark:border-green-400/20"
             )}>
                 <button
                     className={cn(
-                        "h-6 w-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-all",
+                        "h-8 w-8 rounded-md border-2 flex items-center justify-center shrink-0 transition-all",
                         completed
-                            ? "bg-green-500 border-green-500"
-                            : "border-muted-foreground/30 hover:border-primary"
+                            ? "bg-green-500 border-green-500 dark:bg-green-600 dark:border-green-600"
+                            : "border-muted-foreground/30 hover:border-primary active:border-primary"
                     )}
                     onClick={async () => {
                         setCompleted(!completed);
@@ -137,7 +137,7 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, onSave, onSaveSets
                         });
                     }}
                 >
-                    {completed && <Check className="h-3.5 w-3.5 text-white" />}
+                    {completed && <Check className="h-4 w-4 text-white" />}
                 </button>
                 <div className="flex-1 min-w-0">
                     <p className={cn("text-sm", completed && "text-muted-foreground line-through")}>{exercise.display_name}</p>
@@ -152,18 +152,18 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, onSave, onSaveSets
     return (
         <div className={cn(
             "border rounded-xl transition-all overflow-hidden",
-            completed ? "border-green-500/30 bg-green-500/5" : "border-border"
+            completed ? "border-green-500/30 dark:border-green-400/30 bg-green-500/5 dark:bg-green-500/10" : "border-border"
         )}>
             {/* Header - tap to expand */}
             <button
-                className="w-full flex items-center gap-3 p-3 text-left"
+                className="w-full flex items-center gap-3 p-3 text-left active:bg-muted/20"
                 onClick={() => setExpanded(!expanded)}
             >
                 <div className={cn(
-                    "h-6 w-6 rounded-md border-2 flex items-center justify-center shrink-0",
-                    completed ? "bg-green-500 border-green-500" : "border-muted-foreground/30"
+                    "h-8 w-8 rounded-md border-2 flex items-center justify-center shrink-0",
+                    completed ? "bg-green-500 border-green-500 dark:bg-green-600 dark:border-green-600" : "border-muted-foreground/30"
                 )}>
-                    {completed && <Check className="h-3.5 w-3.5 text-white" />}
+                    {completed && <Check className="h-4 w-4 text-white" />}
                 </div>
                 <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{exercise.display_name}</p>
@@ -192,7 +192,7 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, onSave, onSaveSets
                     >
                         <div className="px-3 pb-3 space-y-3 border-t border-border/50 pt-3">
                             {/* Quick input row */}
-                            <div className="grid grid-cols-4 gap-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                 <div className="space-y-1">
                                     <label className="text-[10px] text-muted-foreground font-medium">Weight</label>
                                     <Input
@@ -257,14 +257,14 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, onSave, onSaveSets
 
                             {showPerSet && (
                                 <div className="space-y-2">
-                                    <div className="grid grid-cols-[2rem_1fr_1fr_1fr] gap-2 text-[10px] text-muted-foreground font-medium">
+                                    <div className="grid grid-cols-[2rem_1fr_1fr] sm:grid-cols-[2rem_1fr_1fr_1fr] gap-2 text-[10px] text-muted-foreground font-medium">
                                         <span></span>
                                         <span>Weight</span>
                                         <span>Reps</span>
-                                        <span>RIR</span>
+                                        <span className="hidden sm:block">RIR</span>
                                     </div>
                                     {sets.map((s, i) => (
-                                        <div key={i} className="grid grid-cols-[2rem_1fr_1fr_1fr] gap-2 items-center">
+                                        <div key={i} className="grid grid-cols-[2rem_1fr_1fr] sm:grid-cols-[2rem_1fr_1fr_1fr] gap-2 items-center">
                                             <span className="text-xs text-muted-foreground text-center">{i + 1}</span>
                                             <Input
                                                 type="number"
@@ -297,7 +297,7 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, onSave, onSaveSets
                                                     updated[i] = { ...updated[i], rir: e.target.value };
                                                     setSets(updated);
                                                 }}
-                                                className="h-9 text-center text-sm font-mono"
+                                                className="h-9 text-center text-sm font-mono hidden sm:block"
                                             />
                                         </div>
                                     ))}
@@ -435,13 +435,13 @@ export function TodayWorkout() {
                     &middot; {new Date(session.scheduled_date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
                 </p>
                 {isCompleted && (
-                    <div className="mt-1 flex items-center gap-1 text-green-500">
+                    <div className="mt-1 flex items-center gap-1 text-green-600 dark:text-green-400">
                         <Check className="h-3.5 w-3.5" />
                         <span className="text-xs font-medium">Completed</span>
                     </div>
                 )}
                 {isSkipped && (
-                    <div className="mt-1 flex items-center gap-1 text-red-500">
+                    <div className="mt-1 flex items-center gap-1 text-red-600 dark:text-red-400">
                         <SkipForward className="h-3.5 w-3.5" />
                         <span className="text-xs font-medium">Skipped</span>
                     </div>
@@ -492,15 +492,15 @@ export function TodayWorkout() {
                             />
                             <div className="space-y-1">
                                 <label className="text-xs text-muted-foreground">Perceived Effort (RPE 1-10)</label>
-                                <div className="flex gap-1.5">
+                                <div className="flex flex-wrap gap-1.5">
                                     {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
                                         <button
                                             key={n}
                                             className={cn(
-                                                "h-8 w-8 rounded-lg text-xs font-medium border transition-all",
+                                                "h-9 w-9 rounded-lg text-xs font-medium border transition-all",
                                                 effort === n
                                                     ? "bg-primary text-primary-foreground border-primary"
-                                                    : "border-border hover:border-primary/50"
+                                                    : "border-border hover:border-primary/50 active:border-primary/50"
                                             )}
                                             onClick={() => setEffort(effort === n ? 0 : n)}
                                         >

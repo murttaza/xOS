@@ -120,10 +120,10 @@ export function ExportModal({ open, onOpenChange }: { open: boolean; onOpenChang
                             {Array.from({ length: totalWeeks }, (_, i) => i + 1).map(w => (
                                 <button
                                     key={w}
-                                    className={`shrink-0 h-8 w-8 rounded-full text-xs font-medium transition-all ${
+                                    className={`shrink-0 h-9 w-9 rounded-full text-xs font-medium transition-all ${
                                         w === selectedWeek
                                             ? 'bg-primary text-primary-foreground'
-                                            : 'text-muted-foreground hover:bg-muted'
+                                            : 'text-muted-foreground hover:bg-muted active:bg-muted'
                                     }`}
                                     onClick={() => setSelectedWeek(w)}
                                 >

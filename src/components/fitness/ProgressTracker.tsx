@@ -168,44 +168,74 @@ export function ProgressTracker() {
                 </motion.div>
             )}
 
-            {/* Metrics table */}
+            {/* Metrics — cards on mobile, table on desktop */}
             {sortedMetrics.length > 0 && (
-                <div className="overflow-x-auto -mx-4 px-4">
-                    <table className="w-full text-xs min-w-[600px]">
-                        <thead>
-                            <tr className="border-b border-border text-muted-foreground">
-                                <th className="text-left py-2 font-medium">Wk</th>
-                                <th className="text-left py-2 font-medium">Date</th>
-                                <th className="text-right py-2 font-medium">Weight</th>
-                                <th className="text-right py-2 font-medium">RHR</th>
-                                <th className="text-right py-2 font-medium">Bench</th>
-                                <th className="text-right py-2 font-medium">Squat</th>
-                                <th className="text-right py-2 font-medium">DL</th>
-                                <th className="text-right py-2 font-medium">Rope</th>
-                                <th className="text-left py-2 font-medium">Notes</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sortedMetrics.map(m => (
-                                <tr
-                                    key={m.id}
-                                    className="border-b border-border/30 hover:bg-muted/20 cursor-pointer transition-colors"
-                                    onClick={() => handleEdit(m)}
-                                >
-                                    <td className="py-2 font-medium">{m.week_number || '—'}</td>
-                                    <td className="py-2 text-muted-foreground">{new Date(m.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
-                                    <td className="py-2 text-right font-mono">{m.body_weight || '—'}</td>
-                                    <td className="py-2 text-right font-mono">{m.rhr || '—'}</td>
-                                    <td className="py-2 text-right font-mono">{m.bench_top_set || '—'}</td>
-                                    <td className="py-2 text-right font-mono">{m.squat_top_set || '—'}</td>
-                                    <td className="py-2 text-right font-mono">{m.deadlift_top_set || '—'}</td>
-                                    <td className="py-2 text-right font-mono">{m.rope_minutes ? `${m.rope_minutes}m` : '—'}</td>
-                                    <td className="py-2 text-muted-foreground truncate max-w-[100px]">{m.notes || ''}</td>
+                <>
+                    {/* Mobile cards */}
+                    <div className="sm:hidden space-y-2">
+                        {sortedMetrics.map(m => (
+                            <button
+                                key={m.id}
+                                className="w-full border border-border rounded-xl p-3 text-left hover:bg-muted/20 active:bg-muted/20 transition-colors space-y-1.5"
+                                onClick={() => handleEdit(m)}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-semibold">Week {m.week_number || '—'}</span>
+                                    <span className="text-[10px] text-muted-foreground">
+                                        {new Date(m.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-x-3 gap-y-1 text-xs">
+                                    {m.body_weight && <span className="font-mono">{m.body_weight} lb</span>}
+                                    {m.rhr && <span className="font-mono">RHR {m.rhr}</span>}
+                                    {m.rope_minutes && <span className="font-mono">Rope {m.rope_minutes}m</span>}
+                                    {m.bench_top_set && <span className="font-mono">B: {m.bench_top_set}</span>}
+                                    {m.squat_top_set && <span className="font-mono">S: {m.squat_top_set}</span>}
+                                    {m.deadlift_top_set && <span className="font-mono">D: {m.deadlift_top_set}</span>}
+                                </div>
+                                {m.notes && <p className="text-[10px] text-muted-foreground truncate">{m.notes}</p>}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Desktop table */}
+                    <div className="hidden sm:block overflow-x-auto -mx-4 px-4">
+                        <table className="w-full text-xs">
+                            <thead>
+                                <tr className="border-b border-border text-muted-foreground">
+                                    <th className="text-left py-2 font-medium">Wk</th>
+                                    <th className="text-left py-2 font-medium">Date</th>
+                                    <th className="text-right py-2 font-medium">Weight</th>
+                                    <th className="text-right py-2 font-medium">RHR</th>
+                                    <th className="text-right py-2 font-medium">Bench</th>
+                                    <th className="text-right py-2 font-medium">Squat</th>
+                                    <th className="text-right py-2 font-medium">DL</th>
+                                    <th className="text-right py-2 font-medium">Rope</th>
+                                    <th className="text-left py-2 font-medium">Notes</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                {sortedMetrics.map(m => (
+                                    <tr
+                                        key={m.id}
+                                        className="border-b border-border/30 hover:bg-muted/20 cursor-pointer transition-colors"
+                                        onClick={() => handleEdit(m)}
+                                    >
+                                        <td className="py-2 font-medium">{m.week_number || '—'}</td>
+                                        <td className="py-2 text-muted-foreground">{new Date(m.date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</td>
+                                        <td className="py-2 text-right font-mono">{m.body_weight || '—'}</td>
+                                        <td className="py-2 text-right font-mono">{m.rhr || '—'}</td>
+                                        <td className="py-2 text-right font-mono">{m.bench_top_set || '—'}</td>
+                                        <td className="py-2 text-right font-mono">{m.squat_top_set || '—'}</td>
+                                        <td className="py-2 text-right font-mono">{m.deadlift_top_set || '—'}</td>
+                                        <td className="py-2 text-right font-mono">{m.rope_minutes ? `${m.rope_minutes}m` : '—'}</td>
+                                        <td className="py-2 text-muted-foreground truncate max-w-[100px]">{m.notes || ''}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </>
             )}
 
             {/* Charts */}
@@ -246,7 +276,7 @@ function ChartCard({ title, data, color, peakLine, peakLabel }: {
                     />
                     <YAxis tick={{ fontSize: 10 }} width={40} domain={['auto', 'auto']} />
                     <Tooltip
-                        contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid hsl(var(--border))' }}
+                        contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--popover))', color: 'hsl(var(--popover-foreground))' }}
                         labelFormatter={v => new Date(v + 'T00:00:00').toLocaleDateString()}
                     />
                     {peakLine && (

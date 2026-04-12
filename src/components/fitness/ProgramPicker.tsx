@@ -273,14 +273,14 @@ export function ProgramPicker() {
                                                 <select
                                                     value={day.dayOfWeek}
                                                     onChange={e => updateDay(i, 'dayOfWeek', parseInt(e.target.value))}
-                                                    className="text-xs font-medium bg-transparent border border-border rounded-md px-2 py-1.5 text-foreground"
+                                                    className="text-xs font-medium bg-background border border-border rounded-md px-2 py-2 text-foreground appearance-none cursor-pointer [&>option]:bg-popover [&>option]:text-popover-foreground"
                                                 >
                                                     {DAY_OPTIONS.map(opt => (
                                                         <option key={opt.value} value={opt.value}>{opt.label}</option>
                                                     ))}
                                                 </select>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeDay(i)}>
-                                                    <X className="h-3 w-3" />
+                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeDay(i)}>
+                                                    <X className="h-4 w-4" />
                                                 </Button>
                                             </div>
                                             <Input

@@ -136,7 +136,7 @@ export function FitnessMode() {
                     {/* Mobile bottom tabs */}
                     {activeProgram && (
                         <div className="lg:hidden shrink-0 border-t border-border/50 bg-background/95 backdrop-blur-lg"
-                            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+                            style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 0px)' }}
                         >
                             <div className="flex overflow-x-auto no-scrollbar">
                                 {TABS.map(tab => (

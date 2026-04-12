@@ -44,7 +44,7 @@ export function ProgramOverview() {
                             isCurrent ? "border-primary/40" : "border-border"
                         )}>
                             <button
-                                className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/20 transition-colors"
+                                className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/20 active:bg-muted/20 transition-colors"
                                 onClick={() => setExpandedPhase(isExpanded ? null : phase.id)}
                             >
                                 <div className={cn(
@@ -84,7 +84,7 @@ export function ProgramOverview() {
                                                 return (
                                                     <div key={day.id}>
                                                         <button
-                                                            className="w-full flex items-center gap-2 p-2.5 rounded-lg hover:bg-muted/30 transition-colors text-left"
+                                                            className="w-full flex items-center gap-2 p-2.5 rounded-lg hover:bg-muted/30 active:bg-muted/30 transition-colors text-left"
                                                             onClick={() => setExpandedDay(isDayExpanded ? null : day.id)}
                                                         >
                                                             <span className="text-[10px] text-muted-foreground w-8 shrink-0">

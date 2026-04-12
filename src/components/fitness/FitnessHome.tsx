@@ -114,9 +114,9 @@ export function FitnessHome() {
                                 className={cn(
                                     "rounded-xl p-2.5 sm:p-3 flex flex-col items-center gap-1.5 transition-all border",
                                     isToday && "ring-2 ring-primary ring-offset-2 ring-offset-background",
-                                    status === 'completed' && "border-green-500/30 bg-green-500/10",
-                                    status === 'skipped' && "border-red-500/30 bg-red-500/10",
-                                    status === 'in_progress' && "border-yellow-500/30 bg-yellow-500/10",
+                                    status === 'completed' && "border-green-500/30 dark:border-green-400/30 bg-green-500/10 dark:bg-green-500/15",
+                                    status === 'skipped' && "border-red-500/30 dark:border-red-400/30 bg-red-500/10 dark:bg-red-500/15",
+                                    status === 'in_progress' && "border-yellow-500/30 dark:border-yellow-400/30 bg-yellow-500/10 dark:bg-yellow-500/15",
                                     status === 'planned' && "border-border bg-muted/30",
                                     status === 'rest' && "border-border/50 bg-transparent opacity-50",
                                 )}
@@ -129,11 +129,11 @@ export function FitnessHome() {
                             >
                                 <span className="text-[10px] font-medium text-muted-foreground">{label}</span>
                                 {status === 'completed' ? (
-                                    <Check className="h-4 w-4 text-green-500" />
+                                    <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
                                 ) : status === 'skipped' ? (
-                                    <Minus className="h-4 w-4 text-red-500" />
+                                    <Minus className="h-4 w-4 text-red-600 dark:text-red-400" />
                                 ) : status === 'in_progress' ? (
-                                    <Play className="h-3.5 w-3.5 text-yellow-500" />
+                                    <Play className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-400" />
                                 ) : (
                                     <div className="h-4 w-4 rounded-full border border-border/50" />
                                 )}
@@ -200,14 +200,14 @@ export function FitnessHome() {
                         {recentSessions.map(session => (
                             <button
                                 key={session.id}
-                                className="w-full flex items-center gap-3 border border-border rounded-lg p-3 hover:bg-muted/30 transition-colors text-left"
+                                className="w-full flex items-center gap-3 border border-border rounded-lg p-3 hover:bg-muted/30 active:bg-muted/30 transition-colors text-left"
                                 onClick={() => {
                                     fetchSessionDetail(session.id);
                                     setFitnessTab('today');
                                 }}
                             >
-                                <div className="h-8 w-8 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
-                                    <Check className="h-4 w-4 text-green-500" />
+                                <div className="h-8 w-8 rounded-lg bg-green-500/10 dark:bg-green-500/15 flex items-center justify-center shrink-0">
+                                    <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium truncate">{session.program_day?.name || 'Workout'}</p>

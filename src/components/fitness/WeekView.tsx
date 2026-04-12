@@ -33,9 +33,9 @@ export function WeekView() {
 
     const statusIcon = (status: string) => {
         switch (status) {
-            case 'completed': return <Check className="h-4 w-4 text-green-500" />;
-            case 'skipped': return <Minus className="h-4 w-4 text-red-500" />;
-            case 'in_progress': return <Play className="h-3.5 w-3.5 text-yellow-500" />;
+            case 'completed': return <Check className="h-4 w-4 text-green-600 dark:text-green-400" />;
+            case 'skipped': return <Minus className="h-4 w-4 text-red-600 dark:text-red-400" />;
+            case 'in_progress': return <Play className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-400" />;
             default: return <Clock className="h-3.5 w-3.5 text-muted-foreground/50" />;
         }
     };
@@ -86,15 +86,15 @@ export function WeekView() {
             </div>
 
             {/* Week selector chips */}
-            <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+            <div className="flex justify-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
                 {Array.from({ length: totalWeeks }, (_, i) => i + 1).map(w => (
                     <button
                         key={w}
                         className={cn(
-                            "shrink-0 h-7 w-7 rounded-full text-[10px] font-medium transition-all",
+                            "shrink-0 h-8 w-8 rounded-full text-xs font-medium transition-all",
                             w === viewWeek && "bg-primary text-primary-foreground",
                             w === currentWeek && w !== viewWeek && "ring-1 ring-primary text-primary",
-                            w !== viewWeek && w !== currentWeek && "text-muted-foreground hover:bg-muted"
+                            w !== viewWeek && w !== currentWeek && "text-muted-foreground hover:bg-muted active:bg-muted"
                         )}
                         onClick={() => setViewWeek(w)}
                     >
@@ -116,20 +116,20 @@ export function WeekView() {
                                 initial={{ opacity: 0, x: -10 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 className={cn(
-                                    "w-full flex items-center gap-3 border rounded-xl p-3.5 hover:bg-muted/30 transition-all text-left",
-                                    session.status === 'completed' && "border-green-500/30 bg-green-500/5",
-                                    session.status === 'skipped' && "border-red-500/20 bg-red-500/5 opacity-60",
+                                    "w-full flex items-center gap-3 border rounded-xl p-3.5 hover:bg-muted/30 active:bg-muted/30 transition-all text-left",
+                                    session.status === 'completed' && "border-green-500/30 dark:border-green-400/30 bg-green-500/5 dark:bg-green-500/10",
+                                    session.status === 'skipped' && "border-red-500/20 dark:border-red-400/20 bg-red-500/5 dark:bg-red-500/10 opacity-60",
                                     session.status === 'planned' && "border-border",
-                                    session.status === 'in_progress' && "border-yellow-500/30 bg-yellow-500/5",
+                                    session.status === 'in_progress' && "border-yellow-500/30 dark:border-yellow-400/30 bg-yellow-500/5 dark:bg-yellow-500/10",
                                 )}
                                 onClick={() => handleSessionClick(session.id)}
                             >
                                 <div className={cn(
                                     "h-10 w-10 rounded-xl flex items-center justify-center shrink-0",
-                                    session.status === 'completed' && "bg-green-500/10",
-                                    session.status === 'skipped' && "bg-red-500/10",
+                                    session.status === 'completed' && "bg-green-500/10 dark:bg-green-500/15",
+                                    session.status === 'skipped' && "bg-red-500/10 dark:bg-red-500/15",
                                     session.status === 'planned' && "bg-muted",
-                                    session.status === 'in_progress' && "bg-yellow-500/10",
+                                    session.status === 'in_progress' && "bg-yellow-500/10 dark:bg-yellow-500/15",
                                 )}>
                                     {statusIcon(session.status)}
                                 </div>

@@ -1,7 +1,7 @@
 {
   "name": "lifeos",
   "private": true,
-  "version": "5.6.1",
+  "version": "5.6.2",
   "author": "Murtaza",
   "type": "module",
   "scripts": {
