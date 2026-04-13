@@ -5,9 +5,9 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { getLocalDateString } from '../lib/utils';
-import { X, Pause, Play, Trash2, RotateCcw, Plus, Edit } from 'lucide-react';
+import { CalendarDays, Pause, Play, Trash2, RotateCcw, Plus, Edit } from 'lucide-react';
 import { Streak } from '../types';
-import { ModeToggle } from './ModeToggle';
+import { ModeHeader } from './ModeHeader';
 
 const StreakItem = memo(function StreakItem({ streak, now, updateStreak, deleteStreak }: {
     streak: Streak;
@@ -206,21 +206,15 @@ export function YearMode() {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.3, ease: 'easeOut' }}
-                    className="fixed inset-0 z-[100] bg-background flex overflow-y-auto overflow-x-hidden no-scrollbar no-drag"
+                    className="fixed inset-0 z-[55] bg-background flex flex-col overflow-hidden no-scrollbar no-drag"
                 >
-                    <div className="fixed right-3 sm:right-6 z-50 flex items-center gap-2" style={{ top: 'max(env(safe-area-inset-top, 0px), 12px)' }}>
-                        <ModeToggle />
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={toggleYearMode}
-                            className="rounded-full hover:bg-muted no-drag bg-background/50 backdrop-blur-sm"
-                        >
-                            <X className="h-6 w-6" />
-                        </Button>
-                    </div>
+                    <ModeHeader
+                        modeLabel="Year"
+                        modeIcon={CalendarDays}
+                        onGoHome={toggleYearMode}
+                    />
 
-                    <div className="flex flex-col lg:flex-row w-full min-h-full p-3 sm:p-4 lg:p-8 gap-3 lg:gap-8 pb-8 lg:pb-8" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)' }}>
+                    <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col lg:flex-row w-full p-3 sm:p-4 lg:p-8 gap-3 lg:gap-8 pb-8 lg:pb-8">
                         {/* Left Column - Dots Grid */}
                         <div className="group w-full lg:w-1/2 lg:h-full min-h-0 lg:min-h-[500px] flex flex-col items-center justify-center p-2 sm:p-4 lg:p-8 lg:border-r border-b lg:border-b-0 border-border/50 relative transition-colors duration-150 hover:bg-muted/10 pb-4 lg:pb-8">
                             {/* Subtle Hover Glow */}

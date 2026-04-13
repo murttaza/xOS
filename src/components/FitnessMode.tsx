@@ -2,10 +2,9 @@ import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { cn } from '../lib/utils';
-import { ArrowLeft, Dumbbell, X } from 'lucide-react';
+import { Dumbbell } from 'lucide-react';
 import { Button } from './ui/button';
-import { ModeToggle } from './ModeToggle';
-import { WindowControls } from './WindowControls';
+import { ModeHeader } from './ModeHeader';
 
 import { FitnessHome } from './fitness/FitnessHome';
 import { TodayWorkout } from './fitness/TodayWorkout';
@@ -93,66 +92,33 @@ export function FitnessMode() {
                         "bg-background"
                     )}
                 >
-                    {/* Header */}
-                    <div
-                        className="shrink-0 border-b border-border/50"
-                        style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)' }}
-                    >
-                        <div className="flex items-center justify-between px-3 sm:px-6 lg:px-8 py-3 lg:py-4">
-                            <div className="flex items-center gap-2">
-                                {canGoBack && (
+                    <ModeHeader
+                        modeLabel="Fitness"
+                        modeIcon={Dumbbell}
+                        onGoHome={toggleFitnessMode}
+                        showMobileBack={canGoBack}
+                        onMobileBack={handleBack}
+                        centerContent={activeProgram ? (
+                            <div className="flex items-center gap-1">
+                                {TABS.map(tab => (
                                     <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-9 w-9 lg:hidden"
-                                        onClick={handleBack}
+                                        key={tab.id}
+                                        variant={fitnessTab === tab.id ? 'default' : 'ghost'}
+                                        size="sm"
+                                        className={cn(
+                                            "text-xs h-8 px-3",
+                                            fitnessTab === tab.id
+                                                ? "bg-primary text-primary-foreground"
+                                                : "text-muted-foreground hover:text-foreground"
+                                        )}
+                                        onClick={() => setFitnessTab(tab.id)}
                                     >
-                                        <ArrowLeft className="h-5 w-5" />
+                                        {tab.label}
                                     </Button>
-                                )}
-                                <span className="text-base font-semibold lg:hidden">Fitness</span>
-                                <div className="hidden lg:flex items-center gap-3">
-                                    <Dumbbell className="h-5 w-5 text-primary" />
-                                    <h2 className="text-lg font-bold tracking-tight">Fitness</h2>
-                                </div>
+                                ))}
                             </div>
-
-                            {/* Desktop tab nav */}
-                            {activeProgram && (
-                                <div className="hidden lg:flex items-center gap-1">
-                                    {TABS.map(tab => (
-                                        <Button
-                                            key={tab.id}
-                                            variant={fitnessTab === tab.id ? 'default' : 'ghost'}
-                                            size="sm"
-                                            className={cn(
-                                                "text-xs h-8 px-3",
-                                                fitnessTab === tab.id
-                                                    ? "bg-primary text-primary-foreground"
-                                                    : "text-muted-foreground hover:text-foreground"
-                                            )}
-                                            onClick={() => setFitnessTab(tab.id)}
-                                        >
-                                            {tab.label}
-                                        </Button>
-                                    ))}
-                                </div>
-                            )}
-
-                            <div className="flex items-center gap-2">
-                                <ModeToggle />
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-9 w-9"
-                                    onClick={toggleFitnessMode}
-                                >
-                                    <X className="h-4 w-4" />
-                                </Button>
-                                <WindowControls />
-                            </div>
-                        </div>
-                    </div>
+                        ) : undefined}
+                    />
 
                     {/* Content */}
                     <div className="flex-1 overflow-y-auto no-scrollbar">

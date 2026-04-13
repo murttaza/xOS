@@ -6,8 +6,7 @@ import { Book, Trash2, ArrowLeft, Zap, Maximize2, Minimize2, PanelLeftClose, Pan
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { cn } from '../lib/utils';
-import { ModeToggle } from './ModeToggle';
-import { WindowControls } from './WindowControls';
+import { ModeHeader } from './ModeHeader';
 
 import { BookShelf } from './notes/BookShelf';
 import { NotesList } from './notes/NotesList';
@@ -258,8 +257,6 @@ export const NotesMode = () => {
     const searchNotes = useStore(s => s.searchNotes);
     const searchResults = useStore(s => s.searchResults);
     const deleteSubject = useStore(s => s.deleteSubject);
-    const isMurtazaMode = useStore(s => s.isMurtazaMode);
-    const osPrefix = useStore(s => s.osPrefix);
 
     const [globalSearch, setGlobalSearch] = useState('');
     const [isCreatingSubject, setIsCreatingSubject] = useState(false);
@@ -280,6 +277,16 @@ export const NotesMode = () => {
         }, 300);
         return () => clearTimeout(timeout);
     }, [globalSearch, searchNotes]);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && isNotesMode) {
+                toggleNotesMode();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isNotesMode, toggleNotesMode]);
 
 
     const currentSubject = useMemo(() => subjects.find(s => s.id === currentSubjectId), [subjects, currentSubjectId]);
@@ -363,51 +370,31 @@ export const NotesMode = () => {
                         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 dark:bg-primary/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/4" />
                         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-accent/5 dark:bg-accent/10 rounded-full blur-[80px] translate-y-1/2 -translate-x-1/4" />
                     </div>
-                    {/* Top Bar - Drag Area */}
-                    <div className="px-3 sm:px-6 pb-1 sm:pb-2 bg-transparent z-20" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)' }}>
-                        <header className={cn(
-                            "rounded-2xl px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center backdrop-blur-md drag relative transition-all",
-                            isMurtazaMode ? 'bg-background/90 border border-border shadow-lg shadow-black/10' : 'glass'
-                        )}>
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <motion.h1
-                                    className="text-2xl font-bold tracking-tight text-primary transition-all duration-150 hover:drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)] cursor-pointer no-drag flex items-baseline gap-2 shrink-0"
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={toggleNotesMode}
-                                >
-                                    <span>{isMurtazaMode ? "\u0645\u064F\u0631\u062A\u0636\u06CC\u0670" : `${osPrefix}OS`}</span>
-                                    <span className="text-xs font-mono text-muted-foreground opacity-50 flex items-center gap-1.5 ml-1">
-                                        <Book className="h-3 w-3" /> Notes
-                                    </span>
-                                </motion.h1>
-                            </div>
-
-                            {/* Center Capsule - Search (hidden on mobile, shown md+) */}
-                            <div className="hidden md:flex flex-[2] justify-center w-full max-w-md mx-4 no-drag relative z-[60]">
-                                <NotesSearch
-                                    globalSearch={globalSearch}
-                                    onGlobalSearchChange={setGlobalSearch}
-                                    searchResults={searchResults}
-                                    onResultClick={handleSearchResultClick}
-                                />
-                            </div>
-
-                            <div className="flex items-center gap-4 no-drag justify-end flex-1 min-w-0">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={handleOpenQuickNotes}
-                                    className="h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground gap-1.5"
-                                >
-                                    <Zap className="h-3 w-3" />
-                                    <span className="hidden sm:inline">Quick Notes</span>
-                                </Button>
-                                <ModeToggle />
-                                <WindowControls />
-                            </div>
-                        </header>
-                    </div>
+                    <ModeHeader
+                        modeLabel="Notes"
+                        modeIcon={Book}
+                        onGoHome={toggleNotesMode}
+                        showCloseButton={false}
+                        centerContent={
+                            <NotesSearch
+                                globalSearch={globalSearch}
+                                onGlobalSearchChange={setGlobalSearch}
+                                searchResults={searchResults}
+                                onResultClick={handleSearchResultClick}
+                            />
+                        }
+                        rightContent={
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleOpenQuickNotes}
+                                className="h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                            >
+                                <Zap className="h-3 w-3" />
+                                <span className="hidden sm:inline">Quick Notes</span>
+                            </Button>
+                        }
+                    />
 
                     {/* Mobile Search (visible below md) */}
                     <div className="md:hidden px-4 pb-2 no-drag relative z-[60]">

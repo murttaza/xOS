@@ -435,12 +435,22 @@ function App() {
             >
               <div className="flex items-center gap-2">
                 <motion.h1
-                  className="text-2xl font-bold tracking-tight text-primary dark:text-primary transition-all duration-150 hover:drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)] cursor-pointer no-drag flex items-baseline gap-2"
+                  className="group text-2xl font-bold tracking-tight text-primary dark:text-primary transition-all duration-150 hover:drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)] cursor-pointer no-drag flex items-baseline gap-2"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => isElectron && setIsMurtazaMode(!isMurtazaMode)}
                 >
-                  <span>{isMurtazaMode && isElectron ? "مُرتضیٰ" : `${osPrefix}OS`}</span>
+                  <span className="relative">
+                    {osPrefix}OS
+                    {isMurtazaMode && (
+                      <span
+                        className="absolute -bottom-3.5 left-0 text-[10px] text-muted-foreground/0 group-hover:text-muted-foreground/60 transition-colors duration-300 whitespace-nowrap"
+                        dir="rtl"
+                      >
+                        مُرتضیٰ
+                      </span>
+                    )}
+                  </span>
                   <span className="text-xs font-mono text-muted-foreground opacity-50">v{APP_VERSION}</span>
                 </motion.h1>
 

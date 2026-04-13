@@ -3,10 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { Transaction } from '../types';
 import { cn } from '../lib/utils';
-import { ArrowLeft, Wallet, Plus } from 'lucide-react';
+import { Wallet, Plus } from 'lucide-react';
 import { Button } from './ui/button';
-import { ModeToggle } from './ModeToggle';
-import { WindowControls } from './WindowControls';
+import { ModeHeader } from './ModeHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
 import { MonthSelector } from './budget/MonthSelector';
@@ -99,47 +98,19 @@ export function BudgetMode() {
                         "bg-background"
                     )}
                 >
-                    {/* Header */}
-                    <div
-                        className="shrink-0 border-b border-border/50"
-                        style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)' }}
-                    >
-                        {/* Top bar: back + title + month (desktop) + controls */}
-                        <div className="flex items-center justify-between px-3 sm:px-6 lg:px-8 py-3 lg:py-4">
-                            <div className="flex items-center gap-2">
-                                {/* Mobile back button */}
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-9 w-9 lg:hidden"
-                                    onClick={toggleBudgetMode}
-                                >
-                                    <ArrowLeft className="h-5 w-5" />
-                                </Button>
-                                {/* Mobile title */}
-                                <span className="text-base font-semibold lg:hidden">Budget</span>
-                                {/* Desktop title */}
-                                <div className="hidden lg:flex items-center gap-3">
-                                    <Wallet className="h-5 w-5 text-primary" />
-                                    <h2 className="text-lg font-bold tracking-tight">Budget</h2>
-                                </div>
-                            </div>
-
-                            {/* Desktop month selector in header */}
-                            <div className="hidden lg:block">
-                                <MonthSelector selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <ModeToggle />
-                                <WindowControls />
-                            </div>
-                        </div>
-
-                        {/* Mobile month selector - own row below header */}
-                        <div className="lg:hidden flex justify-center px-3 pb-3">
+                    <ModeHeader
+                        modeLabel="Budget"
+                        modeIcon={Wallet}
+                        onGoHome={toggleBudgetMode}
+                        showMobileBack
+                        onMobileBack={toggleBudgetMode}
+                        centerContent={
                             <MonthSelector selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
-                        </div>
+                        }
+                    />
+                    {/* Mobile month selector - own row below header */}
+                    <div className="md:hidden flex justify-center px-3 pb-3">
+                        <MonthSelector selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
                     </div>
 
                     {/* Content */}
