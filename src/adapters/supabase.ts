@@ -30,6 +30,11 @@ function enqueueIfOffline(fn: () => Promise<unknown>): boolean {
     return false;
 }
 
+/** Clear pending offline writes (must be called on logout to prevent data leakage between users) */
+export function clearOfflineQueue() {
+    offlineQueue.length = 0;
+}
+
 if (typeof window !== 'undefined') {
     window.addEventListener('online', async () => {
         while (offlineQueue.length > 0) {
@@ -170,7 +175,7 @@ export const supabaseBackend: ApiBackend = {
                 date: log.date,
                 journalEntry: log.journalEntry,
                 prayersCompleted: log.prayersCompleted,
-            })
+            }, { onConflict: 'date,user_id' })
         );
     },
 
@@ -338,18 +343,28 @@ export const supabaseBackend: ApiBackend = {
     },
 
     searchNotes: async (query) => {
-        // Escape special PostgREST filter characters to prevent malformed queries
+        // Escape LIKE wildcards and PostgREST filter metacharacters (commas, parens)
         const escaped = query.replace(/[%_\\]/g, c => `\\${c}`);
         const pattern = `%${escaped}%`;
-        // Use chained ilike filters joined with .or() to avoid string interpolation issues
-        const { data: notes, error } = await supabase
-            .from('notes')
-            .select('*, subjects(title, color)')
-            .or(`title.ilike.${pattern},content.ilike.${pattern}`)
-            .order('updatedAt', { ascending: false });
+        // Use two separate queries instead of .or() with string interpolation
+        // to avoid PostgREST parsing issues with commas/dots in user input.
+        const [titleResult, contentResult] = await Promise.all([
+            supabase.from('notes').select('*, subjects(title, color)').ilike('title', pattern).order('updatedAt', { ascending: false }),
+            supabase.from('notes').select('*, subjects(title, color)').ilike('content', pattern).order('updatedAt', { ascending: false }),
+        ]);
+        if (titleResult.error) throw titleResult.error;
+        if (contentResult.error) throw contentResult.error;
+        // Deduplicate by note ID
+        const seen = new Set<number>();
+        const notes: any[] = [];
+        for (const note of [...(titleResult.data || []), ...(contentResult.data || [])]) {
+            if (!seen.has(note.id)) {
+                seen.add(note.id);
+                notes.push(note);
+            }
+        }
 
-        if (error) throw error;
-        if (!notes || notes.length === 0) return [];
+        if (notes.length === 0) return [];
 
         return notes.map((note: any) => ({
             ...note,
@@ -813,7 +828,7 @@ export const supabaseBackend: ApiBackend = {
         const doUpsert = async () => throwOnError(
             await supabase.from('exercise_logs').upsert(payload).select('*, program_exercises(*)').single()
         ) as any;
-        if (enqueueIfOffline(doUpsert)) return {} as any;
+        if (enqueueIfOffline(doUpsert)) return { ...payload, id: `offline-${Date.now()}` } as any;
         return withRetry(doUpsert);
     },
 

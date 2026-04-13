@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { CardContent } from "@/components/ui/card";
 
 import { useStore } from "@/store";
@@ -61,16 +61,35 @@ export function CalendarBlock() {
         setJournalText(dailyLog?.journalEntry || "");
     }, [dailyLog?.date, dailyLog?.journalEntry]);
 
+    // Track pending journal save so we can flush before date switch
+    const pendingJournalRef = React.useRef<{ date: string; text: string } | null>(null);
+
     // Debounced save for Journal Entry
     useEffect(() => {
+        const dateStr = format(date, "yyyy-MM-dd");
+        if (journalText !== (dailyLog?.journalEntry || "")) {
+            pendingJournalRef.current = { date: dateStr, text: journalText };
+        } else {
+            pendingJournalRef.current = null;
+        }
         const handler = setTimeout(() => {
-            const dateStr = format(date, "yyyy-MM-dd");
-            if (journalText !== (dailyLog?.journalEntry || "")) {
-                saveJournalEntry(dateStr, journalText);
+            if (pendingJournalRef.current) {
+                saveJournalEntry(pendingJournalRef.current.date, pendingJournalRef.current.text);
+                pendingJournalRef.current = null;
             }
         }, 1000);
         return () => clearTimeout(handler);
     }, [journalText, date, dailyLog?.journalEntry, saveJournalEntry]);
+
+    // Flush any pending journal save before switching dates
+    const prevDateRef = React.useRef(date);
+    useEffect(() => {
+        if (prevDateRef.current !== date && pendingJournalRef.current) {
+            saveJournalEntry(pendingJournalRef.current.date, pendingJournalRef.current.text);
+            pendingJournalRef.current = null;
+        }
+        prevDateRef.current = date;
+    }, [date, saveJournalEntry]);
 
     const nextMonth = () => setCurrentMonth(prev => addMonths(prev, 1));
     const prevMonth = () => setCurrentMonth(prev => subMonths(prev, 1));

@@ -107,7 +107,8 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
         };
     }, [savePendingChanges]);
 
-    // Debounced Save Effect
+    // Debounced Save Effect — captures noteId at schedule time to prevent
+    // saving Note A's edits to Note B if the user switches quickly.
     useEffect(() => {
         if (!activeNote || !selectedNoteId) return;
 
@@ -118,13 +119,17 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
             return;
         }
 
+        // Snapshot the note we're saving for — if user switches notes before
+        // the timer fires, the closure still references the correct note.
+        const noteToSave = { ...activeNote, ...editingNote, updatedAt: new Date().toISOString() };
+        const noteId = selectedNoteId;
+
         setIsSaving(true);
         const timer = setTimeout(async () => {
-            await updateNote({
-                ...activeNote,
-                ...editingNote,
-                updatedAt: new Date().toISOString()
-            });
+            // Only save if we're still on the same note (avoid stale write)
+            if (noteId === activeStateRef.current.activeNote?.id) {
+                await updateNote(noteToSave);
+            }
             setIsSaving(false);
         }, 1000);
 

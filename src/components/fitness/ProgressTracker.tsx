@@ -35,7 +35,6 @@ export function ProgressTracker() {
         if (!form.date) return;
         await upsertBodyMetric({
             id: editing || undefined,
-            user_id: '',
             user_program_id: activeProgram?.id || null,
             week_number: form.week_number || currentWeek,
             date: form.date,

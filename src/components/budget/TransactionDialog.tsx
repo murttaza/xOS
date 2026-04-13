@@ -109,6 +109,7 @@ export function TransactionDialog({ open, onOpenChange, categories, transaction,
                                 <Input
                                     id="amount"
                                     type="number"
+                                    inputMode="decimal"
                                     step="0.01"
                                     min="0"
                                     value={amount}

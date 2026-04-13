@@ -2,6 +2,7 @@ import { StateCreator } from 'zustand';
 import { Task, RepeatingTask, Subtask } from '@/types';
 import { api } from '@/api';
 import { safeJSONParse, getLocalDateString } from '@/lib/utils';
+import { showErrorToast } from '@/components/ui/toast';
 import type { AppState } from './index';
 
 // Raw types from DB before parsing JSON fields
@@ -77,6 +78,7 @@ export const createTaskSlice: StateCreator<AppState, [], [], TaskSlice> = (set, 
             });
         } catch (error) {
             console.error('Failed to fetch tasks:', error);
+            showErrorToast('Failed to load tasks. Check your connection.');
         }
     },
 
@@ -86,18 +88,25 @@ export const createTaskSlice: StateCreator<AppState, [], [], TaskSlice> = (set, 
             get().fetchTasks();
         } catch (error) {
             console.error('Failed to add task:', error);
+            showErrorToast('Failed to save task.');
         }
     },
 
     updateTask: async (task) => {
-        // Check if task is being completed
+        // Check if task is being completed or uncompleted
         const originalTask = get().tasks.find(t => t.id === task.id);
         if (originalTask) {
             if (task.isComplete === 1 && !originalTask.isComplete) {
-                // Task Just Completed
+                // Task just completed
                 task.completedAt = new Date().toISOString();
 
-                // 1. Check for repeating task streak
+                // Auto-stop the timer first (this creates the session + awards XP)
+                // so we don't double-award when the timer eventually fires separately
+                if (get().activeTimers[task.id!] !== undefined) {
+                    await get().stopTaskTimer(task.id!);
+                }
+
+                // Check for repeating task streak
                 if (task.repeatingTaskId) {
                     const repeatingTask = get().repeatingTasks.find(rt => rt.id === task.repeatingTaskId);
                     if (repeatingTask) {
@@ -106,6 +115,9 @@ export const createTaskSlice: StateCreator<AppState, [], [], TaskSlice> = (set, 
                         get().fetchRepeatingTasks();
                     }
                 }
+            } else if (task.isComplete === 0 && originalTask.isComplete) {
+                // Task being uncompleted — clear completedAt
+                task.completedAt = undefined as any;
             }
         }
 
@@ -257,7 +269,7 @@ export const createTaskSlice: StateCreator<AppState, [], [], TaskSlice> = (set, 
                 const t2 = new Date(todayStr).getTime();
                 let diffDays = 1;
                 if (!isNaN(t1) && !isNaN(t2) && t2 > t1) {
-                    diffDays = Math.round((t2 - t1) / (1000 * 60 * 60 * 24));
+                    diffDays = Math.floor((t2 - t1) / (1000 * 60 * 60 * 24));
                 }
                 await api.updateStreak({
                     ...streak,

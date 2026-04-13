@@ -2,6 +2,7 @@ import { StateCreator } from 'zustand';
 import { BudgetCategory, Transaction, BudgetTarget } from '@/types';
 import { api } from '@/api';
 import { calculateBudgetXP, calculateLevelFromXP, getLocalDateString, getLocalMonthString } from '@/lib/utils';
+import { showErrorToast } from '@/components/ui/toast';
 import type { AppState } from './index';
 
 export interface BudgetSlice {
@@ -42,6 +43,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
             set({ budgetCategories });
         } catch (err) {
             console.error('fetchBudgetCategories failed:', err);
+            showErrorToast('Failed to load budget categories.');
         }
     },
 
@@ -50,6 +52,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
             await api.createBudgetCategory(category);
         } catch (err) {
             console.error('createBudgetCategory failed:', err);
+            showErrorToast('Failed to create category.');
             throw err;
         }
         await get().fetchBudgetCategories();
@@ -78,6 +81,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
             set({ transactions });
         } catch (err) {
             console.error('fetchTransactions failed:', err);
+            showErrorToast('Failed to load transactions.');
         }
     },
 
@@ -86,6 +90,7 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
             await api.addTransaction(tx);
         } catch (err) {
             console.error('addTransaction failed:', err);
+            showErrorToast('Failed to save transaction.');
             throw err;
         }
 

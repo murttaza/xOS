@@ -90,7 +90,8 @@ export function BudgetDashboard({ transactions, budgetTargets }: BudgetDashboard
                     <div className="space-y-2">
                         {categoryBreakdown.map(cat => {
                             const limit = targetMap.get(cat.categoryId);
-                            const percentage = limit ? Math.min((cat.spent / limit) * 100, 100) : 0;
+                            const rawPercentage = limit ? (cat.spent / limit) * 100 : 0;
+                            const percentage = Math.min(rawPercentage, 100); // bar caps at 100%
                             const isOverBudget = limit ? cat.spent > limit : false;
                             const isNearBudget = limit ? percentage >= 75 && !isOverBudget : false;
 
@@ -104,6 +105,7 @@ export function BudgetDashboard({ transactions, budgetTargets }: BudgetDashboard
                                         <span className={`font-medium ${isOverBudget ? 'text-red-500' : 'text-muted-foreground'}`}>
                                             ${fmt(cat.spent)}
                                             {limit && <span className="text-muted-foreground/60"> / ${fmt(limit)}</span>}
+                                            {isOverBudget && <span className="text-red-500/70 text-[10px] ml-1">({Math.round(rawPercentage)}%)</span>}
                                         </span>
                                     </div>
                                     {limit && (

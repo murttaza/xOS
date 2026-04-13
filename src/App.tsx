@@ -166,6 +166,30 @@ function App() {
         }
         await fetchStats();
       }
+      // Seed default budget categories for new users (in case DB trigger didn't run)
+      const currentCategories = useStore.getState().budgetCategories;
+      if (currentCategories.length === 0) {
+        const DEFAULT_CATEGORIES = [
+          { name: 'Food & Dining', icon: 'utensils', color: '#ef4444', isIncome: 0, orderIndex: 0 },
+          { name: 'Transportation', icon: 'car', color: '#f97316', isIncome: 0, orderIndex: 1 },
+          { name: 'Housing', icon: 'home', color: '#eab308', isIncome: 0, orderIndex: 2 },
+          { name: 'Utilities', icon: 'zap', color: '#84cc16', isIncome: 0, orderIndex: 3 },
+          { name: 'Entertainment', icon: 'tv', color: '#22c55e', isIncome: 0, orderIndex: 4 },
+          { name: 'Shopping', icon: 'shopping-bag', color: '#14b8a6', isIncome: 0, orderIndex: 5 },
+          { name: 'Health', icon: 'heart-pulse', color: '#06b6d4', isIncome: 0, orderIndex: 6 },
+          { name: 'Education', icon: 'graduation-cap', color: '#3b82f6', isIncome: 0, orderIndex: 7 },
+          { name: 'Personal Care', icon: 'sparkles', color: '#8b5cf6', isIncome: 0, orderIndex: 8 },
+          { name: 'Other', icon: 'circle-dot', color: '#6b7280', isIncome: 0, orderIndex: 9 },
+          { name: 'Salary', icon: 'briefcase', color: '#22c55e', isIncome: 1, orderIndex: 0 },
+          { name: 'Freelance', icon: 'laptop', color: '#14b8a6', isIncome: 1, orderIndex: 1 },
+          { name: 'Investments', icon: 'trending-up', color: '#3b82f6', isIncome: 1, orderIndex: 2 },
+          { name: 'Other Income', icon: 'plus-circle', color: '#8b5cf6', isIncome: 1, orderIndex: 3 },
+        ];
+        for (const cat of DEFAULT_CATEGORIES) {
+          await api.createBudgetCategory(cat).catch(() => {});
+        }
+        await fetchBudgetCategories();
+      }
       setIsLoading(false);
     }).catch(() => setIsLoading(false));
   }, []); // Initial fetch only - run once
@@ -461,7 +485,12 @@ function App() {
                         <Button
                           variant="outline"
                           className="w-full text-xs flex gap-2 items-center text-destructive hover:text-destructive"
-                          onClick={() => supabase.auth.signOut()}
+                          onClick={async () => {
+                            // Clear persisted state before signing out to prevent
+                            // stale data leaking to the next user session
+                            localStorage.removeItem('lifeos-storage');
+                            await supabase.auth.signOut();
+                          }}
                         >
                           <LogOut className="h-3 w-3" />
                           Sign Out

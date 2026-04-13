@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { LogIn, UserPlus } from 'lucide-react';
+import { LogIn, UserPlus, KeyRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+type Mode = 'signin' | 'signup' | 'reset';
 
 export function LoginPage({ onLogin }: { onLogin: () => void }) {
     const [email, setEmail] = useState('');
@@ -9,7 +11,13 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
-    const [isSignUp, setIsSignUp] = useState(false);
+    const [mode, setMode] = useState<Mode>('signin');
+
+    const switchMode = (newMode: Mode) => {
+        setMode(newMode);
+        setError('');
+        setSuccess('');
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -17,7 +25,20 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
         setSuccess('');
         setLoading(true);
 
-        if (isSignUp) {
+        if (mode === 'reset') {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.origin,
+            });
+            if (error) {
+                setError(error.message);
+            } else {
+                setSuccess('Password reset link sent! Check your email.');
+            }
+            setLoading(false);
+            return;
+        }
+
+        if (mode === 'signup') {
             const { data, error } = await supabase.auth.signUp({ email, password });
             if (error) {
                 // If the error is from a DB trigger but the user was created, try signing in
@@ -34,7 +55,7 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
                 onLogin();
             } else {
                 setSuccess('Account created! Sign in to continue.');
-                setIsSignUp(false);
+                setMode('signin');
                 setLoading(false);
             }
         } else {
@@ -48,11 +69,21 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
         }
     };
 
+    const icon = mode === 'signup' ? <UserPlus className="h-4 w-4 text-emerald-400" />
+        : mode === 'reset' ? <KeyRound className="h-4 w-4 text-amber-400" />
+        : <LogIn className="h-4 w-4 text-primary" />;
+
+    const subtitle = mode === 'signup' ? 'Create an account'
+        : mode === 'reset' ? 'Reset your password'
+        : 'Sign in to continue';
+
     return (
-        <div className={`min-h-screen flex items-center justify-center transition-colors duration-500 ${isSignUp ? 'bg-emerald-950/20' : 'bg-background'}`}>
+        <div className={`min-h-screen flex items-center justify-center transition-colors duration-500 ${
+            mode === 'signup' ? 'bg-emerald-950/20' : mode === 'reset' ? 'bg-amber-950/20' : 'bg-background'
+        }`}>
             <AnimatePresence mode="wait">
                 <motion.form
-                    key={isSignUp ? 'signup' : 'signin'}
+                    key={mode}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
@@ -63,17 +94,8 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
                     <h1 className="text-2xl font-bold text-center text-foreground">xOS</h1>
 
                     <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                        {isSignUp ? (
-                            <>
-                                <UserPlus className="h-4 w-4 text-emerald-400" />
-                                <span>Create an account</span>
-                            </>
-                        ) : (
-                            <>
-                                <LogIn className="h-4 w-4 text-primary" />
-                                <span>Sign in to continue</span>
-                            </>
-                        )}
+                        {icon}
+                        <span>{subtitle}</span>
                     </div>
 
                     {error && (
@@ -97,40 +119,78 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
                         required
                     />
 
-                    <div>
-                        <input
-                            type="password"
-                            placeholder="Password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-4 py-3 h-12 rounded-lg border border-border bg-card text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                            required
-                            minLength={6}
-                        />
-                        {isSignUp && (
-                            <p className="text-xs text-muted-foreground mt-1.5 ml-1">Min. 6 characters</p>
-                        )}
-                    </div>
+                    {mode !== 'reset' && (
+                        <div>
+                            <input
+                                type="password"
+                                placeholder="Password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full px-4 py-3 h-12 rounded-lg border border-border bg-card text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                required
+                                minLength={6}
+                            />
+                            {mode === 'signup' && (
+                                <p className="text-xs text-muted-foreground mt-1.5 ml-1">Min. 6 characters</p>
+                            )}
+                        </div>
+                    )}
 
                     <button
                         type="submit"
                         disabled={loading}
                         className={`w-full py-3 h-12 rounded-lg font-medium disabled:opacity-50 transition-colors ${
-                            isSignUp
+                            mode === 'signup'
                                 ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                                : mode === 'reset'
+                                ? 'bg-amber-600 hover:bg-amber-500 text-white'
                                 : 'bg-primary text-primary-foreground hover:bg-primary/90'
                         }`}
                     >
-                        {loading ? (isSignUp ? 'Creating account...' : 'Signing in...') : (isSignUp ? 'Create Account' : 'Sign In')}
+                        {loading
+                            ? (mode === 'signup' ? 'Creating account...' : mode === 'reset' ? 'Sending...' : 'Signing in...')
+                            : (mode === 'signup' ? 'Create Account' : mode === 'reset' ? 'Send Reset Link' : 'Sign In')
+                        }
                     </button>
 
-                    <button
-                        type="button"
-                        onClick={() => { setIsSignUp(!isSignUp); setError(''); setSuccess(''); }}
-                        className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                        {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-                    </button>
+                    <div className="space-y-1">
+                        {mode === 'signin' && (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={() => switchMode('reset')}
+                                    className="w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    Forgot password?
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => switchMode('signup')}
+                                    className="w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                    Don't have an account? Sign up
+                                </button>
+                            </>
+                        )}
+                        {mode === 'signup' && (
+                            <button
+                                type="button"
+                                onClick={() => switchMode('signin')}
+                                className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                Already have an account? Sign in
+                            </button>
+                        )}
+                        {mode === 'reset' && (
+                            <button
+                                type="button"
+                                onClick={() => switchMode('signin')}
+                                className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                Back to sign in
+                            </button>
+                        )}
+                    </div>
                 </motion.form>
             </AnimatePresence>
         </div>

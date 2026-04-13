@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { LoginPage } from './LoginPage';
 import { supabase } from '../lib/supabase';
+import { clearOfflineQueue } from '../adapters/supabase';
 
 export function AuthGate({ children }: { children: ReactNode }) {
     const [ready, setReady] = useState(false);
@@ -15,8 +16,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
             setReady(true);
         });
 
-        // Listen for auth state changes
-        const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+        // Listen for auth state changes (login, logout, token refresh, expiry)
+        const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_OUT' || !session) {
+                clearOfflineQueue();
+            }
             setAuthenticated(!!session);
         });
         return () => listener.subscription.unsubscribe();

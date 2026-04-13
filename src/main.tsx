@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import { AuthGate } from './components/AuthGate'
+import { ToastContainer } from './components/ui/toast'
 import './index.css'
 
 // Mark web environment for CSS (Electron needs overflow:hidden, web needs scroll)
@@ -13,6 +14,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <AuthGate>
       <App />
+      <ToastContainer />
     </AuthGate>
   </React.StrictMode>,
 )
