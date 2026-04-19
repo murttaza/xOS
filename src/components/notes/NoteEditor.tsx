@@ -353,7 +353,7 @@ export const NoteEditor = ({
     ];
 
     return (
-        <div className="flex-1 bg-card/50 backdrop-blur-sm flex flex-col relative no-drag">
+        <div className="flex-1 min-h-0 bg-card/50 backdrop-blur-sm flex flex-col relative no-drag">
             <Button
                 variant="ghost"
                 size="icon"
@@ -364,7 +364,7 @@ export const NoteEditor = ({
             </Button>
 
             {activeNote ? (
-                <div className="flex flex-col h-full p-4 sm:p-8 md:p-12 animate-in fade-in duration-150">
+                <div className="flex flex-col h-full min-h-0 p-4 sm:p-8 md:p-12 animate-in fade-in duration-150">
                     <input
                         className="bg-transparent text-xl sm:text-3xl md:text-4xl font-bold text-foreground mb-4 sm:mb-6 border-none outline-none placeholder:text-muted-foreground"
                         value={editingNote.title !== undefined ? editingNote.title : activeNote.title}
@@ -405,7 +405,7 @@ export const NoteEditor = ({
 
                     <div
                         ref={editorRef}
-                        className="wysiwyg-editor flex-1 bg-transparent text-foreground text-base sm:text-lg overflow-y-auto outline-none placeholder:text-muted-foreground leading-relaxed custom-scrollbar selection:bg-primary/30"
+                        className="wysiwyg-editor flex-1 min-h-0 bg-transparent text-foreground text-base sm:text-lg overflow-y-auto outline-none placeholder:text-muted-foreground leading-relaxed custom-scrollbar selection:bg-primary/30"
                         contentEditable
                         suppressContentEditableWarning
                         spellCheck

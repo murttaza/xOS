@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { api } from '@/api';
 import { Subject, Note } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -164,30 +164,15 @@ export function NoteLinkPicker({ selectedNoteId, onSelectNote }: NoteLinkPickerP
         }
     };
 
-    // Close on Escape + lock body scroll while open so the page behind
-    // doesn't scroll on iOS/touch devices.
-    useEffect(() => {
-        if (!isOpen) return;
-        const handler = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                e.stopPropagation();
-                setIsOpen(false);
-                reset();
-            }
-        };
-        window.addEventListener('keydown', handler, true);
-        const prevOverflow = document.body.style.overflow;
-        document.body.style.overflow = 'hidden';
-        return () => {
-            window.removeEventListener('keydown', handler, true);
-            document.body.style.overflow = prevOverflow;
-        };
-    }, [isOpen]);
-
     const isCoarsePointer =
         typeof window !== 'undefined' &&
         typeof window.matchMedia === 'function' &&
         window.matchMedia('(pointer: coarse)').matches;
+
+    const handleOpenChange = (open: boolean) => {
+        setIsOpen(open);
+        if (!open) reset();
+    };
 
     return (
         <>
@@ -236,30 +221,29 @@ export function NoteLinkPicker({ selectedNoteId, onSelectNote }: NoteLinkPickerP
                 </Button>
             )}
 
-            {isOpen && createPortal(
-                <div
-                    className="fixed inset-0 z-[110] flex items-center justify-center"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label="Link note picker"
-                    onMouseDown={(e) => {
-                        // Close when clicking the backdrop; stop the event so the
-                        // parent dialog doesn't interpret it as an outside click.
-                        if (e.target === e.currentTarget) {
-                            e.stopPropagation();
+            <DialogPrimitive.Root open={isOpen} onOpenChange={handleOpenChange}>
+                <DialogPrimitive.Portal>
+                    <DialogPrimitive.Overlay className="fixed inset-0 z-[110] bg-black/70 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+                    <DialogPrimitive.Content
+                        aria-describedby={undefined}
+                        className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-[110] flex flex-col bg-popover/95 backdrop-blur-xl border border-border text-foreground shadow-2xl w-full max-w-[520px] max-sm:h-[100dvh] max-sm:max-h-[100dvh] sm:max-h-[85vh] sm:rounded-lg overflow-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+                        onInteractOutside={(e) => {
+                            // Close the picker on backdrop click, but prevent the
+                            // event from propagating to the parent TaskDialog's
+                            // onInteractOutside handler (which would close it too).
+                            e.preventDefault();
                             setIsOpen(false);
                             reset();
-                        }
-                    }}
-                >
-                    <div
-                        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-                        aria-hidden="true"
-                    />
-                    <div
-                        className="relative flex flex-col bg-popover/95 backdrop-blur-xl border border-border text-foreground shadow-2xl w-full max-w-[520px] max-sm:h-[100dvh] max-sm:max-h-[100dvh] sm:max-h-[85vh] sm:rounded-lg overflow-hidden"
-                        onMouseDown={(e) => e.stopPropagation()}
+                        }}
+                        onEscapeKeyDown={(e) => {
+                            // Same: handle Escape here and stop bubbling so the
+                            // parent dialog doesn't also close.
+                            e.preventDefault();
+                            setIsOpen(false);
+                            reset();
+                        }}
                     >
+                        <DialogPrimitive.Title className="sr-only">Link a note</DialogPrimitive.Title>
                         <div className="px-4 sm:px-6 pt-4 sm:pt-5 pb-2 shrink-0 relative">
                             <div className="flex items-center gap-2">
                                 {step !== 'library' && (
@@ -465,10 +449,9 @@ export function NoteLinkPicker({ selectedNoteId, onSelectNote }: NoteLinkPickerP
                                 </Button>
                             </div>
                         )}
-                    </div>
-                </div>,
-                document.body
-            )}
+                    </DialogPrimitive.Content>
+                </DialogPrimitive.Portal>
+            </DialogPrimitive.Root>
         </>
     );
 }
