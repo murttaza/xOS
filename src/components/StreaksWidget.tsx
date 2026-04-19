@@ -35,9 +35,9 @@ const StreakHero = memo(function StreakHero({ streak, now }: { streak: Streak; n
         >
             <div className={cn("absolute inset-0 opacity-[0.03] rounded-xl", heat.bg)} />
             {streak.isPaused ? <Pause className="h-4 w-4 text-muted-foreground mb-1" /> : null}
-            <span className="text-3xl font-black tabular-nums tracking-tighter leading-none text-white">{days}</span>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-white/70 mt-1">days</span>
-            <span className="text-sm font-medium text-white/90 mt-2">{streak.title}</span>
+            <span className="text-3xl font-black tabular-nums tracking-tighter leading-none text-foreground">{days}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mt-1">days</span>
+            <span className="text-sm font-medium text-foreground/90 mt-2">{streak.title}</span>
         </motion.div>
     );
 });
@@ -58,9 +58,9 @@ const StreakHalf = memo(function StreakHalf({ streak, now }: { streak: Streak; n
         >
             <div className={cn("absolute inset-0 opacity-[0.03] rounded-xl", heat.bg)} />
             {streak.isPaused ? <Pause className="h-3 w-3 text-muted-foreground mb-0.5" /> : null}
-            <span className="text-2xl font-black tabular-nums tracking-tighter leading-none text-white">{days}</span>
-            <span className="text-[9px] font-bold uppercase tracking-wider text-white/70 mt-0.5">days</span>
-            <span className="text-xs font-medium text-white/90 mt-1.5 truncate max-w-full">{streak.title}</span>
+            <span className="text-2xl font-black tabular-nums tracking-tighter leading-none text-foreground">{days}</span>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mt-0.5">days</span>
+            <span className="text-xs font-medium text-foreground/90 mt-1.5 truncate max-w-full">{streak.title}</span>
         </motion.div>
     );
 });
@@ -80,9 +80,9 @@ const StreakThird = memo(function StreakThird({ streak, now }: { streak: Streak;
             )}
         >
             <div className={cn("absolute inset-0 opacity-[0.03] rounded-lg", heat.bg)} />
-            <span className="text-xl font-black tabular-nums tracking-tighter leading-none text-white">{days}</span>
-            <span className="text-[8px] font-bold uppercase tracking-wider text-white/70 mt-0.5">days</span>
-            <span className="text-[11px] font-medium text-white/90 mt-1 truncate max-w-full">{streak.title}</span>
+            <span className="text-xl font-black tabular-nums tracking-tighter leading-none text-foreground">{days}</span>
+            <span className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground mt-0.5">days</span>
+            <span className="text-[11px] font-medium text-foreground/90 mt-1 truncate max-w-full">{streak.title}</span>
         </motion.div>
     );
 });

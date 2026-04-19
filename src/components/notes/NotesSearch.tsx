@@ -51,7 +51,7 @@ export const NotesSearch = ({
                                 <span className="text-[10px] text-muted-foreground font-medium">{format(new Date(note.updatedAt), 'MMM d')}</span>
                             </div>
                             <div className="font-bold text-sm text-foreground">{note.title}</div>
-                            <div className="text-xs text-muted-foreground line-clamp-1">{note.content}</div>
+                            <div className="text-xs text-muted-foreground line-clamp-1">{(note.content || '').replace(/<[^>]+>/g, ' ').trim()}</div>
                         </div>
                     ))}
                 </div>

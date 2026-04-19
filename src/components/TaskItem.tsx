@@ -56,23 +56,41 @@ export const TaskItem = memo(function TaskItem({ task, isActive, isTimerRunning,
         return task.dueDate < today;
     }, [task.dueDate, task.isComplete]);
 
+    const [isOpeningNote, setIsOpeningNote] = useState(false);
+
     const handleOpenNote = async (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (!task.noteId) return;
+        if (!task.noteId || isOpeningNote) return;
+        setIsOpeningNote(true);
 
         try {
             const note = await api.getNote(task.noteId);
-            if (note) {
-                const state = useStore.getState();
-                if (!state.isNotesMode) {
-                    state.toggleNotesMode();
-                }
-                setTimeout(() => {
-                    useStore.getState().openSubject(note.subjectId, note.id!);
-                }, 100);
+            if (!note) {
+                const { showErrorToast } = await import('@/components/ui/toast');
+                showErrorToast('Linked note no longer exists.');
+                return;
             }
+            if (note.subjectId == null) {
+                const { showErrorToast } = await import('@/components/ui/toast');
+                showErrorToast('Linked note is missing its book.');
+                return;
+            }
+
+            const state = useStore.getState();
+            // Ensure subjects are loaded before opening (avoids BookView not rendering)
+            if (state.subjects.length === 0) {
+                await state.fetchSubjects();
+            }
+            if (!state.isNotesMode) {
+                state.toggleNotesMode();
+            }
+            // Use a microtask so the notes-mode panel has mounted before we open
+            await Promise.resolve();
+            await useStore.getState().openSubject(note.subjectId, note.id!);
         } catch (err) {
             console.error("Failed to open note", err);
+        } finally {
+            setIsOpeningNote(false);
         }
     };
 

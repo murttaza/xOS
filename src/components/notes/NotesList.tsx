@@ -64,10 +64,12 @@ export const NotesList = ({
     const filteredNotes = useMemo(() => {
         if (!searchTerm) return notes;
         const term = searchTerm.toLowerCase();
-        return notes.filter(n =>
-            (n.title?.toLowerCase() || '').includes(term) ||
-            (n.content?.substring(0, 200).toLowerCase() || '').includes(term)
-        );
+        return notes.filter(n => {
+            const title = (n.title || '').toLowerCase();
+            // Strip HTML tags before matching so searches don't hit markup.
+            const contentText = (n.content || '').replace(/<[^>]+>/g, ' ').toLowerCase();
+            return title.includes(term) || contentText.includes(term);
+        });
     }, [notes, searchTerm]);
 
     return (
@@ -134,7 +136,7 @@ export const NotesList = ({
                                 </Button>
                             </div>
                             <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                                {note.content?.substring(0, 100) || "No content..."}
+                                {(note.content || '').replace(/<[^>]+>/g, ' ').trim().substring(0, 120) || "No content..."}
                             </p>
                             <div className="text-[10px] text-muted-foreground/70 mt-2 flex items-center gap-1">
                                 <Calendar className="h-2.5 w-2.5" />

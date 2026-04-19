@@ -5,14 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Task, Subtask, Note } from "@/types";
+import { Task, Subtask } from "@/types";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Plus, X, TimerOff } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { api } from "@/api";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { NoteLinkPicker } from "@/components/notes/NoteLinkPicker";
 
 interface TaskDialogProps {
     open: boolean;
@@ -34,20 +33,8 @@ export function TaskDialog({ open, onOpenChange, onSubmit, initialTask }: TaskDi
     const [date, setDate] = useState<Date | undefined>(undefined);
     const [isUntimed, setIsUntimed] = useState(false);
     const [existingLabels, setExistingLabels] = useState<string[]>([]);
-    const [allNotes, setAllNotes] = useState<Note[]>([]);
     const [noteId, setNoteId] = useState<number | null>(null);
     const [time, setTime] = useState<string>("");
-
-    useEffect(() => {
-        if (open) {
-            api.searchNotes("").then(notes => {
-                setAllNotes(notes || []);
-            }).catch((err) => {
-                console.error('Failed to fetch notes for task dialog:', err);
-                setAllNotes([]);
-            });
-        }
-    }, [open]);
 
     useEffect(() => {
         if (initialTask) {
@@ -277,22 +264,10 @@ export function TaskDialog({ open, onOpenChange, onSubmit, initialTask }: TaskDi
                         <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                             Link to Note
                         </Label>
-                        <Select
-                            value={noteId ? String(noteId) : "none"}
-                            onValueChange={(val) => setNoteId(val === "none" ? null : Number(val))}
-                        >
-                            <SelectTrigger className="bg-muted/50 border-border text-foreground h-10 sm:h-9">
-                                <SelectValue placeholder="Select a note..." />
-                            </SelectTrigger>
-                            <SelectContent className="bg-popover/95 border-border text-foreground backdrop-blur-xl max-h-48 overflow-y-auto z-[200]">
-                                <SelectItem value="none" className="text-muted-foreground/60">None</SelectItem>
-                                {allNotes.map(n => (
-                                    <SelectItem key={n.id} value={String(n.id)}>
-                                        {n.title || "Untitled Note"} <span className="text-xs text-muted-foreground/60 ml-2">({n.subjectTitle})</span>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <NoteLinkPicker
+                            selectedNoteId={noteId}
+                            onSelectNote={setNoteId}
+                        />
                     </div>
 
                     {/* Stats */}
