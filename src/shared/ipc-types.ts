@@ -1,4 +1,4 @@
-import type { Task, Session, Stat, DailyLog, DevItem, RepeatingTask, Subject, Note, Streak } from '../types';
+import type { Task, Session, Stat, DailyLog, DevItem, RepeatingTask, Subject, Note, Streak, PasswordEntry } from '../types';
 
 /**
  * All IPC channel names used between renderer and main process.
@@ -86,6 +86,15 @@ export const IpcChannels = {
   // Notifications
   SetNotificationPrefs: 'set-notification-prefs',
   GetNotificationPrefs: 'get-notification-prefs',
+
+  // Passwords (Electron only — local encrypted storage)
+  GetPasswords: 'get-passwords',
+  CreatePassword: 'create-password',
+  UpdatePassword: 'update-password',
+  DeletePassword: 'delete-password',
+  RevealPassword: 'reveal-password',
+  TouchPassword: 'touch-password',
+  TogglePinPassword: 'toggle-pin-password',
 } as const;
 
 /** Union of all IPC channel name strings */
@@ -165,4 +174,13 @@ export interface IpcHandlerMap {
 
   // Export
   [IpcChannels.ExportAllData]: () => unknown;
+
+  // Passwords
+  [IpcChannels.GetPasswords]: () => PasswordEntry[];
+  [IpcChannels.CreatePassword]: (args: { entry: Omit<PasswordEntry, 'id'>; plaintext: string }) => number;
+  [IpcChannels.UpdatePassword]: (args: { entry: PasswordEntry; plaintext?: string }) => unknown;
+  [IpcChannels.DeletePassword]: (id: number) => unknown;
+  [IpcChannels.RevealPassword]: (id: number) => string;
+  [IpcChannels.TouchPassword]: (id: number) => unknown;
+  [IpcChannels.TogglePinPassword]: (args: { id: number; isPinned: number }) => unknown;
 }

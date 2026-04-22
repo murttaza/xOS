@@ -25,6 +25,9 @@ export interface UiSlice {
     isFitnessMode: boolean;
     toggleFitnessMode: () => void;
 
+    isPasswordsMode: boolean;
+    togglePasswordsMode: () => void;
+
     isTransitioning: boolean;
     triggerTransition: (action: () => void) => Promise<void>;
 
@@ -51,7 +54,7 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
 
     isFocusMode: false,
     setIsFocusMode: (isFocusMode) => {
-        get().triggerTransition(() => set({ isFocusMode, isNotesMode: false, isYearMode: false, isBudgetMode: false, isFitnessMode: false }));
+        get().triggerTransition(() => set({ isFocusMode, isNotesMode: false, isYearMode: false, isBudgetMode: false, isFitnessMode: false, isPasswordsMode: false }));
     },
 
     isMurtazaMode: true,
@@ -65,22 +68,27 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
 
     isNotesMode: false,
     toggleNotesMode: () => {
-        get().triggerTransition(() => set(state => ({ isNotesMode: !state.isNotesMode, isYearMode: false, isBudgetMode: false, isFitnessMode: false })));
+        get().triggerTransition(() => set(state => ({ isNotesMode: !state.isNotesMode, isYearMode: false, isBudgetMode: false, isFitnessMode: false, isPasswordsMode: false })));
     },
 
     isYearMode: false,
     toggleYearMode: () => {
-        get().triggerTransition(() => set((state) => ({ isYearMode: !state.isYearMode, isNotesMode: false, isBudgetMode: false, isFitnessMode: false })));
+        get().triggerTransition(() => set((state) => ({ isYearMode: !state.isYearMode, isNotesMode: false, isBudgetMode: false, isFitnessMode: false, isPasswordsMode: false })));
     },
 
     isBudgetMode: false,
     toggleBudgetMode: () => {
-        get().triggerTransition(() => set((state) => ({ isBudgetMode: !state.isBudgetMode, isNotesMode: false, isYearMode: false, isFitnessMode: false })));
+        get().triggerTransition(() => set((state) => ({ isBudgetMode: !state.isBudgetMode, isNotesMode: false, isYearMode: false, isFitnessMode: false, isPasswordsMode: false })));
     },
 
     isFitnessMode: false,
     toggleFitnessMode: () => {
-        get().triggerTransition(() => set((state) => ({ isFitnessMode: !state.isFitnessMode, isNotesMode: false, isYearMode: false, isBudgetMode: false })));
+        get().triggerTransition(() => set((state) => ({ isFitnessMode: !state.isFitnessMode, isNotesMode: false, isYearMode: false, isBudgetMode: false, isPasswordsMode: false })));
+    },
+
+    isPasswordsMode: false,
+    togglePasswordsMode: () => {
+        get().triggerTransition(() => set((state) => ({ isPasswordsMode: !state.isPasswordsMode, isNotesMode: false, isYearMode: false, isBudgetMode: false, isFitnessMode: false })));
     },
 
     osPrefix: 'm',

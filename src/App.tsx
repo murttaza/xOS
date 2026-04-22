@@ -18,6 +18,7 @@ const NotesMode = lazy(() => import('./components/NotesMode').then(m => ({ defau
 const YearMode = lazy(() => import('./components/YearMode').then(m => ({ default: m.YearMode })));
 const BudgetMode = lazy(() => import('./components/BudgetMode').then(m => ({ default: m.BudgetMode })));
 const FitnessMode = lazy(() => import('./components/FitnessMode').then(m => ({ default: m.FitnessMode })));
+const PasswordsMode = lazy(() => import('./components/PasswordsMode').then(m => ({ default: m.PasswordsMode })));
 
 import { HeaderPrayers } from './components/HeaderPrayers';
 import { FocusMode } from './components/FocusMode';
@@ -103,7 +104,7 @@ function App() {
     isMurtazaMode, setIsMurtazaMode,
     isHardcoreMode, setIsHardcoreMode,
     osPrefix, setOsPrefix,
-    toggleNotesMode, toggleYearMode, toggleBudgetMode, toggleFitnessMode,
+    toggleNotesMode, toggleYearMode, toggleBudgetMode, toggleFitnessMode, togglePasswordsMode,
     fetchBudgetCategories,
   } = useStore(useShallow(state => ({
     fetchTasks: state.fetchTasks,
@@ -124,6 +125,7 @@ function App() {
     toggleYearMode: state.toggleYearMode,
     toggleBudgetMode: state.toggleBudgetMode,
     toggleFitnessMode: state.toggleFitnessMode,
+    togglePasswordsMode: state.togglePasswordsMode,
     fetchBudgetCategories: state.fetchBudgetCategories,
   })));
 
@@ -258,13 +260,17 @@ function App() {
     const removeFitnessListener = window.ipcRenderer.on('toggle-fitness-mode', () => {
       toggleFitnessMode();
     });
+    const removePasswordsListener = window.ipcRenderer.on('toggle-passwords-mode', () => {
+      togglePasswordsMode();
+    });
     return () => {
       removeListener();
       removeYearListener();
       removeBudgetListener();
       removeFitnessListener();
+      removePasswordsListener();
     };
-  }, [toggleNotesMode, toggleYearMode, toggleBudgetMode, toggleFitnessMode]);
+  }, [toggleNotesMode, toggleYearMode, toggleBudgetMode, toggleFitnessMode, togglePasswordsMode]);
 
   // ── Multi-window IPC listeners (Electron only) ────────────────
   useEffect(() => {
@@ -367,6 +373,7 @@ function App() {
         <Suspense><YearMode /></Suspense>
         <Suspense><BudgetMode /></Suspense>
         <Suspense><FitnessMode /></Suspense>
+        <Suspense><PasswordsMode /></Suspense>
 
         <AnimatePresence>
           {isTransitioning && (
@@ -554,6 +561,12 @@ function App() {
                           </div>
                           {isElectron && (
                             <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">Passwords Mode</span>
+                              <kbd className="px-2 py-0.5 text-[10px] font-mono bg-muted rounded border border-border text-muted-foreground">Ctrl + Num0</kbd>
+                            </div>
+                          )}
+                          {isElectron && (
+                            <div className="flex items-center justify-between">
                               <span className="text-xs text-muted-foreground">Command Palette</span>
                               <kbd className="px-2 py-0.5 text-[10px] font-mono bg-muted rounded border border-border text-muted-foreground">Ctrl + Space</kbd>
                             </div>
@@ -715,6 +728,7 @@ function App() {
       <Suspense><YearMode /></Suspense>
       <Suspense><BudgetMode /></Suspense>
       <Suspense><FitnessMode /></Suspense>
+      {isElectron && <Suspense><PasswordsMode /></Suspense>}
 
       <AnimatePresence>
         {isTransitioning && (

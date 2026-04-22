@@ -91,6 +91,22 @@ export interface Streak {
     createdAt?: string;
 }
 
+// Passwords (Electron only — local encrypted storage via OS keychain/DPAPI)
+export interface PasswordEntry {
+    id?: number;
+    name: string;                 // Display name (e.g. "Gmail")
+    username: string;             // Email/username
+    passwordEnc?: string;         // Base64 ciphertext, never exposed to UI
+    url?: string;
+    notes?: string;
+    category?: string;            // Optional group tag
+    isPinned: number;             // 0 or 1
+    orderIndex?: number;
+    createdAt?: string;
+    updatedAt?: string;
+    lastUsed?: string | null;
+}
+
 export interface BudgetCategory {
     id?: number;
     name: string;

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, desktopCapturer, nativeTheme } from 'electron'
+import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, desktopCapturer, nativeTheme, safeStorage } from 'electron'
 import path from 'node:path'
 import db from './db'
 import { IpcChannels } from '../src/shared/ipc-types'
@@ -199,6 +199,15 @@ app.whenReady().then(() => {
     renameStatUpdate: db.prepare('UPDATE stats SET statName = ? WHERE statName = ?'),
     renameStatGetTasks: db.prepare('SELECT id, statTarget FROM tasks'),
     renameStatUpdateTask: db.prepare('UPDATE tasks SET statTarget = ? WHERE id = ?'),
+    // Passwords (local-only, encrypted at rest via OS keychain/DPAPI)
+    getPasswords: db.prepare('SELECT id, name, username, url, notes, category, isPinned, orderIndex, createdAt, updatedAt, lastUsed FROM passwords ORDER BY isPinned DESC, lastUsed DESC, name ASC'),
+    createPassword: db.prepare('INSERT INTO passwords (name, username, passwordEnc, url, notes, category, isPinned, orderIndex, createdAt, updatedAt, lastUsed) VALUES (@name, @username, @passwordEnc, @url, @notes, @category, @isPinned, @orderIndex, @createdAt, @updatedAt, @lastUsed)'),
+    updatePassword: db.prepare('UPDATE passwords SET name = @name, username = @username, url = @url, notes = @notes, category = @category, isPinned = @isPinned, updatedAt = @updatedAt WHERE id = @id'),
+    updatePasswordWithCipher: db.prepare('UPDATE passwords SET name = @name, username = @username, passwordEnc = @passwordEnc, url = @url, notes = @notes, category = @category, isPinned = @isPinned, updatedAt = @updatedAt WHERE id = @id'),
+    deletePassword: db.prepare('DELETE FROM passwords WHERE id = ?'),
+    getPasswordCipher: db.prepare('SELECT passwordEnc FROM passwords WHERE id = ?'),
+    touchPassword: db.prepare('UPDATE passwords SET lastUsed = ? WHERE id = ?'),
+    togglePinPassword: db.prepare('UPDATE passwords SET isPinned = ? WHERE id = ?'),
   };
 
   // IPC Handlers (using cached prepared statements)
@@ -469,6 +478,90 @@ app.whenReady().then(() => {
     };
   });
 
+  // ── Passwords (local-only, encrypted with OS keychain via safeStorage) ──
+  const encryptPw = (plaintext: string): string => {
+    if (!safeStorage.isEncryptionAvailable()) {
+      throw new Error('OS encryption is not available on this system');
+    }
+    return safeStorage.encryptString(plaintext).toString('base64');
+  };
+  const decryptPw = (cipherB64: string): string => {
+    if (!cipherB64) return '';
+    return safeStorage.decryptString(Buffer.from(cipherB64, 'base64'));
+  };
+
+  ipcMain.handle(IpcChannels.GetPasswords, () => {
+    return stmts.getPasswords.all();
+  });
+
+  ipcMain.handle(IpcChannels.CreatePassword, (_, { entry, plaintext }: { entry: any; plaintext: string }) => {
+    const now = new Date().toISOString();
+    const result = stmts.createPassword.run({
+      name: entry.name,
+      username: entry.username || '',
+      passwordEnc: encryptPw(plaintext || ''),
+      url: entry.url || '',
+      notes: entry.notes || '',
+      category: entry.category || '',
+      isPinned: entry.isPinned ? 1 : 0,
+      orderIndex: entry.orderIndex ?? 0,
+      createdAt: now,
+      updatedAt: now,
+      lastUsed: null,
+    });
+    return result.lastInsertRowid;
+  });
+
+  ipcMain.handle(IpcChannels.UpdatePassword, (_, { entry, plaintext }: { entry: any; plaintext?: string }) => {
+    const now = new Date().toISOString();
+    if (typeof plaintext === 'string' && plaintext.length > 0) {
+      return stmts.updatePasswordWithCipher.run({
+        id: entry.id,
+        name: entry.name,
+        username: entry.username || '',
+        passwordEnc: encryptPw(plaintext),
+        url: entry.url || '',
+        notes: entry.notes || '',
+        category: entry.category || '',
+        isPinned: entry.isPinned ? 1 : 0,
+        updatedAt: now,
+      });
+    }
+    return stmts.updatePassword.run({
+      id: entry.id,
+      name: entry.name,
+      username: entry.username || '',
+      url: entry.url || '',
+      notes: entry.notes || '',
+      category: entry.category || '',
+      isPinned: entry.isPinned ? 1 : 0,
+      updatedAt: now,
+    });
+  });
+
+  ipcMain.handle(IpcChannels.DeletePassword, (_, id: number) => {
+    return stmts.deletePassword.run(id);
+  });
+
+  ipcMain.handle(IpcChannels.RevealPassword, (_, id: number) => {
+    const row = stmts.getPasswordCipher.get(id) as { passwordEnc: string } | undefined;
+    if (!row) return '';
+    try {
+      return decryptPw(row.passwordEnc);
+    } catch (err) {
+      console.error('Failed to decrypt password:', err);
+      return '';
+    }
+  });
+
+  ipcMain.handle(IpcChannels.TouchPassword, (_, id: number) => {
+    return stmts.touchPassword.run(new Date().toISOString(), id);
+  });
+
+  ipcMain.handle(IpcChannels.TogglePinPassword, (_, { id, isPinned }: { id: number; isPinned: number }) => {
+    return stmts.togglePinPassword.run(isPinned, id);
+  });
+
   ipcMain.on('minimize-window', () => {
     win?.setAlwaysOnTop(false);
     win?.minimize();
@@ -579,6 +672,13 @@ app.whenReady().then(() => {
   // Global Shortcut for Fitness Mode (Ctrl + numpad 3)
   globalShortcut.register('CommandOrControl+num3', () => {
     win?.webContents.send('toggle-fitness-mode');
+    if (win?.isMinimized()) win.restore();
+    win?.focus();
+  });
+
+  // Global Shortcut for Passwords Mode (Ctrl + numpad 0)
+  globalShortcut.register('CommandOrControl+num0', () => {
+    win?.webContents.send('toggle-passwords-mode');
     if (win?.isMinimized()) win.restore();
     win?.focus();
   });

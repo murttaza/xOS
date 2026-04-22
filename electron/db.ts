@@ -98,6 +98,21 @@ db.exec(`
     isPaused INTEGER DEFAULT 0,
     createdAt TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS passwords (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    username TEXT,
+    passwordEnc TEXT,
+    url TEXT,
+    notes TEXT,
+    category TEXT,
+    isPinned INTEGER DEFAULT 0,
+    orderIndex INTEGER DEFAULT 0,
+    createdAt TEXT,
+    updatedAt TEXT,
+    lastUsed TEXT
+  );
 `);
 
 // Migration for existing tables
