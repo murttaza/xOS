@@ -220,7 +220,7 @@ export function YearMode() {
                             {/* Subtle Hover Glow */}
                             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none bg-[radial-gradient(ellipse_at_center,hsl(var(--foreground)/0.03)_0%,transparent_60%)]" />
 
-                            <div className="absolute left-3 sm:left-8 flex items-center gap-3 z-50 no-drag" style={{ top: 'max(env(safe-area-inset-top, 0px), 12px)' }}>
+                            <div className="absolute left-3 sm:left-8 flex items-center gap-3 z-50 no-drag" style={{ top: 'max(env(safe-area-inset-top, 0px), 28px)' }}>
                                 <Button
                                     variant={viewState === 'days' ? "default" : "outline"}
                                     size="sm"

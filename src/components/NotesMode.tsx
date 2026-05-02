@@ -374,6 +374,8 @@ export const NotesMode = () => {
                         modeLabel="Notes"
                         modeIcon={Book}
                         onGoHome={toggleNotesMode}
+                        showMobileBack
+                        onMobileBack={toggleNotesMode}
                         showCloseButton={false}
                         centerContent={
                             <NotesSearch

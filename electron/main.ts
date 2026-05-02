@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, desktopCapturer, nativeTheme, safeStorage } from 'electron'
+import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, desktopCapturer, nativeTheme, safeStorage, clipboard } from 'electron'
 import path from 'node:path'
 import db from './db'
 import { IpcChannels } from '../src/shared/ipc-types'
@@ -560,6 +560,31 @@ app.whenReady().then(() => {
 
   ipcMain.handle(IpcChannels.TogglePinPassword, (_, { id, isPinned }: { id: number; isPinned: number }) => {
     return stmts.togglePinPassword.run(isPinned, id);
+  });
+
+  // ── Clipboard (uses Electron's native clipboard module — more reliable than navigator.clipboard) ──
+  ipcMain.handle(IpcChannels.ClipboardWrite, (_, text: string) => {
+    try {
+      clipboard.writeText(text ?? '');
+      return true;
+    } catch (err) {
+      console.error('Clipboard write failed:', err);
+      return false;
+    }
+  });
+
+  ipcMain.handle(IpcChannels.ClipboardClearIfMatch, (_, text: string) => {
+    try {
+      const current = clipboard.readText();
+      if (current === text) {
+        clipboard.writeText('');
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('Clipboard clear failed:', err);
+      return false;
+    }
   });
 
   ipcMain.on('minimize-window', () => {

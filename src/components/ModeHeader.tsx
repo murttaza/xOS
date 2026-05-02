@@ -33,7 +33,7 @@ export function ModeHeader({
     return (
         <div
             className="shrink-0 px-3 sm:px-4 pb-1 sm:pb-2 bg-transparent z-20"
-            style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)' }}
+            style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 28px)' }}
         >
             <header className={cn(
                 "rounded-2xl px-3 sm:px-4 lg:px-6 py-3 lg:py-4 flex justify-between items-center backdrop-blur-md drag relative transition-all",
@@ -46,7 +46,7 @@ export function ModeHeader({
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-9 w-9 lg:hidden no-drag"
+                            className="h-10 w-10 lg:hidden no-drag"
                             onClick={onMobileBack}
                         >
                             <ArrowLeft className="h-5 w-5" />
@@ -88,10 +88,15 @@ export function ModeHeader({
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-9 w-9 hidden lg:flex"
+                            className={cn(
+                                "h-10 w-10 lg:h-9 lg:w-9",
+                                // Hide on mobile if a mobile-back arrow is already provided (avoid duplication)
+                                showMobileBack && "hidden lg:flex"
+                            )}
                             onClick={onGoHome}
+                            aria-label="Close"
                         >
-                            <X className="h-4 w-4" />
+                            <X className="h-5 w-5 lg:h-4 lg:w-4" />
                         </Button>
                     )}
                     <WindowControls />

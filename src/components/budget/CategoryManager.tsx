@@ -102,7 +102,7 @@ export function CategoryManager({ open, onOpenChange, categories, onCreate, onUp
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-lg max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:w-full max-sm:rounded-none max-sm:border-0 max-sm:p-0 flex flex-col">
-                <DialogHeader className="max-sm:px-4 max-sm:pb-2 shrink-0" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 16px)' }}>
+                <DialogHeader className="max-sm:px-4 max-sm:pb-2 shrink-0" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 28px)' }}>
                     <DialogTitle>Manage Categories</DialogTitle>
                 </DialogHeader>
 

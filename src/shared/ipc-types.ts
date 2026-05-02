@@ -95,6 +95,10 @@ export const IpcChannels = {
   RevealPassword: 'reveal-password',
   TouchPassword: 'touch-password',
   TogglePinPassword: 'toggle-pin-password',
+
+  // Clipboard (Electron only — uses native clipboard module)
+  ClipboardWrite: 'clipboard-write',
+  ClipboardClearIfMatch: 'clipboard-clear-if-match',
 } as const;
 
 /** Union of all IPC channel name strings */
@@ -183,4 +187,8 @@ export interface IpcHandlerMap {
   [IpcChannels.RevealPassword]: (id: number) => string;
   [IpcChannels.TouchPassword]: (id: number) => unknown;
   [IpcChannels.TogglePinPassword]: (args: { id: number; isPinned: number }) => unknown;
+
+  // Clipboard
+  [IpcChannels.ClipboardWrite]: (text: string) => boolean;
+  [IpcChannels.ClipboardClearIfMatch]: (text: string) => boolean;
 }

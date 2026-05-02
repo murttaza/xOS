@@ -127,10 +127,23 @@ export const createTaskSlice: StateCreator<AppState, [], [], TaskSlice> = (set, 
 
     deleteTask: async (id) => {
         const state = get();
+        const task = state.tasks.find(t => t.id === id);
+
         // Stop timer if running for this task
         if (state.activeTimers[id] !== undefined) {
             await state.stopTaskTimer(id);
         }
+
+        // If trashing an incomplete spawned repeating task, reset that streak.
+        // Completed instances should leave the streak alone.
+        if (task && !task.isComplete && task.repeatingTaskId) {
+            const rt = state.repeatingTasks.find(r => r.id === task.repeatingTaskId);
+            if (rt && (rt.streak ?? 0) > 0) {
+                await api.updateRepeatingTask({ ...rt, streak: 0 });
+                get().fetchRepeatingTasks();
+            }
+        }
+
         await api.deleteTask(id);
         get().fetchTasks();
     },

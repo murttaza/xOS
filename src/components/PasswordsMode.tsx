@@ -4,6 +4,7 @@ import { useStore } from '../store';
 import { PasswordEntry } from '../types';
 import { cn } from '../lib/utils';
 import { isElectron } from '../lib/platform';
+import { writeClipboard, clearClipboardIfMatch } from '../lib/clipboard';
 import {
     Shield, Search, Plus, Pin, PinOff, Copy, Eye, EyeOff, Trash2,
     ExternalLink, KeyRound, User, Link as LinkIcon, StickyNote, RefreshCw,
@@ -144,12 +145,8 @@ export function PasswordsMode() {
     };
 
     const copyText = async (text: string, flashKey: string) => {
-        try {
-            await navigator.clipboard.writeText(text);
-            flash(flashKey);
-        } catch (err) {
-            console.error('Copy failed:', err);
-        }
+        const ok = await writeClipboard(text);
+        if (ok) flash(flashKey);
     };
 
     const handleCopyPassword = async (p: PasswordEntry) => {
@@ -159,11 +156,7 @@ export function PasswordsMode() {
             await copyText(pt, `pw-${p.id}`);
             touchPassword(p.id);
             // Auto-clear clipboard after 30s (best-effort)
-            setTimeout(() => {
-                navigator.clipboard.readText().then(c => {
-                    if (c === pt) navigator.clipboard.writeText('').catch(() => {});
-                }).catch(() => {});
-            }, 30000);
+            setTimeout(() => { clearClipboardIfMatch(pt); }, 30000);
         }
     };
 

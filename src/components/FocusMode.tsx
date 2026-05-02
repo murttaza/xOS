@@ -146,7 +146,7 @@ export function FocusMode() {
             )}
         >
             {/* Top Toolbar */}
-            <div className="absolute left-0 right-0 px-4 sm:px-6 flex justify-between items-start z-50 no-drag pointer-events-none" style={{ top: 'max(env(safe-area-inset-top, 0px), 16px)' }}>
+            <div className="absolute left-0 right-0 px-4 sm:px-6 flex justify-between items-start z-50 no-drag pointer-events-none" style={{ top: 'max(env(safe-area-inset-top, 0px), 28px)' }}>
                 {/* Left: Exit button */}
                 <div className="pointer-events-auto bg-black/5 dark:bg-black/20 backdrop-blur-md border border-black/5 dark:border-white/5 rounded-full p-1.5 flex items-center gap-1 hover:bg-black/10 dark:hover:bg-black/40 transition-all duration-150 shadow-sm">
                     <Button

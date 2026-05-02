@@ -11,8 +11,9 @@ import { Task, RepeatingTask } from "@/types";
 import { Accordion } from "@/components/ui/accordion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RepeatingTaskDialog } from "./RepeatingTaskDialog";
-import { getLocalDateString } from "@/lib/utils";
+import { getLocalDateString, cn } from "@/lib/utils";
 import { endOfWeek } from "date-fns";
+import { api } from "@/api";
 
 import { TaskSection } from "./tasks/TaskSection";
 import { RepeatingTasksPage } from "./tasks/RepeatingTasksPage";
@@ -41,6 +42,9 @@ export function TaskBoard() {
 
     const [untimedTaskToComplete, setUntimedTaskToComplete] = useState<Task | null>(null);
     const [manualDuration, setManualDuration] = useState("30");
+    const [existingLoggedMinutes, setExistingLoggedMinutes] = useState(0);
+    const [addAdditionalTime, setAddAdditionalTime] = useState(true);
+    const [defaultNewTaskDate, setDefaultNewTaskDate] = useState<string | undefined>(undefined);
 
     const [showRepeating, setShowRepeating] = useState(false);
 
@@ -50,9 +54,16 @@ export function TaskBoard() {
             setIsRepeatingDialogOpen(true);
         } else {
             setEditingTask(null);
+            setDefaultNewTaskDate(undefined);
             setIsDialogOpen(true);
         }
     }, [showRepeating]);
+
+    const handleAddTaskWithDate = useCallback((dueDate: string) => {
+        setEditingTask(null);
+        setDefaultNewTaskDate(dueDate);
+        setIsDialogOpen(true);
+    }, []);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -100,8 +111,20 @@ export function TaskBoard() {
     const handleComplete = useCallback(async (task: Task) => {
         // Check for untimed task
         if (task.labels?.includes("untimed")) {
+            // Check if any time has already been logged for this task
+            let loggedMinutes = 0;
+            if (task.id) {
+                try {
+                    const sessions = await api.getSessionsByTask(task.id);
+                    loggedMinutes = sessions.reduce((acc: number, s: any) => acc + (s.duration_minutes || 0), 0);
+                } catch (e) {
+                    console.error("Failed to fetch sessions for untimed task", e);
+                }
+            }
+            setExistingLoggedMinutes(loggedMinutes);
+            setAddAdditionalTime(loggedMinutes === 0); // default: no extra time if some already logged
+            setManualDuration(loggedMinutes > 0 ? "0" : "30");
             setUntimedTaskToComplete(task);
-            setManualDuration("30");
             return;
         }
 
@@ -114,8 +137,9 @@ export function TaskBoard() {
     const confirmUntimedCompletion = async () => {
         if (!untimedTaskToComplete) return;
 
-        const duration = parseInt(manualDuration);
-        if (!isNaN(duration) && duration > 0) {
+        const shouldAdd = existingLoggedMinutes === 0 || addAdditionalTime;
+        const duration = shouldAdd ? parseInt(manualDuration) : 0;
+        if (shouldAdd && !isNaN(duration) && duration > 0) {
             // Add session
             const now = new Date();
             const startTime = new Date(now.getTime() - duration * 60000).toISOString();
@@ -294,6 +318,8 @@ export function TaskBoard() {
                                         onEdit={handleEditClick}
                                         onDelete={deleteTask}
                                         onComplete={handleComplete}
+                                        onAdd={() => handleAddTaskWithDate(getLocalDateString(new Date()))}
+                                        addLabel="Add task for today"
                                     />
 
                                     <TaskSection
@@ -362,6 +388,7 @@ export function TaskBoard() {
                 onOpenChange={setIsDialogOpen}
                 onSubmit={handleSubmit}
                 initialTask={editingTask}
+                defaultDueDate={defaultNewTaskDate}
             />
 
             <RepeatingTaskDialog
@@ -450,27 +477,71 @@ export function TaskBoard() {
             {untimedTaskToComplete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
                     <div className="w-full max-w-sm bg-popover/95 border border-border rounded-xl shadow-2xl p-6">
-                        <h3 className="text-lg font-light text-foreground mb-2">Duration Worked</h3>
-                        <p className="text-xs text-muted-foreground mb-4">
-                            How many minutes did you work on "{untimedTaskToComplete.title}"?
-                        </p>
+                        <h3 className="text-lg font-light text-foreground mb-2">
+                            {existingLoggedMinutes > 0 ? 'Add additional time?' : 'Duration Worked'}
+                        </h3>
+                        {existingLoggedMinutes > 0 ? (
+                            <p className="text-xs text-muted-foreground mb-4">
+                                You've already logged{' '}
+                                <span className="text-foreground font-medium">
+                                    {Math.floor(existingLoggedMinutes / 60)}h {existingLoggedMinutes % 60}m
+                                </span>{' '}
+                                on "{untimedTaskToComplete.title}". Add more time before completing?
+                            </p>
+                        ) : (
+                            <p className="text-xs text-muted-foreground mb-4">
+                                How many minutes did you work on "{untimedTaskToComplete.title}"?
+                            </p>
+                        )}
 
                         <div className="space-y-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="duration" className="text-xs uppercase tracking-wider text-muted-foreground">Minutes</Label>
-                                <Input
-                                    id="duration"
-                                    type="number"
-                                    min="0"
-                                    value={manualDuration}
-                                    onChange={(e) => setManualDuration(e.target.value)}
-                                    className="bg-muted/50 border-border text-foreground"
-                                    autoFocus
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') confirmUntimedCompletion();
-                                    }}
-                                />
-                            </div>
+                            {existingLoggedMinutes > 0 && (
+                                <div className="flex gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAddAdditionalTime(false)}
+                                        className={cn(
+                                            "flex-1 h-9 rounded-md text-sm font-medium transition-all border",
+                                            !addAdditionalTime
+                                                ? "bg-primary text-primary-foreground border-transparent"
+                                                : "bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+                                        )}
+                                    >
+                                        No, just complete
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setAddAdditionalTime(true); setManualDuration("30"); }}
+                                        className={cn(
+                                            "flex-1 h-9 rounded-md text-sm font-medium transition-all border",
+                                            addAdditionalTime
+                                                ? "bg-primary text-primary-foreground border-transparent"
+                                                : "bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+                                        )}
+                                    >
+                                        Add more time
+                                    </button>
+                                </div>
+                            )}
+                            {(existingLoggedMinutes === 0 || addAdditionalTime) && (
+                                <div className="grid gap-2">
+                                    <Label htmlFor="duration" className="text-xs uppercase tracking-wider text-muted-foreground">
+                                        {existingLoggedMinutes > 0 ? 'Additional Minutes' : 'Minutes'}
+                                    </Label>
+                                    <Input
+                                        id="duration"
+                                        type="number"
+                                        min="0"
+                                        value={manualDuration}
+                                        onChange={(e) => setManualDuration(e.target.value)}
+                                        className="bg-muted/50 border-border text-foreground"
+                                        autoFocus
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') confirmUntimedCompletion();
+                                        }}
+                                    />
+                                </div>
+                            )}
                             <div className="flex justify-end gap-2">
                                 <Button variant="ghost" onClick={() => setUntimedTaskToComplete(null)} className="text-muted-foreground hover:text-foreground hover:bg-muted">
                                     Cancel

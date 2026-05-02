@@ -18,11 +18,12 @@ interface TaskDialogProps {
     onOpenChange: (open: boolean) => void;
     onSubmit: (task: Omit<Task, "id"> | Task) => void;
     initialTask?: Task | null;
+    defaultDueDate?: string;
 }
 
 import { useStore } from "@/store";
 
-export function TaskDialog({ open, onOpenChange, onSubmit, initialTask }: TaskDialogProps) {
+export function TaskDialog({ open, onOpenChange, onSubmit, initialTask, defaultDueDate }: TaskDialogProps) {
     const stats = useStore(state => state.stats);
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
@@ -69,13 +70,24 @@ export function TaskDialog({ open, onOpenChange, onSubmit, initialTask }: TaskDi
             setDifficulty(1);
             setStatTarget(["Fitness"]);
             setSubtasks([]);
-            setDate(undefined);
+            // Pre-fill date if defaultDueDate provided (e.g. from "today" section add button)
+            if (defaultDueDate) {
+                const parts = defaultDueDate.split('-');
+                if (parts.length === 3) {
+                    const parsedDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+                    setDate(isNaN(parsedDate.getTime()) ? undefined : parsedDate);
+                } else {
+                    setDate(undefined);
+                }
+            } else {
+                setDate(undefined);
+            }
             setIsUntimed(false);
             setExistingLabels([]);
             setNoteId(null);
             setTime("");
         }
-    }, [initialTask, open]);
+    }, [initialTask, open, defaultDueDate]);
 
     const handleSubmit = () => {
         // Construct labels: keep existing ones but filter out "untimed", then add it back if isUntimed is true
