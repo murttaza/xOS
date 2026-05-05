@@ -215,6 +215,8 @@ export const createFitnessSlice: StateCreator<AppState, [], [], FitnessSlice> = 
                 await api.updateUserProgram(p.id, { status: 'paused' });
             }
             await api.startProgram(programId, startedOn);
+            // Drop pointers tied to the previous run before refetching
+            set({ currentSession: null, selectedSessionId: null, exerciseLogs: [] });
             await get().fetchFitnessData();
         } catch (err) {
             console.error('Failed to start program:', err);

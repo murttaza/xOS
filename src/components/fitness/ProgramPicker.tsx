@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../../store';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Dumbbell, Play, Plus, X, ChevronRight, Trash2, ArrowLeft, Check } from 'lucide-react';
+import { Dumbbell, Play, Plus, X, ChevronRight, Trash2, ArrowLeft, Check, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
 
@@ -77,6 +77,7 @@ export function ProgramPicker() {
     const [showCreate, setShowCreate] = useState(false);
     const [step, setStep] = useState<'preset' | 'customize'>('preset');
     const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+    const [confirmRestart, setConfirmRestart] = useState<string | null>(null);
     const [renamingId, setRenamingId] = useState<string | null>(null);
     const [renameValue, setRenameValue] = useState('');
 
@@ -101,6 +102,15 @@ export function ProgramPicker() {
         setStarting(false);
         if (hasActiveProgram) setShowProgramPicker(false);
     };
+
+    const mondayLabel = (() => {
+        const today = new Date();
+        const day = today.getDay();
+        const diff = day === 0 ? 6 : day - 1;
+        const monday = new Date(today);
+        monday.setDate(today.getDate() - diff);
+        return monday.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+    })();
 
     const handleResume = async (userProgramId: string) => {
         await updateProgramStatus(userProgramId, 'active');
@@ -466,6 +476,43 @@ export function ProgramPicker() {
                                         )}
                                     </AnimatePresence>
 
+                                    <AnimatePresence>
+                                        {confirmRestart === program.id && (
+                                            <motion.div
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                exit={{ opacity: 0, height: 0 }}
+                                                className="space-y-2 bg-muted/40 rounded-lg px-3 py-2"
+                                            >
+                                                <p className="text-xs text-muted-foreground">
+                                                    Restart from Week 1, starting {mondayLabel}? Your current progress will be saved as a paused run you can resume anytime.
+                                                </p>
+                                                <div className="flex items-center gap-2 justify-end">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        className="h-7 text-xs px-2"
+                                                        onClick={() => setConfirmRestart(null)}
+                                                        disabled={starting}
+                                                    >
+                                                        Cancel
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        className="h-7 text-xs px-3"
+                                                        onClick={async () => {
+                                                            await handleStart(program.id);
+                                                            setConfirmRestart(null);
+                                                        }}
+                                                        disabled={starting}
+                                                    >
+                                                        {starting ? 'Restarting…' : 'Restart'}
+                                                    </Button>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+
                                     {!isActive && !isDeleting && (
                                         <Button
                                             className="w-full"
@@ -474,6 +521,18 @@ export function ProgramPicker() {
                                         >
                                             <Play className="h-4 w-4 mr-2" />
                                             {isActive ? 'Current Program' : 'Start Program'}
+                                        </Button>
+                                    )}
+
+                                    {isActive && !isDeleting && !isRenaming && confirmRestart !== program.id && (
+                                        <Button
+                                            className="w-full"
+                                            variant="outline"
+                                            onClick={() => setConfirmRestart(program.id)}
+                                            disabled={starting}
+                                        >
+                                            <RotateCcw className="h-4 w-4 mr-2" />
+                                            Restart Program
                                         </Button>
                                     )}
                                 </div>
