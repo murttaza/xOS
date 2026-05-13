@@ -14,8 +14,11 @@ const PEAK_WEIGHT = 180;
 
 function parseTopSet(val: string | null): number | null {
     if (!val) return null;
-    const match = val.match(/(\d+)/);
-    return match ? parseInt(match[1], 10) : null;
+    // Capture leading weight as a float so "275.5x5" doesn't round down to 275.
+    const match = val.match(/^\s*([\d.]+)/);
+    if (!match) return null;
+    const n = parseFloat(match[1]);
+    return Number.isFinite(n) ? n : null;
 }
 
 export function ProgressTracker() {

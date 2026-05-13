@@ -5,6 +5,7 @@ import { Subject, Note } from '../types';
 import { Book, Trash2, ArrowLeft, Zap, Maximize2, Minimize2, PanelLeftClose, PanelLeft } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { showConfirm } from './ui/confirm-dialog';
 import { cn } from '../lib/utils';
 import { ModeHeader } from './ModeHeader';
 
@@ -137,14 +138,26 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
 
     const handleDeleteNote = async (e: React.MouseEvent, id: number) => {
         e.stopPropagation();
-        if (confirm('Are you sure you want to delete this note?')) {
+        const ok = await showConfirm({
+            title: 'Delete note',
+            message: 'Are you sure you want to delete this note?',
+            confirmLabel: 'Delete',
+            destructive: true,
+        });
+        if (ok) {
             await deleteNote(id);
             if (selectedNoteId === id) setSelectedNoteId(null);
         }
     };
 
     const handleDeleteSubject = async () => {
-        if (confirm(`Delete entire notebook "${subject.title}" and all its notes?`)) {
+        const ok = await showConfirm({
+            title: 'Delete notebook',
+            message: `Delete entire notebook "${subject.title}" and all its notes?`,
+            confirmLabel: 'Delete',
+            destructive: true,
+        });
+        if (ok) {
             if (subject.id) await deleteSubject(subject.id);
             onClose();
         }
@@ -307,7 +320,13 @@ export const NotesMode = () => {
     };
 
     const handleDeleteLibrary = async () => {
-        if (confirm("Are you sure you want to delete this entire library? All books and notes within it will be lost.")) {
+        const ok = await showConfirm({
+            title: 'Delete library',
+            message: 'Are you sure you want to delete this entire library? All books and notes within it will be lost.',
+            confirmLabel: 'Delete library',
+            destructive: true,
+        });
+        if (ok) {
             const libraryOffset = currentLibraryIndex * TOTAL_SPINES;
             // Identify subjects in this library
             const subjectsToDelete = subjects.filter(s => s.orderIndex >= libraryOffset && s.orderIndex < libraryOffset + TOTAL_SPINES);

@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { showConfirm } from '../ui/confirm-dialog';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 
 interface CategoryManagerProps {
@@ -90,8 +91,14 @@ export function CategoryManager({ open, onOpenChange, categories, onCreate, onUp
         }
     };
 
-    const handleDelete = (id: number) => {
-        if (confirm('Delete this category and all its transactions?')) {
+    const handleDelete = async (id: number) => {
+        const ok = await showConfirm({
+            title: 'Delete category',
+            message: 'Delete this category and all its transactions?',
+            confirmLabel: 'Delete',
+            destructive: true,
+        });
+        if (ok) {
             onDelete(id);
             if (editingCategory?.id === id) {
                 setEditingCategory(null);

@@ -196,7 +196,7 @@ export function CalendarBlock() {
                     <span className="text-base font-bold tracking-tight shrink-0">{format(currentMonth, "MMMM yyyy")}</span>
                     <ChevronDown className={`h-4 w-4 lg:hidden transition-transform shrink-0 ${isMobileExpanded ? 'rotate-180' : ''}`} />
                     {!isMobileExpanded && (
-                        <span className="text-[11px] text-muted-foreground/50 font-normal truncate lg:hidden">
+                        <span className="text-[11px] text-muted-foreground/80 font-normal truncate lg:hidden">
                             Today {format(new Date(), "EEE d")}{daySessions.length > 0 ? ` · ${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m` : ''}
                         </span>
                     )}

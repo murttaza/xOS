@@ -35,13 +35,28 @@ export function clearOfflineQueue() {
     offlineQueue.length = 0;
 }
 
-if (typeof window !== 'undefined') {
-    window.addEventListener('online', async () => {
+// Track the listener so we can detach it on hot-reload (the module is re-evaluated
+// in dev) and on logout. Also logs failed replays instead of silently swallowing.
+let _onlineListener: (() => void) | null = null;
+
+function flushQueue() {
+    void (async () => {
         while (offlineQueue.length > 0) {
             const op = offlineQueue.shift()!;
-            try { await op(); } catch { /* best-effort */ }
+            try {
+                await op();
+            } catch (err) {
+                console.error('[offline-queue] replay failed:', err);
+            }
         }
-    });
+    })();
+}
+
+if (typeof window !== 'undefined') {
+    // Detach a prior listener (HMR re-evaluates this module) before attaching a new one.
+    if (_onlineListener) window.removeEventListener('online', _onlineListener);
+    _onlineListener = flushQueue;
+    window.addEventListener('online', _onlineListener);
 }
 
 export const supabaseBackend: ApiBackend = {

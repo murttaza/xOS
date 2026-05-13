@@ -48,6 +48,10 @@ function createWindow() {
     minHeight: 700,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
+      // Defense-in-depth: explicit security flags even though Electron 30 defaults are already secure.
+      contextIsolation: true,
+      nodeIntegration: false,
+      webSecurity: true,
       // backgroundThrottling intentionally left as default (true)
       // This allows Chromium to throttle the renderer when minimized/hidden,
       // drastically reducing CPU usage. Timers are kept alive via main process IPC.
@@ -210,12 +214,29 @@ app.whenReady().then(() => {
     togglePinPassword: db.prepare('UPDATE passwords SET isPinned = ? WHERE id = ?'),
   };
 
+  // Wraps ipcMain.handle with try/catch so SQLite/runtime errors surface as
+  // proper serializable Error objects in the renderer (avoiding raw exception
+  // leaks and silent white-screens). The `any[]` rest param matches the
+  // permissiveness of ipcMain.handle so existing handler signatures don't change.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const safeHandle = (channel: string, fn: (event: Electron.IpcMainInvokeEvent, ...args: any[]) => unknown) => {
+    ipcMain.handle(channel, async (event, ...args) => {
+      try {
+        return await fn(event, ...args);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[IPC ${channel}]`, err);
+        throw new Error(msg);
+      }
+    });
+  };
+
   // IPC Handlers (using cached prepared statements)
-  ipcMain.handle(IpcChannels.GetTasks, () => {
+  safeHandle(IpcChannels.GetTasks, () => {
     return stmts.getTasks.all();
   });
 
-  ipcMain.handle(IpcChannels.AddTask, (_, task) => {
+  safeHandle(IpcChannels.AddTask, (_, task) => {
     return stmts.addTask.run({
       ...task,
       statTarget: JSON.stringify(task.statTarget),
@@ -227,7 +248,7 @@ app.whenReady().then(() => {
     });
   });
 
-  ipcMain.handle(IpcChannels.UpdateTask, (_, task) => {
+  safeHandle(IpcChannels.UpdateTask, (_, task) => {
     return stmts.updateTask.run({
       ...task,
       completedAt: task.completedAt || null,
@@ -239,12 +260,12 @@ app.whenReady().then(() => {
     });
   });
 
-  ipcMain.handle(IpcChannels.DeleteTask, (_, id) => {
+  safeHandle(IpcChannels.DeleteTask, (_, id) => {
     return stmts.deleteTask.run(id);
   });
 
   // Batch insert multiple tasks in a single transaction
-  ipcMain.handle(IpcChannels.BatchAddTasks, (_, tasks: any[]) => {
+  safeHandle(IpcChannels.BatchAddTasks, (_, tasks: any[]) => {
     const batchInsert = db.transaction((taskList: any[]) => {
       const results = [];
       for (const task of taskList) {
@@ -264,39 +285,39 @@ app.whenReady().then(() => {
   });
 
   // Sessions
-  ipcMain.handle(IpcChannels.AddSession, (_, session) => {
+  safeHandle(IpcChannels.AddSession, (_, session) => {
     return stmts.addSession.run(session);
   });
 
-  ipcMain.handle(IpcChannels.GetSessionsByDate, (_, date) => {
+  safeHandle(IpcChannels.GetSessionsByDate, (_, date) => {
     return stmts.getSessionsByDate.all(date);
   });
 
-  ipcMain.handle(IpcChannels.GetSessionsRange, (_, { startDate, endDate }) => {
+  safeHandle(IpcChannels.GetSessionsRange, (_, { startDate, endDate }) => {
     return stmts.getSessionsRange.all(startDate, endDate);
   });
 
-  ipcMain.handle(IpcChannels.GetSessionsByTask, (_, taskId) => {
+  safeHandle(IpcChannels.GetSessionsByTask, (_, taskId) => {
     return stmts.getSessionsByTask.all(taskId);
   });
   // Stats
-  ipcMain.handle(IpcChannels.GetStats, () => {
+  safeHandle(IpcChannels.GetStats, () => {
     return stmts.getStats.all();
   });
 
-  ipcMain.handle(IpcChannels.UpdateStat, (_, { statName, currentXP, currentLevel }) => {
+  safeHandle(IpcChannels.UpdateStat, (_, { statName, currentXP, currentLevel }) => {
     return stmts.updateStat.run(currentXP, currentLevel, statName);
   });
 
-  ipcMain.handle(IpcChannels.AddStat, (_, statName) => {
+  safeHandle(IpcChannels.AddStat, (_, statName) => {
     return stmts.addStat.run(statName);
   });
 
-  ipcMain.handle(IpcChannels.DeleteStat, (_, statName) => {
+  safeHandle(IpcChannels.DeleteStat, (_, statName) => {
     return stmts.deleteStat.run(statName);
   });
 
-  ipcMain.handle(IpcChannels.RenameStat, (_, { oldName, newName }) => {
+  safeHandle(IpcChannels.RenameStat, (_, { oldName, newName }) => {
     const transaction = db.transaction(() => {
       stmts.renameStatUpdate.run(newName, oldName);
 
@@ -320,15 +341,15 @@ app.whenReady().then(() => {
   });
 
   // Daily Log
-  ipcMain.handle(IpcChannels.GetDailyLog, (_, date) => {
+  safeHandle(IpcChannels.GetDailyLog, (_, date) => {
     return stmts.getDailyLog.get(date);
   });
 
-  ipcMain.handle(IpcChannels.SaveDailyLog, (_, log) => {
+  safeHandle(IpcChannels.SaveDailyLog, (_, log) => {
     return stmts.saveDailyLog.run(log);
   });
 
-  ipcMain.handle(IpcChannels.SaveJournalEntry, (_, { date, entry }) => {
+  safeHandle(IpcChannels.SaveJournalEntry, (_, { date, entry }) => {
     const row = stmts.getDailyLogForJournal.get(date);
     if (row) {
       return stmts.updateJournalEntry.run(entry, date);
@@ -338,28 +359,28 @@ app.whenReady().then(() => {
   });
 
   // Dev Items
-  ipcMain.handle(IpcChannels.GetDevItems, () => {
+  safeHandle(IpcChannels.GetDevItems, () => {
     return stmts.getDevItems.all();
   });
 
-  ipcMain.handle(IpcChannels.AddDevItem, (_, text) => {
+  safeHandle(IpcChannels.AddDevItem, (_, text) => {
     return stmts.addDevItem.run(text);
   });
 
-  ipcMain.handle(IpcChannels.ToggleDevItem, (_, { id, isComplete }) => {
+  safeHandle(IpcChannels.ToggleDevItem, (_, { id, isComplete }) => {
     return stmts.toggleDevItem.run(isComplete, id);
   });
 
-  ipcMain.handle(IpcChannels.DeleteDevItem, (_, id) => {
+  safeHandle(IpcChannels.DeleteDevItem, (_, id) => {
     return stmts.deleteDevItem.run(id);
   });
 
   // Repeating Tasks
-  ipcMain.handle(IpcChannels.GetRepeatingTasks, () => {
+  safeHandle(IpcChannels.GetRepeatingTasks, () => {
     return stmts.getRepeatingTasks.all();
   });
 
-  ipcMain.handle(IpcChannels.AddRepeatingTask, (_, task) => {
+  safeHandle(IpcChannels.AddRepeatingTask, (_, task) => {
     return stmts.addRepeatingTask.run({
       ...task,
       lastGeneratedDate: task.lastGeneratedDate || null,
@@ -371,7 +392,7 @@ app.whenReady().then(() => {
     });
   });
 
-  ipcMain.handle(IpcChannels.UpdateRepeatingTask, (_, task) => {
+  safeHandle(IpcChannels.UpdateRepeatingTask, (_, task) => {
     return stmts.updateRepeatingTask.run({
       ...task,
       lastGeneratedDate: task.lastGeneratedDate || null,
@@ -383,35 +404,35 @@ app.whenReady().then(() => {
     });
   });
 
-  ipcMain.handle(IpcChannels.DeleteRepeatingTask, (_, id) => {
+  safeHandle(IpcChannels.DeleteRepeatingTask, (_, id) => {
     return stmts.deleteRepeatingTask.run(id);
   });
 
   // Notes Mode
-  ipcMain.handle(IpcChannels.GetSubjects, () => {
+  safeHandle(IpcChannels.GetSubjects, () => {
     return stmts.getSubjects.all();
   });
 
-  ipcMain.handle(IpcChannels.CreateSubject, (_, subject) => {
+  safeHandle(IpcChannels.CreateSubject, (_, subject) => {
     return stmts.createSubject.run({
       ...subject,
       createdAt: new Date().toISOString()
     });
   });
 
-  ipcMain.handle(IpcChannels.UpdateSubject, (_, subject) => {
+  safeHandle(IpcChannels.UpdateSubject, (_, subject) => {
     return stmts.updateSubject.run(subject);
   });
 
-  ipcMain.handle(IpcChannels.DeleteSubject, (_, id) => {
+  safeHandle(IpcChannels.DeleteSubject, (_, id) => {
     return stmts.deleteSubject.run(id);
   });
 
-  ipcMain.handle(IpcChannels.GetNotes, (_, subjectId) => {
+  safeHandle(IpcChannels.GetNotes, (_, subjectId) => {
     return stmts.getNotes.all(subjectId);
   });
 
-  ipcMain.handle(IpcChannels.CreateNote, (_, note) => {
+  safeHandle(IpcChannels.CreateNote, (_, note) => {
     const now = new Date().toISOString();
     return stmts.createNote.run({
       ...note,
@@ -420,32 +441,32 @@ app.whenReady().then(() => {
     });
   });
 
-  ipcMain.handle(IpcChannels.GetNote, (_, id) => {
+  safeHandle(IpcChannels.GetNote, (_, id) => {
     return stmts.getNote.get(id);
   });
 
-  ipcMain.handle(IpcChannels.UpdateNote, (_, note) => {
+  safeHandle(IpcChannels.UpdateNote, (_, note) => {
     return stmts.updateNote.run({
       ...note,
       updatedAt: new Date().toISOString()
     });
   });
 
-  ipcMain.handle(IpcChannels.DeleteNote, (_, id) => {
+  safeHandle(IpcChannels.DeleteNote, (_, id) => {
     return stmts.deleteNote.run(id);
   });
 
-  ipcMain.handle(IpcChannels.SearchNotes, (_, query) => {
+  safeHandle(IpcChannels.SearchNotes, (_, query) => {
     const likeQuery = `%${query}%`;
     return stmts.searchNotes.all(likeQuery, likeQuery);
   });
 
   // Streaks
-  ipcMain.handle(IpcChannels.GetStreaks, () => {
+  safeHandle(IpcChannels.GetStreaks, () => {
     return stmts.getStreaks.all();
   });
 
-  ipcMain.handle(IpcChannels.CreateStreak, (_, streak) => {
+  safeHandle(IpcChannels.CreateStreak, (_, streak) => {
     const now = new Date().toISOString();
     return stmts.createStreak.run({
       ...streak,
@@ -454,16 +475,16 @@ app.whenReady().then(() => {
     });
   });
 
-  ipcMain.handle(IpcChannels.UpdateStreak, (_, streak) => {
+  safeHandle(IpcChannels.UpdateStreak, (_, streak) => {
     return stmts.updateStreak.run(streak);
   });
 
-  ipcMain.handle(IpcChannels.DeleteStreak, (_, id) => {
+  safeHandle(IpcChannels.DeleteStreak, (_, id) => {
     return stmts.deleteStreak.run(id);
   });
 
   // Data Export - dumps all tables into a single JSON object
-  ipcMain.handle(IpcChannels.ExportAllData, () => {
+  safeHandle(IpcChannels.ExportAllData, () => {
     return {
       tasks: db.prepare('SELECT * FROM tasks').all(),
       sessions: db.prepare('SELECT * FROM sessions').all(),
@@ -490,11 +511,11 @@ app.whenReady().then(() => {
     return safeStorage.decryptString(Buffer.from(cipherB64, 'base64'));
   };
 
-  ipcMain.handle(IpcChannels.GetPasswords, () => {
+  safeHandle(IpcChannels.GetPasswords, () => {
     return stmts.getPasswords.all();
   });
 
-  ipcMain.handle(IpcChannels.CreatePassword, (_, { entry, plaintext }: { entry: any; plaintext: string }) => {
+  safeHandle(IpcChannels.CreatePassword, (_, { entry, plaintext }: { entry: any; plaintext: string }) => {
     const now = new Date().toISOString();
     const result = stmts.createPassword.run({
       name: entry.name,
@@ -512,7 +533,7 @@ app.whenReady().then(() => {
     return result.lastInsertRowid;
   });
 
-  ipcMain.handle(IpcChannels.UpdatePassword, (_, { entry, plaintext }: { entry: any; plaintext?: string }) => {
+  safeHandle(IpcChannels.UpdatePassword, (_, { entry, plaintext }: { entry: any; plaintext?: string }) => {
     const now = new Date().toISOString();
     if (typeof plaintext === 'string' && plaintext.length > 0) {
       return stmts.updatePasswordWithCipher.run({
@@ -539,11 +560,11 @@ app.whenReady().then(() => {
     });
   });
 
-  ipcMain.handle(IpcChannels.DeletePassword, (_, id: number) => {
+  safeHandle(IpcChannels.DeletePassword, (_, id: number) => {
     return stmts.deletePassword.run(id);
   });
 
-  ipcMain.handle(IpcChannels.RevealPassword, (_, id: number) => {
+  safeHandle(IpcChannels.RevealPassword, (_, id: number) => {
     const row = stmts.getPasswordCipher.get(id) as { passwordEnc: string } | undefined;
     if (!row) return '';
     try {
@@ -554,16 +575,16 @@ app.whenReady().then(() => {
     }
   });
 
-  ipcMain.handle(IpcChannels.TouchPassword, (_, id: number) => {
+  safeHandle(IpcChannels.TouchPassword, (_, id: number) => {
     return stmts.touchPassword.run(new Date().toISOString(), id);
   });
 
-  ipcMain.handle(IpcChannels.TogglePinPassword, (_, { id, isPinned }: { id: number; isPinned: number }) => {
+  safeHandle(IpcChannels.TogglePinPassword, (_, { id, isPinned }: { id: number; isPinned: number }) => {
     return stmts.togglePinPassword.run(isPinned, id);
   });
 
   // ── Clipboard (uses Electron's native clipboard module — more reliable than navigator.clipboard) ──
-  ipcMain.handle(IpcChannels.ClipboardWrite, (_, text: string) => {
+  safeHandle(IpcChannels.ClipboardWrite, (_, text: string) => {
     try {
       clipboard.writeText(text ?? '');
       return true;
@@ -573,7 +594,7 @@ app.whenReady().then(() => {
     }
   });
 
-  ipcMain.handle(IpcChannels.ClipboardClearIfMatch, (_, text: string) => {
+  safeHandle(IpcChannels.ClipboardClearIfMatch, (_, text: string) => {
     try {
       const current = clipboard.readText();
       if (current === text) {
@@ -742,20 +763,20 @@ app.whenReady().then(() => {
   });
 
   // ── Auto-launch IPC ───────────────────────────────────────────
-  ipcMain.handle(IpcChannels.SetAutoLaunch, (_, enabled: boolean) => {
+  safeHandle(IpcChannels.SetAutoLaunch, (_, enabled: boolean) => {
     setAutoLaunch(enabled);
   });
 
-  ipcMain.handle(IpcChannels.GetAutoLaunch, () => {
+  safeHandle(IpcChannels.GetAutoLaunch, () => {
     return getAutoLaunch();
   });
 
   // ── Notification prefs IPC ────────────────────────────────────
-  ipcMain.handle(IpcChannels.SetNotificationPrefs, (_, prefs) => {
+  safeHandle(IpcChannels.SetNotificationPrefs, (_, prefs) => {
     savePrefs(prefs);
   });
 
-  ipcMain.handle(IpcChannels.GetNotificationPrefs, () => {
+  safeHandle(IpcChannels.GetNotificationPrefs, () => {
     return getPrefs();
   });
 
@@ -821,15 +842,19 @@ app.whenReady().then(() => {
   );
 
   // Auto-update: check for updates via GitHub Releases
-  try {
-    import('electron-updater').then(({ autoUpdater }) => {
+  import('electron-updater')
+    .then(({ autoUpdater }) => {
       autoUpdater.autoDownload = true;
       autoUpdater.autoInstallOnAppQuit = true;
-      autoUpdater.checkForUpdatesAndNotify();
+      autoUpdater.on('error', (err) => console.error('[auto-update]', err));
+      autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+        console.warn('[auto-update] checkForUpdatesAndNotify rejected:', err?.message ?? err);
+      });
+    })
+    .catch((err) => {
+      // electron-updater may not be available in dev mode — log instead of swallowing.
+      console.warn('[auto-update] electron-updater unavailable:', err?.message ?? err);
     });
-  } catch {
-    // electron-updater may not be available in dev mode
-  }
 })
 
 app.on('before-quit', () => {

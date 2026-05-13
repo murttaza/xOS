@@ -54,7 +54,10 @@ export function WidgetApp() {
       const maxStreak = streaks?.reduce((max, s) => Math.max(max, s.currentStreak || 0), 0) || 0
 
       setState({ taskTitle, timerSeconds, totalXP, maxStreak, hasTimer })
-    } catch { /* Supabase might be unreachable */ }
+    } catch (err) {
+      // Don't toast — widget is silent; just log so it's debuggable.
+      console.warn('[widget] fetch failed:', err)
+    }
   }
 
   // Initial fetch + periodic refresh

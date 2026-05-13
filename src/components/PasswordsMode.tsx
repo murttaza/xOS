@@ -5,6 +5,7 @@ import { PasswordEntry } from '../types';
 import { cn } from '../lib/utils';
 import { isElectron } from '../lib/platform';
 import { writeClipboard, clearClipboardIfMatch } from '../lib/clipboard';
+import { showConfirm } from './ui/confirm-dialog';
 import {
     Shield, Search, Plus, Pin, PinOff, Copy, Eye, EyeOff, Trash2,
     ExternalLink, KeyRound, User, Link as LinkIcon, StickyNote, RefreshCw,
@@ -55,14 +56,11 @@ function strength(pw: string): { label: string; score: number; color: string } {
     return { label: 'Excellent', score, color: 'bg-emerald-400' };
 }
 
-function faviconUrl(urlStr?: string) {
-    if (!urlStr) return null;
-    try {
-        const u = new URL(urlStr.startsWith('http') ? urlStr : `https://${urlStr}`);
-        return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=64`;
-    } catch {
-        return null;
-    }
+// Returns null so the initials-avatar fallback renders. Previously this called
+// https://www.google.com/s2/favicons which leaked every vault domain to Google.
+// A future on-device cache can return a file:// URL from app.getPath('userData').
+function faviconUrl(): string | null {
+    return null;
 }
 
 function initials(name: string) {
@@ -93,6 +91,45 @@ export function PasswordsMode() {
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [revealed, setRevealed] = useState<Record<number, string>>({});
 
+    // Tracks the pending auto-clear so we can cancel it when the user copies
+    // another password or unmounts (avoids stale clears wiping fresh clipboard).
+    const clearTimerRef = useRef<{ handle: ReturnType<typeof setTimeout>; text: string } | null>(null);
+
+    const scheduleClipboardClear = useCallback((plaintext: string) => {
+        if (clearTimerRef.current) {
+            clearTimeout(clearTimerRef.current.handle);
+        }
+        const handle = setTimeout(() => {
+            clearClipboardIfMatch(plaintext).catch(() => {});
+            clearTimerRef.current = null;
+        }, 30000);
+        clearTimerRef.current = { handle, text: plaintext };
+    }, []);
+
+    // Clear immediately on window blur — reduces the exposure window when the
+    // user alt-tabs to another app.
+    useEffect(() => {
+        if (!isPasswordsMode) return;
+        const onBlur = () => {
+            const pending = clearTimerRef.current;
+            if (pending) {
+                clearTimeout(pending.handle);
+                clearClipboardIfMatch(pending.text).catch(() => {});
+                clearTimerRef.current = null;
+            }
+        };
+        window.addEventListener('blur', onBlur);
+        return () => {
+            window.removeEventListener('blur', onBlur);
+            const pending = clearTimerRef.current;
+            if (pending) {
+                clearTimeout(pending.handle);
+                clearClipboardIfMatch(pending.text).catch(() => {});
+                clearTimerRef.current = null;
+            }
+        };
+    }, [isPasswordsMode]);
+
     useEffect(() => {
         if (isPasswordsMode) fetchPasswords();
     }, [isPasswordsMode, fetchPasswords]);
@@ -121,8 +158,10 @@ export function PasswordsMode() {
         );
     }, [passwords, query]);
 
-    const pinned = filtered.filter(p => p.isPinned);
-    const others = filtered.filter(p => !p.isPinned);
+    const { pinned, others } = useMemo(() => ({
+        pinned: filtered.filter(p => p.isPinned),
+        others: filtered.filter(p => !p.isPinned),
+    }), [filtered]);
 
     const selected = useMemo(
         () => passwords.find(p => p.id === selectedId) || null,
@@ -155,8 +194,8 @@ export function PasswordsMode() {
         if (pt) {
             await copyText(pt, `pw-${p.id}`);
             touchPassword(p.id);
-            // Auto-clear clipboard after 30s (best-effort)
-            setTimeout(() => { clearClipboardIfMatch(pt); }, 30000);
+            // Auto-clear clipboard after 30s — cancelable, cleared eagerly on blur/unmount.
+            scheduleClipboardClear(pt);
         }
     };
 
@@ -207,9 +246,13 @@ export function PasswordsMode() {
 
     const handleDelete = async (p: PasswordEntry) => {
         if (!p.id) return;
-        if (confirm(`Delete "${p.name}"? This can't be undone.`)) {
-            await deletePassword(p.id);
-        }
+        const ok = await showConfirm({
+            title: 'Delete password',
+            message: `Delete "${p.name}"? This can't be undone.`,
+            confirmLabel: 'Delete',
+            destructive: true,
+        });
+        if (ok) await deletePassword(p.id);
     };
 
     const openUrl = (url?: string) => {
@@ -424,7 +467,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
 }
 
 function Avatar({ entry }: { entry: PasswordEntry }) {
-    const fav = faviconUrl(entry.url);
+    const fav = faviconUrl();
     const [broken, setBroken] = useState(false);
     if (fav && !broken) {
         return (

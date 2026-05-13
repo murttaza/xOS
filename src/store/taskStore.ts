@@ -1,4 +1,5 @@
 import { StateCreator } from 'zustand';
+import { differenceInCalendarDays } from 'date-fns';
 import { Task, RepeatingTask, Subtask } from '@/types';
 import { api } from '@/api';
 import { safeJSONParse, getLocalDateString } from '@/lib/utils';
@@ -111,8 +112,12 @@ export const createTaskSlice: StateCreator<AppState, [], [], TaskSlice> = (set, 
                     const repeatingTask = get().repeatingTasks.find(rt => rt.id === task.repeatingTaskId);
                     if (repeatingTask) {
                         const newStreak = (repeatingTask.streak || 0) + 1;
-                        await api.updateRepeatingTask({ ...repeatingTask, streak: newStreak });
-                        get().fetchRepeatingTasks();
+                        try {
+                            await api.updateRepeatingTask({ ...repeatingTask, streak: newStreak });
+                            get().fetchRepeatingTasks();
+                        } catch (err) {
+                            console.error('Failed to update repeating task streak:', err);
+                        }
                     }
                 }
             } else if (task.isComplete === 0 && originalTask.isComplete) {
@@ -121,8 +126,15 @@ export const createTaskSlice: StateCreator<AppState, [], [], TaskSlice> = (set, 
             }
         }
 
-        await api.updateTask(task);
-        get().fetchTasks();
+        try {
+            await api.updateTask(task);
+            get().fetchTasks();
+        } catch (err) {
+            console.error('Failed to update task:', err);
+            showErrorToast('Failed to save changes. Your data may be out of sync.');
+            // Refetch to recover from any partial state
+            get().fetchTasks();
+        }
     },
 
     deleteTask: async (id) => {
@@ -139,13 +151,23 @@ export const createTaskSlice: StateCreator<AppState, [], [], TaskSlice> = (set, 
         if (task && !task.isComplete && task.repeatingTaskId) {
             const rt = state.repeatingTasks.find(r => r.id === task.repeatingTaskId);
             if (rt && (rt.streak ?? 0) > 0) {
-                await api.updateRepeatingTask({ ...rt, streak: 0 });
-                get().fetchRepeatingTasks();
+                try {
+                    await api.updateRepeatingTask({ ...rt, streak: 0 });
+                    get().fetchRepeatingTasks();
+                } catch (err) {
+                    console.error('Failed to reset streak on delete:', err);
+                }
             }
         }
 
-        await api.deleteTask(id);
-        get().fetchTasks();
+        try {
+            await api.deleteTask(id);
+            get().fetchTasks();
+        } catch (err) {
+            console.error('Failed to delete task:', err);
+            showErrorToast('Failed to delete task.');
+            get().fetchTasks();
+        }
     },
 
     fetchRepeatingTasks: async () => {
@@ -277,12 +299,13 @@ export const createTaskSlice: StateCreator<AppState, [], [], TaskSlice> = (set, 
         const streaks = await api.getStreaks() as import('@/types').Streak[];
         for (const streak of streaks) {
             if (streak.isPaused !== 1 && streak.lastUpdated < todayStr) {
-                // Calculate days elapsed safely
-                const t1 = new Date(streak.lastUpdated).getTime();
-                const t2 = new Date(todayStr).getTime();
+                // Use calendar-day diff so DST transitions and partial days
+                // don't round to zero or to an off-by-one.
+                const last = new Date(streak.lastUpdated);
+                const today = new Date(todayStr);
                 let diffDays = 1;
-                if (!isNaN(t1) && !isNaN(t2) && t2 > t1) {
-                    diffDays = Math.floor((t2 - t1) / (1000 * 60 * 60 * 24));
+                if (!isNaN(last.getTime()) && !isNaN(today.getTime())) {
+                    diffDays = Math.max(1, differenceInCalendarDays(today, last));
                 }
                 await api.updateStreak({
                     ...streak,

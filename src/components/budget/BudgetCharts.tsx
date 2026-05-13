@@ -6,24 +6,30 @@ interface BudgetChartsProps {
 }
 
 export function BudgetCharts({ transactions }: BudgetChartsProps) {
-    // Donut chart data: spending by category (expenses only)
+    // Donut chart data: spending by category (expenses only).
+    // Aggregate in integer cents to avoid IEEE-754 drift (0.1 + 0.2 !== 0.3),
+    // then convert back to display dollars at the boundary.
     const { segments, total } = useMemo(() => {
-        const catTotals: Record<string, { name: string; color: string; amount: number }> = {};
+        const catCents: Record<string, { name: string; color: string; cents: number }> = {};
 
         for (const tx of transactions) {
             if (tx.isIncome) continue;
             const key = String(tx.categoryId);
-            if (!catTotals[key]) {
-                catTotals[key] = {
+            if (!catCents[key]) {
+                catCents[key] = {
                     name: tx.categoryName || 'Other',
                     color: tx.categoryColor || '#6b7280',
-                    amount: 0,
+                    cents: 0,
                 };
             }
-            catTotals[key].amount += Number(tx.amount);
+            // Round to nearest cent BEFORE adding, so a single bad input doesn't
+            // poison the running sum.
+            catCents[key].cents += Math.round(Number(tx.amount) * 100);
         }
 
-        const sorted = Object.values(catTotals).sort((a, b) => b.amount - a.amount);
+        const sorted = Object.values(catCents)
+            .map(s => ({ name: s.name, color: s.color, amount: s.cents / 100 }))
+            .sort((a, b) => b.amount - a.amount);
         const total = sorted.reduce((sum, s) => sum + s.amount, 0);
 
         return { segments: sorted, total };

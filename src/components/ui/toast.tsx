@@ -30,7 +30,7 @@ export function ToastContainer() {
     }, [addToast]);
 
     return (
-        <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 max-w-sm" style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <div className="fixed bottom-4 right-3 sm:right-4 z-[100] flex flex-col gap-2 max-w-sm" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
             <AnimatePresence>
                 {toasts.map(t => (
                     <motion.div
@@ -42,8 +42,12 @@ export function ToastContainer() {
                     >
                         <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                         <span className="flex-1">{t.message}</span>
-                        <button onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))} className="shrink-0 opacity-70 hover:opacity-100">
-                            <X className="h-3.5 w-3.5" />
+                        <button
+                            onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))}
+                            className="shrink-0 -m-1.5 p-1.5 opacity-70 hover:opacity-100 flex items-center justify-center"
+                            aria-label="Dismiss"
+                        >
+                            <X className="h-4 w-4" />
                         </button>
                     </motion.div>
                 ))}

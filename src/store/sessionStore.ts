@@ -2,6 +2,7 @@ import { StateCreator } from 'zustand';
 import { Session, DailyLog } from '@/types';
 import { api } from '@/api';
 import { safeJSONParse, calculateSessionXP, calculateLevelFromXP, calculatePrayerXP, getLocalDateString } from '@/lib/utils';
+import { showErrorToast } from '@/components/ui/toast';
 import type { AppState } from './index';
 
 const MAX_TIMER_SECONDS = 86400; // 24-hour cap
@@ -278,7 +279,14 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
 
         const startTime = new Date(startTimeStr);
         const now = new Date();
-        const duration = Math.min(Math.floor((now.getTime() - startTime.getTime()) / 1000), MAX_TIMER_SECONDS);
+        const rawSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+        const duration = Math.min(rawSeconds, MAX_TIMER_SECONDS);
+        if (rawSeconds > MAX_TIMER_SECONDS) {
+            // Most likely the laptop slept for a long stretch — capped silently before; surface it so the user knows.
+            const hours = Math.round(rawSeconds / 3600);
+            console.warn(`[timer] Capped session for task ${taskId}: ran ~${hours}h, saving ${MAX_TIMER_SECONDS / 3600}h.`);
+            showErrorToast(`Timer ran for ~${hours}h (likely while idle). Saved the maximum 24h — adjust manually if needed.`);
+        }
         const durationMinutes = Math.floor(duration / 60);
 
         if (durationMinutes > 0) {

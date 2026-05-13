@@ -5,7 +5,8 @@ import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Check, Minus, Play, Clock } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+// Locale-aware day name from a Date — avoids hardcoded English/week-start ordering.
+const dayName = (d: Date) => d.toLocaleDateString(undefined, { weekday: 'long' });
 
 export function WeekView() {
     const activeProgram = useStore(s => s.activeProgram);
@@ -108,7 +109,7 @@ export function WeekView() {
                 {weekSessions.length > 0 ? (
                     weekSessions.map(session => {
                         const dayDate = new Date(session.scheduled_date + 'T00:00:00');
-                        const dayName = DAY_NAMES[dayDate.getDay() === 0 ? 6 : dayDate.getDay() - 1];
+                        const day = dayName(dayDate);
 
                         return (
                             <motion.button
@@ -138,7 +139,7 @@ export function WeekView() {
                                         {session.program_day?.name || 'Workout'}
                                     </p>
                                     <p className="text-[10px] text-muted-foreground">
-                                        {dayName}, {dayDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                        {day}, {dayDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                     </p>
                                 </div>
                                 {session.perceived_effort && (

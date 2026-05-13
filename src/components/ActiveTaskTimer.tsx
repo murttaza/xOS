@@ -113,16 +113,16 @@ export function ActiveTaskTimer() {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-9 w-9 sm:h-12 sm:w-12 rounded-full hover:bg-muted transition-all hover:scale-[1.08] active:scale-[0.92]"
+                                            className="h-11 w-11 sm:h-12 sm:w-12 rounded-full hover:bg-muted transition-all hover:scale-[1.08] active:scale-[0.92]"
                                             onClick={() => setIsMinimized(true)}
                                             title="Minimize timer"
                                         >
-                                            <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                            <ChevronDown className="h-4 w-4 sm:h-4 sm:w-4" />
                                         </Button>
                                         <Button
                                             variant="outline"
                                             size="icon"
-                                            className="h-9 w-9 sm:h-12 sm:w-12 rounded-full border-2 border-primary/30 bg-primary/5 hover:bg-primary/15 hover:text-primary hover:border-primary/50 transition-all shadow-[0_0_12px_-3px_hsl(var(--primary)/0.3)] hover:scale-[1.08] active:scale-[0.92]"
+                                            className="h-11 w-11 sm:h-12 sm:w-12 rounded-full border-2 border-primary/30 bg-primary/5 hover:bg-primary/15 hover:text-primary hover:border-primary/50 transition-all shadow-[0_0_12px_-3px_hsl(var(--primary)/0.3)] hover:scale-[1.08] active:scale-[0.92]"
                                             onClick={() => toggleTaskTimer(taskId)}
                                         >
                                             <Pause className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -130,15 +130,15 @@ export function ActiveTaskTimer() {
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-9 w-9 sm:h-12 sm:w-12 rounded-full hover:bg-destructive/20 dark:hover:bg-destructive/15 hover:text-destructive transition-all hover:scale-[1.08] active:scale-[0.92]"
+                                            className="h-11 w-11 sm:h-12 sm:w-12 rounded-full hover:bg-destructive/20 dark:hover:bg-destructive/15 hover:text-destructive transition-all hover:scale-[1.08] active:scale-[0.92]"
                                             onClick={() => stopTaskTimer(taskId)}
                                         >
-                                            <Square className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                            <Square className="h-4 w-4 sm:h-4 sm:w-4" />
                                         </Button>
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-9 w-9 sm:h-12 sm:w-12 rounded-full hover:bg-muted transition-all hover:scale-[1.08] active:scale-[0.92] hidden sm:flex"
+                                            className="h-11 w-11 sm:h-12 sm:w-12 rounded-full hover:bg-muted transition-all hover:scale-[1.08] active:scale-[0.92] hidden sm:flex"
                                             onClick={() => setIsFocusMode(true)}
                                         >
                                             <Maximize2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />

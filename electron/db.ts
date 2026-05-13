@@ -115,44 +115,31 @@ db.exec(`
   );
 `);
 
-// Migration for existing tables
-try {
-  db.prepare('ALTER TABLE tasks ADD COLUMN repeatingTaskId INTEGER').run();
-} catch (error) {
-  // Column likely already exists
-}
-try {
-  db.prepare('ALTER TABLE tasks ADD COLUMN subtasks TEXT').run();
-} catch (error) {
-  // Column likely already exists
-}
-try {
-  db.prepare('ALTER TABLE repeating_tasks ADD COLUMN subtasks TEXT').run();
-} catch (error) {
-  // Column likely already exists
-}
-try {
-  db.prepare('ALTER TABLE repeating_tasks ADD COLUMN streak INTEGER DEFAULT 0').run();
-} catch (error) {
-  // Column likely already exists
-}
-try {
-  db.prepare('ALTER TABLE tasks ADD COLUMN completedAt TEXT').run();
-} catch (error) {
-  // Column likely already exists
+// Migration helper: only swallows "duplicate column" errors, surfaces everything
+// else (corruption, locked DB, type mismatch) so silent failures don't hide bugs.
+function safeAddColumn(table: string, column: string, type: string) {
+  try {
+    db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`).run();
+  } catch (error) {
+    const msg = (error as { message?: string })?.message ?? '';
+    if (/duplicate column name/i.test(msg)) {
+      return; // expected — already migrated
+    }
+    console.error(`[db] migration failed on ${table}.${column}:`, error);
+    throw error;
+  }
 }
 
+// Migration for existing tables
+safeAddColumn('tasks', 'repeatingTaskId', 'INTEGER');
+safeAddColumn('tasks', 'subtasks', 'TEXT');
+safeAddColumn('repeating_tasks', 'subtasks', 'TEXT');
+safeAddColumn('repeating_tasks', 'streak', 'INTEGER DEFAULT 0');
+safeAddColumn('tasks', 'completedAt', 'TEXT');
+
 // Additional migrations for time and noteId
-try {
-  db.prepare('ALTER TABLE tasks ADD COLUMN noteId INTEGER').run();
-} catch (error) {
-  // Column likely already exists
-}
-try {
-  db.prepare('ALTER TABLE tasks ADD COLUMN time TEXT').run();
-} catch (error) {
-  // Column likely already exists
-}
+safeAddColumn('tasks', 'noteId', 'INTEGER');
+safeAddColumn('tasks', 'time', 'TEXT');
 
 // Initialize Stats if empty
 const stats = ['Fitness', 'Mental', 'Religion', 'Finance', 'Social'];
@@ -160,11 +147,7 @@ const insertStat = db.prepare('INSERT OR IGNORE INTO stats (statName) VALUES (?)
 stats.forEach(stat => insertStat.run(stat));
 
 // Migration: Add curveVersion column for XP curve migration tracking
-try {
-  db.prepare('ALTER TABLE stats ADD COLUMN curveVersion INTEGER DEFAULT 1').run();
-} catch (error) {
-  // Column likely already exists
-}
+safeAddColumn('stats', 'curveVersion', 'INTEGER DEFAULT 1');
 
 // One-time migration: Recalculate XP from old curve (1000*level^1.5) to new curve (800 + 400*level*log2(level+1))
 const unmigrated = db.prepare('SELECT * FROM stats WHERE curveVersion = 1 AND currentLevel > 1').all() as Array<{

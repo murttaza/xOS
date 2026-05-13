@@ -46,9 +46,14 @@ function positionPalette() {
   const cursor = screen.getCursorScreenPoint()
   const display = screen.getDisplayNearestPoint(cursor)
   const { x, y, width, height } = display.workArea
+  // Clamp X/Y so the palette never lands off-screen on small displays.
+  const desiredX = x + Math.round((width - PALETTE_WIDTH) / 2)
+  const desiredY = y + Math.round(height * 0.18)
+  const clampedX = Math.max(x, Math.min(desiredX, x + width - PALETTE_WIDTH))
+  const clampedY = Math.max(y, Math.min(desiredY, y + height - PALETTE_HEIGHT))
   paletteWin.setBounds({
-    x: x + Math.round((width - PALETTE_WIDTH) / 2),
-    y: y + Math.round(height * 0.18),
+    x: clampedX,
+    y: clampedY,
     width: PALETTE_WIDTH,
     height: PALETTE_HEIGHT,
   })

@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import { AuthGate } from './components/AuthGate'
 import { ToastContainer } from './components/ui/toast'
+import { ConfirmProvider } from './components/ui/confirm-dialog'
 import './index.css'
 
 // Mark web environment for CSS (Electron needs overflow:hidden, web needs scroll)
@@ -15,6 +16,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <AuthGate>
       <App />
       <ToastContainer />
+      <ConfirmProvider />
     </AuthGate>
   </React.StrictMode>,
 )

@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, memo } from 'react';
+import { differenceInCalendarDays } from 'date-fns';
 import { useStore } from '@/store';
 import { Streak } from '@/types';
 import { Pause, Repeat } from 'lucide-react';
@@ -12,10 +13,9 @@ type StreakLike =
 
 function computeStreakDays(streak: Streak, now: Date) {
     const start = streak.createdAt ? new Date(streak.createdAt) : new Date(streak.lastUpdated || new Date());
-    const startMidnight = new Date(start.getFullYear(), start.getMonth(), start.getDate());
     const effectiveNow = streak.isPaused ? new Date(streak.lastUpdated || new Date()) : now;
-    const effectiveNowMidnight = new Date(effectiveNow.getFullYear(), effectiveNow.getMonth(), effectiveNow.getDate());
-    return Math.max(0, Math.round((effectiveNowMidnight.getTime() - startMidnight.getTime()) / (1000 * 60 * 60 * 24)));
+    // Calendar-day diff handles DST + timezone changes cleanly.
+    return Math.max(0, differenceInCalendarDays(effectiveNow, start));
 }
 
 function getHeatColor(days: number) {

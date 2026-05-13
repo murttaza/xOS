@@ -13,6 +13,7 @@ import {
     DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { showConfirm } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 
 
@@ -39,9 +40,13 @@ export function StatsBlock() {
     }, [newStatName, editingStat, renameStat, addStat]);
 
     const handleDelete = useCallback(async (stat: Stat) => {
-        if (confirm(`Are you sure you want to delete ${stat.statName}?`)) {
-            await deleteStat(stat.statName);
-        }
+        const ok = await showConfirm({
+            title: 'Delete stat',
+            message: `Are you sure you want to delete ${stat.statName}?`,
+            confirmLabel: 'Delete',
+            destructive: true,
+        });
+        if (ok) await deleteStat(stat.statName);
     }, [deleteStat]);
 
     const openAddDialog = useCallback(() => {
