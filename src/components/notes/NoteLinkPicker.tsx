@@ -300,7 +300,7 @@ export function NoteLinkPicker({ selectedNoteId, onSelectNote }: NoteLinkPickerP
                             )}
                         </div>
 
-                        <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-4 py-3 min-h-0">
+                        <div className="flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6 pb-4 py-3 min-h-0">
                         {step === 'library' && (
                             <div className="space-y-1.5">
                                 {librariesWithCounts.map(({ idx, count }) => (

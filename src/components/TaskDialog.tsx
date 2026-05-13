@@ -245,7 +245,7 @@ export function TaskDialog({ open, onOpenChange, onSubmit, initialTask, defaultD
                                         <span className="truncate">{date ? format(date, "MMM d") : "Pick date"}</span>
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 bg-popover/95 backdrop-blur-xl border-border text-foreground min-w-[280px] sm:min-w-[320px]" align="start">
+                                <PopoverContent className="w-[min(20rem,calc(100vw-1.5rem))] p-0 bg-popover/95 backdrop-blur-xl border-border text-foreground" align="start" sideOffset={8}>
                                     <Calendar
                                         mode="single"
                                         selected={date}

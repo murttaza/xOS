@@ -172,7 +172,7 @@ export const TaskItem = memo(function TaskItem({ task, isActive, isTimerRunning,
                 </div>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px] max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:w-full max-sm:rounded-none max-sm:border-0 max-sm:p-0 bg-popover/95 backdrop-blur-xl border-border text-foreground shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-                <DialogHeader className="pb-4 border-b border-border shrink-0 max-sm:px-4 max-sm:pt-4">
+                <DialogHeader className="pb-4 border-b border-border shrink-0 max-sm:pl-4 max-sm:pr-16 max-sm:pt-4 sm:pr-12">
                     <DialogTitle className="text-lg sm:text-xl font-light tracking-wide flex items-center gap-3">
                         <div className={cn("w-2 h-6 rounded-full shrink-0", statColor.bg, pulse.className)} style={pulse.style} />
                         <span className="truncate">{task.title}</span>

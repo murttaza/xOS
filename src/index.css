@@ -251,12 +251,12 @@
     html.web body {
         overflow: auto;
         overflow-x: hidden;
-        overscroll-behavior-x: none;
+        overscroll-behavior: none;
     }
 
     /* Lock mobile web to vertical-only touch scrolling */
     html.web {
-        overscroll-behavior-x: none;
+        overscroll-behavior: none;
         touch-action: pan-y;
     }
 
