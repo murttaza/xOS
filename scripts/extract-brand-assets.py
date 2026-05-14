@@ -146,8 +146,9 @@ def main() -> None:
 
     # iOS apple-touch-icon + PWA / Android maskable icons — composite onto a solid dark
     # tile with safe-area padding so the OS mask + corner-rounding don't reveal white
-    # halos or clip the icon's spiral / bookmark decorations.
-    tile = to_tile_icon(icon_sq, padding_pct=0.10)
+    # halos or clip the icon's spiral / bookmark decorations. iOS rounds corners with
+    # radius ≈ 22% of side; 30% padding keeps the spiral + bookmark inside the safe zone.
+    tile = to_tile_icon(icon_sq, padding_pct=0.30)
     print(f"Tile canvas (post-padding): {tile.size}")
     export_png(tile, OUT / "apple-touch-icon.png", 180)
     export_png(tile, OUT / "icon-192.png", 192)
