@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { LoginPage } from './LoginPage';
 import { UpdatePasswordPage } from './UpdatePasswordPage';
+import { Wordmark } from './Wordmark';
 import { supabase } from '../lib/supabase';
 import { clearOfflineQueue } from '../adapters/supabase';
 
@@ -34,7 +35,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
     if (!ready) return (
         <div className="h-screen flex items-center justify-center bg-background">
-            <div className="text-4xl font-bold text-primary animate-pulse">xOS</div>
+            <Wordmark height={48} className="animate-pulse" />
         </div>
     );
     if (isRecovery) return <UpdatePasswordPage onDone={() => setIsRecovery(false)} />;

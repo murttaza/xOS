@@ -6,6 +6,7 @@ import { Square, CheckCircle, Timer } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { format } from "date-fns";
 import { Button } from './ui/button';
+import { Wordmark } from './Wordmark';
 
 export function FocusOverlay() {
     const [isHovered, setIsHovered] = useState(false);
@@ -154,14 +155,13 @@ export function FocusOverlay() {
                                     {/* Right: mOS */}
                                     <AnimatePresence>
                                         {isHovered && (
-                                            <motion.span
+                                            <motion.div
                                                 initial={{ opacity: 0, x: 10 }}
                                                 animate={{ opacity: 0.5, x: 0 }}
                                                 exit={{ opacity: 0, x: 10 }}
-                                                className="text-[10px] font-mono text-muted-foreground"
                                             >
-                                                mOS
-                                            </motion.span>
+                                                <Wordmark height={14} />
+                                            </motion.div>
                                         )}
                                     </AnimatePresence>
                                 </div>

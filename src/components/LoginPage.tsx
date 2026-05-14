@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { LogIn, UserPlus, KeyRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Wordmark } from './Wordmark';
 
 type Mode = 'signin' | 'signup' | 'reset';
 
@@ -91,7 +92,7 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
                     onSubmit={handleSubmit}
                     className="w-full max-w-sm space-y-4 p-8"
                 >
-                    <h1 className="text-2xl font-bold text-center text-foreground">xOS</h1>
+                    <div className="flex justify-center"><Wordmark height={32} /></div>
 
                     <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                         {icon}

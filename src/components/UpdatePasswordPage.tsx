@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { KeyRound } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Wordmark } from './Wordmark';
 
 export function UpdatePasswordPage({ onDone }: { onDone: () => void }) {
     const [password, setPassword] = useState('');
@@ -37,7 +38,7 @@ export function UpdatePasswordPage({ onDone }: { onDone: () => void }) {
                 onSubmit={handleSubmit}
                 className="w-full max-w-sm space-y-4 p-8"
             >
-                <h1 className="text-2xl font-bold text-center text-foreground">xOS</h1>
+                <div className="flex justify-center"><Wordmark height={32} /></div>
 
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                     <KeyRound className="h-4 w-4 text-amber-400" />

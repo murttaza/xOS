@@ -5,6 +5,7 @@ import { cn } from '../lib/utils';
 import { Button } from './ui/button';
 import { ModeToggle } from './ModeToggle';
 import { WindowControls } from './WindowControls';
+import { Wordmark } from './Wordmark';
 
 interface ModeHeaderProps {
     modeLabel: string;
@@ -27,7 +28,6 @@ export function ModeHeader({
     showMobileBack = false,
     onMobileBack,
 }: ModeHeaderProps) {
-    const osPrefix = useStore(s => s.osPrefix);
     const isMurtazaMode = useStore(s => s.isMurtazaMode);
 
     return (
@@ -58,11 +58,11 @@ export function ModeHeader({
                         whileTap={{ scale: 0.98 }}
                         onClick={onGoHome}
                     >
-                        <span className="relative">
-                            {osPrefix}OS
+                        <span className="relative inline-flex items-center">
+                            <Wordmark height={28} />
                             {isMurtazaMode && (
                                 <span
-                                    className="absolute -bottom-3.5 left-0 text-[10px] text-muted-foreground/0 group-hover:text-muted-foreground/60 transition-colors duration-300 whitespace-nowrap"
+                                    className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground/0 group-hover:text-muted-foreground/60 transition-colors duration-300 whitespace-nowrap"
                                     dir="rtl"
                                 >
                                     مُرتضیٰ

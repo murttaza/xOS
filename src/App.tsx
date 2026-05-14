@@ -29,8 +29,8 @@ import { WindowControls } from './components/WindowControls';
 
 import { DevelopmentButton } from './components/DevelopmentButton';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { Wordmark } from './components/Wordmark';
 import { Popover, PopoverContent, PopoverTrigger } from './components/ui/popover';
-import { Input } from './components/ui/input';
 import { Button } from './components/ui/button';
 import { Switch } from './components/ui/switch';
 import { Label } from './components/ui/label';
@@ -103,7 +103,6 @@ function App() {
     fetchRepeatingTasks, fetchStreaks, checkMissedTasks, syncTimers,
     isMurtazaMode, setIsMurtazaMode,
     isHardcoreMode, setIsHardcoreMode,
-    osPrefix, setOsPrefix,
     toggleNotesMode, toggleYearMode, toggleBudgetMode, toggleFitnessMode, togglePasswordsMode,
     fetchBudgetCategories,
   } = useStore(useShallow(state => ({
@@ -118,8 +117,6 @@ function App() {
     setIsMurtazaMode: state.setIsMurtazaMode,
     isHardcoreMode: state.isHardcoreMode,
     setIsHardcoreMode: state.setIsHardcoreMode,
-    osPrefix: state.osPrefix,
-    setOsPrefix: state.setOsPrefix,
     syncTimers: state.syncTimers,
     toggleNotesMode: state.toggleNotesMode,
     toggleYearMode: state.toggleYearMode,
@@ -405,9 +402,8 @@ function App() {
           <motion.div
             animate={{ opacity: [0.4, 1, 0.4], scale: [0.95, 1.05, 0.95] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-            className="text-4xl font-bold text-primary"
           >
-            {osPrefix}OS
+            <Wordmark height={48} />
           </motion.div>
           <p className="text-sm text-muted-foreground animate-pulse">Loading your data...</p>
         </div>
@@ -442,16 +438,16 @@ function App() {
             >
               <div className="flex items-center gap-2">
                 <motion.h1
-                  className="group text-2xl font-bold tracking-tight text-primary dark:text-primary transition-all duration-150 hover:drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)] cursor-pointer no-drag flex items-baseline gap-2"
+                  className="group transition-all duration-150 hover:drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)] cursor-pointer no-drag flex items-center gap-2"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => isElectron && setIsMurtazaMode(!isMurtazaMode)}
                 >
-                  <span className="relative">
-                    {osPrefix}OS
+                  <span className="relative inline-flex items-center">
+                    <Wordmark height={32} />
                     {isMurtazaMode && (
                       <span
-                        className="absolute -bottom-3.5 left-0 text-[10px] text-muted-foreground/0 group-hover:text-muted-foreground/60 transition-colors duration-300 whitespace-nowrap"
+                        className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground/0 group-hover:text-muted-foreground/60 transition-colors duration-300 whitespace-nowrap"
                         dir="rtl"
                       >
                         مُرتضیٰ
@@ -469,15 +465,6 @@ function App() {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-48 p-3 no-drag space-y-3" side="right">
-                      <div className="flex items-center gap-2">
-                        <Input
-                          value={osPrefix}
-                          onChange={(e) => setOsPrefix(e.target.value.slice(0, 1))}
-                          maxLength={1}
-                          className="h-8 text-center font-bold"
-                        />
-                        <span className="text-sm font-medium text-muted-foreground">OS</span>
-                      </div>
                       <div className="flex items-center justify-between">
                         <Label htmlFor="hardcore-mode" className="text-xs font-medium">Hardcore</Label>
                         <Switch
