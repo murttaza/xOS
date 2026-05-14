@@ -182,7 +182,7 @@ export function CalendarBlock() {
     }, [sessions, tasks, getTaskTitle]);
 
     return (
-        <div className="flex flex-col lg:h-full overflow-hidden lg:bg-gradient-to-br lg:from-card lg:to-secondary/10">
+        <div className="flex flex-col lg:h-full lg:overflow-hidden lg:bg-gradient-to-br lg:from-card lg:to-secondary/10">
             {/* Header - collapsible on mobile */}
             <div
                 className="flex items-center justify-between p-4 pb-2 shrink-0 cursor-pointer lg:cursor-default"
@@ -218,7 +218,7 @@ export function CalendarBlock() {
                 </div>
             </div>
 
-            <CardContent className={`${isMobileExpanded ? 'block' : 'hidden'} lg:flex flex-1 min-h-0 overflow-hidden p-4 pt-0 flex-col gap-6`}>
+            <CardContent className={`${isMobileExpanded ? 'block' : 'hidden'} lg:flex flex-1 min-h-0 lg:overflow-hidden p-4 pt-0 flex-col gap-6`}>
                 {/* Calendar Grid */}
                 <div className="w-full max-w-[340px] mx-auto shrink-0">
                     <div className="grid grid-cols-7 gap-1 mb-2">

@@ -35,7 +35,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
     if (!ready) return (
         <div className="h-screen flex items-center justify-center bg-background">
-            <Wordmark height={48} className="animate-pulse" />
+            <Wordmark height={36} className="animate-pulse" />
         </div>
     );
     if (isRecovery) return <UpdatePasswordPage onDone={() => setIsRecovery(false)} />;

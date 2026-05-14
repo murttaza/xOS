@@ -38,7 +38,7 @@ export function UpdatePasswordPage({ onDone }: { onDone: () => void }) {
                 onSubmit={handleSubmit}
                 className="w-full max-w-sm space-y-4 p-8"
             >
-                <div className="flex justify-center"><Wordmark height={32} /></div>
+                <div className="flex justify-center"><Wordmark height={24} /></div>
 
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                     <KeyRound className="h-4 w-4 text-amber-400" />

@@ -403,7 +403,7 @@ function App() {
             animate={{ opacity: [0.4, 1, 0.4], scale: [0.95, 1.05, 0.95] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
           >
-            <Wordmark height={48} />
+            <Wordmark height={36} />
           </motion.div>
           <p className="text-sm text-muted-foreground animate-pulse">Loading your data...</p>
         </div>
@@ -438,23 +438,24 @@ function App() {
             >
               <div className="flex items-center gap-2">
                 <motion.h1
-                  className="group transition-all duration-150 hover:drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)] cursor-pointer no-drag flex items-center gap-2"
-                  whileHover={{ scale: 1.05 }}
+                  className="group transition-all duration-150 hover:drop-shadow-[0_0_4px_hsl(var(--primary)/0.4)] cursor-pointer no-drag flex items-center gap-2"
+                  whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => isElectron && setIsMurtazaMode(!isMurtazaMode)}
                 >
-                  <span className="relative inline-flex items-center">
-                    <Wordmark height={32} />
-                    {isMurtazaMode && (
+                  <Wordmark height={22} />
+                  {isMurtazaMode && (
+                    <>
+                      <span className="h-3 w-px bg-muted-foreground/20" aria-hidden="true" />
                       <span
-                        className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground/0 group-hover:text-muted-foreground/60 transition-colors duration-300 whitespace-nowrap"
+                        className="text-[11px] text-muted-foreground/30 group-hover:text-muted-foreground/70 transition-colors duration-300 whitespace-nowrap"
                         dir="rtl"
                       >
                         مُرتضیٰ
                       </span>
-                    )}
-                  </span>
-                  <span className="text-xs font-mono text-muted-foreground opacity-50">v{APP_VERSION}</span>
+                    </>
+                  )}
+                  <span className="text-[10px] font-mono text-muted-foreground/50">v{APP_VERSION}</span>
                 </motion.h1>
 
                 {!isMurtazaMode && (

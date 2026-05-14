@@ -53,22 +53,23 @@ export function ModeHeader({
                         </Button>
                     )}
                     <motion.h1
-                        className="group text-2xl font-bold tracking-tight text-primary transition-all duration-150 hover:drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)] cursor-pointer no-drag flex items-baseline gap-2 shrink-0"
-                        whileHover={{ scale: 1.05 }}
+                        className="group transition-all duration-150 hover:drop-shadow-[0_0_4px_hsl(var(--primary)/0.4)] cursor-pointer no-drag flex items-center gap-2 shrink-0"
+                        whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={onGoHome}
                     >
-                        <span className="relative inline-flex items-center">
-                            <Wordmark height={28} />
-                            {isMurtazaMode && (
+                        <Wordmark height={20} />
+                        {isMurtazaMode && (
+                            <>
+                                <span className="h-3 w-px bg-muted-foreground/20" aria-hidden="true" />
                                 <span
-                                    className="absolute -bottom-3 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground/0 group-hover:text-muted-foreground/60 transition-colors duration-300 whitespace-nowrap"
+                                    className="text-[11px] text-muted-foreground/30 group-hover:text-muted-foreground/70 transition-colors duration-300 whitespace-nowrap"
                                     dir="rtl"
                                 >
                                     مُرتضیٰ
                                 </span>
-                            )}
-                        </span>
+                            </>
+                        )}
                         <span className="text-xs font-mono text-muted-foreground opacity-50 flex items-center gap-1.5 ml-1">
                             {ModeIcon && <ModeIcon className="h-3 w-3" />} {modeLabel}
                         </span>

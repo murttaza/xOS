@@ -1,3 +1,6 @@
+import wordmarkDarkUrl from '../assets/wordmark-dark.png';
+import wordmarkLightUrl from '../assets/wordmark-light.png';
+
 type Props = {
   className?: string;
   height?: number;
@@ -5,12 +8,14 @@ type Props = {
 
 // Two themed PNGs share an identical alpha mask, so swapping by `.dark` class keeps
 // the wordmark perfectly aligned across themes without re-tinting at runtime.
-export function Wordmark({ className, height = 32 }: Props) {
+// Imported through Vite so the emitted URLs are relative and resolve correctly in
+// Electron's file:// renderer context (a public/ path would 404 there).
+export function Wordmark({ className, height = 24 }: Props) {
   const style = { height, width: 'auto', maxWidth: 'none' as const };
   return (
     <>
       <img
-        src="/wordmark-dark.png"
+        src={wordmarkDarkUrl}
         alt="mOS"
         height={height}
         style={style}
@@ -18,7 +23,7 @@ export function Wordmark({ className, height = 32 }: Props) {
         draggable={false}
       />
       <img
-        src="/wordmark-light.png"
+        src={wordmarkLightUrl}
         alt="mOS"
         height={height}
         style={style}

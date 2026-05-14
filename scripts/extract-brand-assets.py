@@ -4,11 +4,19 @@ Extract favicon / app-icon / wordmark from Rebrand/FavIcon Wordmark Logo BrandBo
 Run from repo root:
     py scripts/extract-brand-assets.py
 
-Outputs into public/:
-    favicon.ico, app-icon.ico, logo.ico (multi-resolution Windows ICO)
-    apple-touch-icon.png (180x180)
-    icon-192.png, icon-512.png (webmanifest)
-    wordmark-dark.png (high-res, transparent bg)
+Outputs:
+    public/favicon.ico, app-icon.ico, logo.ico  — multi-res Windows ICO
+                                                  (rich design w/ spiral binding + bookmark)
+    public/apple-touch-icon.png (180x180)       — iOS home-screen tile
+    public/icon-192.png, icon-512.png           — PWA / Android manifest
+                                                  (above 3 use the clean rounded-square favicon
+                                                  variant from the brand book — no spiral
+                                                  or bookmark — so iOS's corner mask doesn't
+                                                  clip decorations)
+    src/assets/wordmark-dark.png                — high-res cream wordmark
+    src/assets/wordmark-light.png               — high-res near-black wordmark
+                                                  (in src/assets so Vite emits relative URLs
+                                                  that work in Electron's file:// context)
 """
 from pathlib import Path
 import numpy as np
@@ -16,12 +24,14 @@ from PIL import Image, ImageFilter
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "Rebrand" / "FavIcon Wordmark Logo BrandBook.png"
-OUT = ROOT / "public"
+PUBLIC = ROOT / "public"
+ASSETS = ROOT / "src" / "assets"
 
 # Crop rectangles inside the 1448x1086 brand-book sheet.
 # Pinned empirically by inspecting the brand book.
-ICON_DARK_BOX = (455, 60, 705, 415)        # main app icon (dark)
-WORDMARK_BOX  = (585, 488, 768, 590)       # 2nd "mOs" wordmark, the one with PREFERRED tag
+ICON_DARK_BOX     = (455, 60, 705, 415)        # main app icon (dark) — rich, with spiral
+ICON_FAVICON_BOX  = (1200, 125, 1300, 225)     # clean rounded-square variant from FAVICON panel
+WORDMARK_BOX      = (585, 488, 768, 590)       # 2nd "mOs" wordmark, the one with PREFERRED tag
 
 # Sheet background brightness on this brand book is in the range ~2..16. Anything brighter
 # than this is content. We threshold a little above the max bg so noise doesn't leak.
@@ -124,7 +134,8 @@ def to_tile_icon(icon_rgba: Image.Image, padding_pct: float = 0.10) -> Image.Ima
 def main() -> None:
     if not SRC.exists():
         raise SystemExit(f"Source brand book not found at {SRC}")
-    OUT.mkdir(parents=True, exist_ok=True)
+    PUBLIC.mkdir(parents=True, exist_ok=True)
+    ASSETS.mkdir(parents=True, exist_ok=True)
     sheet = Image.open(SRC).convert("RGB")
     print(f"Loaded {SRC.name}  ({sheet.size[0]}x{sheet.size[1]})")
 
@@ -140,19 +151,27 @@ def main() -> None:
     # ICOs (browser tab favicon + Electron Windows installer/taskbar/tray) — keep the
     # transparent rounded-square silhouette; this is what makes them feel well-incorporated
     # against arbitrary tab/taskbar backgrounds.
-    export_ico(icon_sq, OUT / "favicon.ico",  [16, 32, 48])
-    export_ico(icon_sq, OUT / "app-icon.ico", [16, 32, 48, 64, 128, 256])
-    export_ico(icon_sq, OUT / "logo.ico",     [16, 32, 48, 64, 128, 256])
+    export_ico(icon_sq, PUBLIC / "favicon.ico",  [16, 32, 48])
+    export_ico(icon_sq, PUBLIC / "app-icon.ico", [16, 32, 48, 64, 128, 256])
+    export_ico(icon_sq, PUBLIC / "logo.ico",     [16, 32, 48, 64, 128, 256])
 
-    # iOS apple-touch-icon + PWA / Android maskable icons — composite onto a solid dark
-    # tile with safe-area padding so the OS mask + corner-rounding don't reveal white
-    # halos or clip the icon's spiral / bookmark decorations. iOS rounds corners with
-    # radius ≈ 22% of side; 30% padding keeps the spiral + bookmark inside the safe zone.
-    tile = to_tile_icon(icon_sq, padding_pct=0.30)
-    print(f"Tile canvas (post-padding): {tile.size}")
-    export_png(tile, OUT / "apple-touch-icon.png", 180)
-    export_png(tile, OUT / "icon-192.png", 192)
-    export_png(tile, OUT / "icon-512.png", 512)
+    # ---- Clean rounded-square variant for iOS / PWA ----
+    # The main icon's spiral binding + bookmark tab don't survive iOS's home-screen mask.
+    # The FAVICON panel in the brand book has a simpler design: just the rounded square
+    # with the 4 sub-icons, no external decorations. Use that for iOS / Android tiles.
+    fav = extract_icon(sheet.crop(ICON_FAVICON_BOX).convert("RGBA"), close_passes=8)
+    bbox = fav.getbbox()
+    if bbox:
+        fav = fav.crop(bbox)
+    fav_sq = square_pad(fav)
+    # 12% padding inside the dark tile gives a tasteful margin without making the icon
+    # feel small. Because there's no spiral/bookmark, iOS's corner mask can crop the
+    # outer ~5% safely.
+    tile = to_tile_icon(fav_sq, padding_pct=0.12)
+    print(f"Clean icon bbox: {fav_sq.size}  Tile canvas: {tile.size}")
+    export_png(tile, PUBLIC / "apple-touch-icon.png", 180)
+    export_png(tile, PUBLIC / "icon-192.png", 192)
+    export_png(tile, PUBLIC / "icon-512.png", 512)
 
     # ---- Wordmark ----
     # Single alpha mask drives both color variants. The mask is built from the cream
@@ -167,12 +186,12 @@ def main() -> None:
     wm_mask = wm_mask.resize((target_w, target_h), Image.Resampling.LANCZOS)
 
     # Dark-theme: cream ink, matches the brand-book primary wordmark color.
-    tint(wm_mask, (212, 200, 188)).save(OUT / "wordmark-dark.png", format="PNG", optimize=True)
-    print(f"  wrote wordmark-dark.png   size={wm_mask.size}")
+    tint(wm_mask, (212, 200, 188)).save(ASSETS / "wordmark-dark.png", format="PNG", optimize=True)
+    print(f"  wrote src/assets/wordmark-dark.png   size={wm_mask.size}")
     # Light-theme: warm near-black for high contrast against the page bg without losing
     # the wordmark's warm character.
-    tint(wm_mask, (32, 26, 22)).save(OUT / "wordmark-light.png", format="PNG", optimize=True)
-    print(f"  wrote wordmark-light.png  size={wm_mask.size}")
+    tint(wm_mask, (32, 26, 22)).save(ASSETS / "wordmark-light.png", format="PNG", optimize=True)
+    print(f"  wrote src/assets/wordmark-light.png  size={wm_mask.size}")
 
 
 if __name__ == "__main__":
