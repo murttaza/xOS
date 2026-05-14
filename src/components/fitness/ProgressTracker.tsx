@@ -117,42 +117,53 @@ export function ProgressTracker() {
                             <X className="h-4 w-4" />
                         </Button>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        <div className="space-y-1">
-                            <label className="text-[10px] text-muted-foreground font-medium">Date</label>
-                            <Input type="date" value={form.date || ''} onChange={e => setForm({ ...form, date: e.target.value })} className="h-9 text-sm" />
+                    {/* This Week */}
+                    <div className="space-y-2">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80 font-semibold">This Week</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            <div className="space-y-1 min-w-0">
+                                <label className="text-[10px] text-muted-foreground font-medium leading-tight block">Date</label>
+                                <Input type="date" value={form.date || ''} onChange={e => setForm({ ...form, date: e.target.value })} className="h-9 text-sm w-full" />
+                            </div>
+                            <div className="space-y-1 min-w-0">
+                                <label className="text-[10px] text-muted-foreground font-medium leading-tight block">Week</label>
+                                <Input type="number" inputMode="numeric" enterKeyHint="next" value={form.week_number || ''} onChange={e => setForm({ ...form, week_number: parseInt(e.target.value) || 0 })} className="h-9 text-sm w-full" />
+                            </div>
+                            <div className="space-y-1 min-w-0">
+                                <label className="text-[10px] text-muted-foreground font-medium leading-tight block">Weight (lb)</label>
+                                <Input type="number" inputMode="decimal" enterKeyHint="next" value={form.body_weight ?? ''} onChange={e => setForm({ ...form, body_weight: parseFloat(e.target.value) || null })} className="h-9 text-sm w-full" />
+                            </div>
+                            <div className="space-y-1 min-w-0">
+                                <label className="text-[10px] text-muted-foreground font-medium leading-tight block">RHR (bpm)</label>
+                                <Input type="number" inputMode="numeric" enterKeyHint="next" value={form.rhr ?? ''} onChange={e => setForm({ ...form, rhr: parseInt(e.target.value) || null })} className="h-9 text-sm w-full" />
+                            </div>
+                            <div className="space-y-1 min-w-0">
+                                <label className="text-[10px] text-muted-foreground font-medium leading-tight block">Rope (min)</label>
+                                <Input type="number" inputMode="decimal" enterKeyHint="next" value={form.rope_minutes ?? ''} onChange={e => setForm({ ...form, rope_minutes: parseFloat(e.target.value) || null })} className="h-9 text-sm w-full" />
+                            </div>
+                            <div className="space-y-1 min-w-0">
+                                <label className="text-[10px] text-muted-foreground font-medium leading-tight block">Pace /min</label>
+                                <Input type="number" inputMode="numeric" enterKeyHint="next" value={form.rope_pace ?? ''} onChange={e => setForm({ ...form, rope_pace: parseInt(e.target.value) || null })} className="h-9 text-sm w-full" />
+                            </div>
                         </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] text-muted-foreground font-medium">Week #</label>
-                            <Input type="number" value={form.week_number || ''} onChange={e => setForm({ ...form, week_number: parseInt(e.target.value) || 0 })} className="h-9 text-sm" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] text-muted-foreground font-medium">Body Weight (lb)</label>
-                            <Input type="number" inputMode="decimal" value={form.body_weight ?? ''} onChange={e => setForm({ ...form, body_weight: parseFloat(e.target.value) || null })} className="h-9 text-sm" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] text-muted-foreground font-medium">RHR (bpm)</label>
-                            <Input type="number" inputMode="numeric" value={form.rhr ?? ''} onChange={e => setForm({ ...form, rhr: parseInt(e.target.value) || null })} className="h-9 text-sm" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] text-muted-foreground font-medium">Rope (min)</label>
-                            <Input type="number" inputMode="decimal" value={form.rope_minutes ?? ''} onChange={e => setForm({ ...form, rope_minutes: parseFloat(e.target.value) || null })} className="h-9 text-sm" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] text-muted-foreground font-medium">Rope pace (/min)</label>
-                            <Input type="number" inputMode="numeric" value={form.rope_pace ?? ''} onChange={e => setForm({ ...form, rope_pace: parseInt(e.target.value) || null })} className="h-9 text-sm" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] text-muted-foreground font-medium">Bench top set</label>
-                            <Input placeholder="e.g. 185x8" value={form.bench_top_set ?? ''} onChange={e => setForm({ ...form, bench_top_set: e.target.value })} className="h-9 text-sm" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] text-muted-foreground font-medium">Squat top set</label>
-                            <Input placeholder="e.g. 225x6" value={form.squat_top_set ?? ''} onChange={e => setForm({ ...form, squat_top_set: e.target.value })} className="h-9 text-sm" />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] text-muted-foreground font-medium">Deadlift top set</label>
-                            <Input placeholder="e.g. 275x5" value={form.deadlift_top_set ?? ''} onChange={e => setForm({ ...form, deadlift_top_set: e.target.value })} className="h-9 text-sm" />
+                    </div>
+
+                    {/* Top Sets */}
+                    <div className="space-y-2">
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80 font-semibold">Top Sets</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="space-y-1 min-w-0">
+                                <label className="text-[10px] text-muted-foreground font-medium leading-tight block">Bench</label>
+                                <Input placeholder="e.g. 185x8" enterKeyHint="next" value={form.bench_top_set ?? ''} onChange={e => setForm({ ...form, bench_top_set: e.target.value })} className="h-9 text-sm w-full" />
+                            </div>
+                            <div className="space-y-1 min-w-0">
+                                <label className="text-[10px] text-muted-foreground font-medium leading-tight block">Squat</label>
+                                <Input placeholder="e.g. 225x6" enterKeyHint="next" value={form.squat_top_set ?? ''} onChange={e => setForm({ ...form, squat_top_set: e.target.value })} className="h-9 text-sm w-full" />
+                            </div>
+                            <div className="space-y-1 min-w-0">
+                                <label className="text-[10px] text-muted-foreground font-medium leading-tight block">Deadlift</label>
+                                <Input placeholder="e.g. 275x5" enterKeyHint="done" value={form.deadlift_top_set ?? ''} onChange={e => setForm({ ...form, deadlift_top_set: e.target.value })} className="h-9 text-sm w-full" />
+                            </div>
                         </div>
                     </div>
                     <div className="space-y-1">

@@ -90,10 +90,10 @@ export interface ApiBackend {
     getExercises: () => Promise<Exercise[]>;
     getPrograms: () => Promise<Program[]>;
     getProgram: (id: string) => Promise<{ program: Program; phases: ProgramPhase[]; days: ProgramDay[]; exercises: ProgramExercise[]; principles: ProgramPrinciple[] }>;
-    createProgram: (program: Pick<Program, 'name' | 'description' | 'total_weeks'> & { slug?: string }) => Promise<Program>;
+    createProgram: (program: Pick<Program, 'name' | 'description' | 'total_weeks'> & { slug?: string; scheduling_mode?: 'weekly' | 'sequential' }) => Promise<Program>;
     createProgramPhase: (phase: Pick<ProgramPhase, 'program_id' | 'name' | 'week_start' | 'week_end' | 'rir_guidance' | 'description' | 'order'>) => Promise<ProgramPhase>;
     createProgramDay: (day: Pick<ProgramDay, 'program_id' | 'phase_id' | 'day_of_week' | 'name' | 'focus' | 'order'>) => Promise<ProgramDay>;
-    updateProgram: (id: string, updates: Partial<Pick<Program, 'name' | 'description' | 'total_weeks'>>) => Promise<Program>;
+    updateProgram: (id: string, updates: Partial<Pick<Program, 'name' | 'description' | 'total_weeks' | 'scheduling_mode'>>) => Promise<Program>;
     deleteProgram: (id: string) => Promise<unknown>;
     updateProgramPhase: (id: string, updates: Partial<Pick<ProgramPhase, 'name' | 'week_start' | 'week_end' | 'rir_guidance' | 'description' | 'order'>>) => Promise<ProgramPhase>;
     deleteProgramPhase: (id: string) => Promise<unknown>;
@@ -107,6 +107,8 @@ export interface ApiBackend {
     getUserPrograms: () => Promise<UserProgram[]>;
     startProgram: (programId: string, startedOn: string) => Promise<UserProgram>;
     updateUserProgram: (id: string, updates: Partial<Pick<UserProgram, 'status' | 'current_week'>>) => Promise<unknown>;
+    deleteUserProgram: (id: string) => Promise<unknown>;
+    deleteUserProgramsForProgram: (programId: string) => Promise<unknown>;
 
     // Workout Sessions
     getSessionsForProgram: (userProgramId: string) => Promise<WorkoutSession[]>;
@@ -117,6 +119,7 @@ export interface ApiBackend {
 
     // Exercise Logs
     getExerciseLogs: (sessionId: string) => Promise<ExerciseLog[]>;
+    getAllExerciseLogsForProgram: (userProgramId: string) => Promise<ExerciseLog[]>;
     upsertExerciseLog: (log: Omit<ExerciseLog, 'id' | 'created_at' | 'program_exercise' | 'exercise_sets'> & { id?: string }) => Promise<ExerciseLog>;
     deleteExerciseLog: (id: string) => Promise<unknown>;
 

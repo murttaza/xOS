@@ -157,6 +157,7 @@ export interface Program {
     name: string;
     description: string;
     total_weeks: number;
+    scheduling_mode: 'weekly' | 'sequential';
     created_at: string;
 }
 

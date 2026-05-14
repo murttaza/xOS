@@ -11,6 +11,7 @@ import { TodayWorkout } from './fitness/TodayWorkout';
 import { WeekView } from './fitness/WeekView';
 import { ProgramOverview } from './fitness/ProgramOverview';
 import { ProgressTracker } from './fitness/ProgressTracker';
+import { StatsView } from './fitness/StatsView';
 import { ExerciseHistory } from './fitness/ExerciseHistory';
 import { PrinciplesView } from './fitness/PrinciplesView';
 import { ProgramPicker } from './fitness/ProgramPicker';
@@ -20,6 +21,7 @@ const TABS = [
     { id: 'today', label: 'Today' },
     { id: 'week', label: 'Week' },
     { id: 'program', label: 'Program' },
+    { id: 'stats', label: 'Stats' },
     { id: 'progress', label: 'Progress' },
     { id: 'history', label: 'History' },
     { id: 'principles', label: 'Principles' },
@@ -60,6 +62,7 @@ export function FitnessMode() {
             case 'today': return <TodayWorkout />;
             case 'week': return <WeekView />;
             case 'program': return <ProgramOverview />;
+            case 'stats': return <StatsView />;
             case 'progress': return <ProgressTracker />;
             case 'history': return <ExerciseHistory />;
             case 'principles': return <PrinciplesView />;

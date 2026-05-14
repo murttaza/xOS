@@ -654,6 +654,7 @@ export const supabaseBackend: ApiBackend = {
                 slug,
                 description: program.description || '',
                 total_weeks: program.total_weeks,
+                ...(program.scheduling_mode ? { scheduling_mode: program.scheduling_mode } : {}),
             }).select('*').single()
         ) as any;
     },
@@ -693,6 +694,14 @@ export const supabaseBackend: ApiBackend = {
 
     deleteProgram: async (id) => {
         return throwOnError(await supabase.from('programs').delete().eq('id', id));
+    },
+
+    deleteUserProgram: async (id) => {
+        return throwOnError(await supabase.from('user_programs').delete().eq('id', id));
+    },
+
+    deleteUserProgramsForProgram: async (programId) => {
+        return throwOnError(await supabase.from('user_programs').delete().eq('program_id', programId));
     },
 
     updateProgramPhase: async (id, updates) => {
@@ -820,6 +829,16 @@ export const supabaseBackend: ApiBackend = {
         return throwOnError(
             await supabase.from('exercise_logs').select('*, program_exercises(*)')
                 .eq('session_id', sessionId).order('created_at')
+        );
+    },
+
+    getAllExerciseLogsForProgram: async (userProgramId) => {
+        return throwOnError(
+            await supabase.from('exercise_logs')
+                .select('*, program_exercises(*), workout_sessions!inner(scheduled_date, completed_at, user_program_id, status)')
+                .eq('workout_sessions.user_program_id', userProgramId)
+                .order('created_at', { ascending: false })
+                .limit(2000)
         );
     },
 

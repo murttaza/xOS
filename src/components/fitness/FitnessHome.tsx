@@ -6,6 +6,7 @@ import { Play, Check, Minus, ChevronRight, Calendar, TrendingUp, Dumbbell, FileT
 import { cn } from '../../lib/utils';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+const DAY_NAMES_SHORT: Record<number, string> = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun' };
 
 export function FitnessHome() {
     const activeProgram = useStore(s => s.activeProgram);
@@ -15,11 +16,18 @@ export function FitnessHome() {
     const getCurrentWeek = useStore(s => s.getCurrentWeek);
     const getPhaseForWeek = useStore(s => s.getPhaseForWeek);
     const getSessionsForWeek = useStore(s => s.getSessionsForWeek);
+    const getSchedulingMode = useStore(s => s.getSchedulingMode);
+    const getTodaySession = useStore(s => s.getTodaySession);
+    const getNextSequentialDay = useStore(s => s.getNextSequentialDay);
     const ensureWeekSessions = useStore(s => s.ensureWeekSessions);
+    const ensureNextSession = useStore(s => s.ensureNextSession);
+    const selectOrCreateSession = useStore(s => s.selectOrCreateSession);
     const setFitnessTab = useStore(s => s.setFitnessTab);
     const fetchSessionDetail = useStore(s => s.fetchSessionDetail);
     const setShowProgramPicker = useStore(s => s.setShowProgramPicker);
 
+    const schedulingMode = getSchedulingMode();
+    const isSequential = schedulingMode === 'sequential';
     const currentWeek = getCurrentWeek();
     const currentPhase = getPhaseForWeek(currentWeek);
     const weekSessions = getSessionsForWeek(currentWeek);
@@ -28,22 +36,28 @@ export function FitnessHome() {
     const progress = Math.round((currentWeek / totalWeeks) * 100);
 
     useEffect(() => {
-        if (activeProgram) {
+        if (!activeProgram) return;
+        if (isSequential) {
+            ensureNextSession();
+        } else {
             ensureWeekSessions(currentWeek);
         }
-    }, [activeProgram, currentWeek, ensureWeekSessions]);
+    }, [activeProgram, currentWeek, isSequential, ensureWeekSessions, ensureNextSession]);
 
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    const todaySession = weekSessions.find(s => s.scheduled_date === todayStr);
+    const todaySession = isSequential ? getTodaySession() : weekSessions.find(s => s.scheduled_date === todayStr);
 
     const latestWeight = bodyMetrics.find(m => m.body_weight);
     const completedThisWeek = weekSessions.filter(s => s.status === 'completed').length;
     const recentSessions = sessions.filter(s => s.status === 'completed').slice(-3);
 
-    const handleTodayClick = () => {
+    const handleTodayClick = async () => {
         if (todaySession) {
-            fetchSessionDetail(todaySession.id);
+            await selectOrCreateSession({ id: todaySession.id, program_day_id: todaySession.program_day_id });
+        } else if (isSequential) {
+            const created = await ensureNextSession();
+            if (created) await fetchSessionDetail(created.id);
         }
         setFitnessTab('today');
     };
@@ -109,69 +123,144 @@ export function FitnessHome() {
                         View All <ChevronRight className="h-3 w-3 ml-1" />
                     </Button>
                 </div>
-                <div className="grid grid-cols-5 gap-2">
-                    {DAY_LABELS.map((label, i) => {
-                        const session = weekSessions.find(s => {
-                            const d = new Date(s.scheduled_date + 'T00:00:00');
-                            return d.getDay() === (i === 0 ? 1 : i + 1); // Mon=1
-                        });
-                        const isToday = session?.scheduled_date === todayStr;
-                        const status = session?.status || 'rest';
-
-                        return (
-                            <button
-                                key={label}
-                                className={cn(
-                                    "rounded-xl p-2.5 sm:p-3 flex flex-col items-center gap-1.5 transition-all border",
-                                    isToday && "ring-2 ring-primary ring-offset-2 ring-offset-background",
-                                    status === 'completed' && "border-green-500/30 dark:border-green-400/30 bg-green-500/10 dark:bg-green-500/15",
-                                    status === 'skipped' && "border-red-500/30 dark:border-red-400/30 bg-red-500/10 dark:bg-red-500/15",
-                                    status === 'in_progress' && "border-yellow-500/30 dark:border-yellow-400/30 bg-yellow-500/10 dark:bg-yellow-500/15",
-                                    status === 'planned' && "border-border bg-muted/30",
-                                    status === 'rest' && "border-border/50 bg-transparent opacity-50",
-                                )}
-                                onClick={() => {
-                                    if (session) {
-                                        fetchSessionDetail(session.id);
+                {isSequential ? (
+                    <div className={cn("grid gap-2", weekSessions.length <= 4 ? `grid-cols-${Math.max(weekSessions.length, 1)}` : "grid-cols-5")}>
+                        {weekSessions.map((session, i) => {
+                            const isVirtual = session.id.startsWith('virtual:');
+                            const status = session.status;
+                            // Find the next-up: first day in order that is virtual or planned/in_progress.
+                            const isNextUp = !weekSessions.slice(0, i).some(s =>
+                                s.id.startsWith('virtual:') || s.status === 'planned' || s.status === 'in_progress'
+                            ) && (isVirtual || status === 'planned' || status === 'in_progress');
+                            return (
+                                <button
+                                    key={session.id}
+                                    className={cn(
+                                        "rounded-xl p-2.5 sm:p-3 flex flex-col items-center gap-1.5 transition-all border min-w-0",
+                                        isNextUp && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+                                        status === 'completed' && "border-green-500/30 dark:border-green-400/30 bg-green-500/10 dark:bg-green-500/15",
+                                        status === 'skipped' && "border-red-500/30 dark:border-red-400/30 bg-red-500/10 dark:bg-red-500/15",
+                                        status === 'in_progress' && "border-yellow-500/30 dark:border-yellow-400/30 bg-yellow-500/10 dark:bg-yellow-500/15",
+                                        (status === 'planned' && !isVirtual) && "border-border bg-muted/30",
+                                        isVirtual && "border-dashed border-border/60 bg-transparent",
+                                    )}
+                                    onClick={async () => {
+                                        await selectOrCreateSession({ id: session.id, program_day_id: session.program_day_id });
                                         setFitnessTab('today');
-                                    }
-                                }}
-                            >
-                                <span className="text-[10px] font-medium text-muted-foreground">{label}</span>
-                                {status === 'completed' ? (
-                                    <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
-                                ) : status === 'skipped' ? (
-                                    <Minus className="h-4 w-4 text-red-600 dark:text-red-400" />
-                                ) : status === 'in_progress' ? (
-                                    <Play className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-400" />
-                                ) : (
-                                    <div className="h-4 w-4 rounded-full border border-border/50" />
-                                )}
-                                <span className="text-[9px] text-muted-foreground truncate w-full text-center">
-                                    {session?.program_day?.name?.split('—')[0]?.trim() || (status === 'rest' ? 'Rest' : '')}
-                                </span>
-                            </button>
-                        );
-                    })}
-                </div>
+                                    }}
+                                >
+                                    <span className="text-[10px] font-medium text-muted-foreground">Day {i + 1}</span>
+                                    {status === 'completed' ? (
+                                        <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                    ) : status === 'skipped' ? (
+                                        <Minus className="h-4 w-4 text-red-600 dark:text-red-400" />
+                                    ) : status === 'in_progress' ? (
+                                        <Play className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-400" />
+                                    ) : (
+                                        <div className="h-4 w-4 rounded-full border border-border/50" />
+                                    )}
+                                    <span className="text-[9px] text-muted-foreground truncate w-full text-center">
+                                        {session.program_day?.name?.split('—')[0]?.trim() || ''}
+                                    </span>
+                                    {session.program_day?.day_of_week && (
+                                        <span className="text-[8px] text-muted-foreground/60 truncate w-full text-center">
+                                            usually {DAY_NAMES_SHORT[session.program_day.day_of_week]}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-5 gap-2">
+                        {DAY_LABELS.map((label, i) => {
+                            const session = weekSessions.find(s => {
+                                const d = new Date(s.scheduled_date + 'T00:00:00');
+                                return d.getDay() === (i === 0 ? 1 : i + 1); // Mon=1
+                            });
+                            const isToday = session?.scheduled_date === todayStr;
+                            const status = session?.status || 'rest';
+
+                            return (
+                                <button
+                                    key={label}
+                                    className={cn(
+                                        "rounded-xl p-2.5 sm:p-3 flex flex-col items-center gap-1.5 transition-all border",
+                                        isToday && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+                                        status === 'completed' && "border-green-500/30 dark:border-green-400/30 bg-green-500/10 dark:bg-green-500/15",
+                                        status === 'skipped' && "border-red-500/30 dark:border-red-400/30 bg-red-500/10 dark:bg-red-500/15",
+                                        status === 'in_progress' && "border-yellow-500/30 dark:border-yellow-400/30 bg-yellow-500/10 dark:bg-yellow-500/15",
+                                        status === 'planned' && "border-border bg-muted/30",
+                                        status === 'rest' && "border-border/50 bg-transparent opacity-50",
+                                    )}
+                                    onClick={() => {
+                                        if (session) {
+                                            fetchSessionDetail(session.id);
+                                            setFitnessTab('today');
+                                        }
+                                    }}
+                                >
+                                    <span className="text-[10px] font-medium text-muted-foreground">{label}</span>
+                                    {status === 'completed' ? (
+                                        <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                    ) : status === 'skipped' ? (
+                                        <Minus className="h-4 w-4 text-red-600 dark:text-red-400" />
+                                    ) : status === 'in_progress' ? (
+                                        <Play className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-400" />
+                                    ) : (
+                                        <div className="h-4 w-4 rounded-full border border-border/50" />
+                                    )}
+                                    <span className="text-[9px] text-muted-foreground truncate w-full text-center">
+                                        {session?.program_day?.name?.split('—')[0]?.trim() || (status === 'rest' ? 'Rest' : '')}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
             </motion.div>
 
             {/* Today CTA */}
-            {todaySession && todaySession.status !== 'completed' && todaySession.status !== 'skipped' && (
-                <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                >
-                    <Button
-                        className="w-full h-12 text-base font-semibold gap-2"
-                        onClick={handleTodayClick}
-                    >
-                        <Dumbbell className="h-5 w-5" />
-                        {todaySession.status === 'in_progress' ? 'Continue Workout' : "Start Today's Workout"}
-                    </Button>
-                </motion.div>
-            )}
+            {(() => {
+                if (isSequential) {
+                    const nextDay = todaySession?.program_day || getNextSequentialDay();
+                    if (!nextDay) return null;
+                    const inProgress = todaySession?.status === 'in_progress';
+                    return (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                        >
+                            <Button
+                                className="w-full h-12 text-base font-semibold gap-2"
+                                onClick={handleTodayClick}
+                            >
+                                <Dumbbell className="h-5 w-5" />
+                                {inProgress ? `Continue: ${nextDay.name}` : `Start Next: ${nextDay.name}`}
+                            </Button>
+                        </motion.div>
+                    );
+                }
+                if (todaySession && todaySession.status !== 'completed' && todaySession.status !== 'skipped') {
+                    return (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                        >
+                            <Button
+                                className="w-full h-12 text-base font-semibold gap-2"
+                                onClick={handleTodayClick}
+                            >
+                                <Dumbbell className="h-5 w-5" />
+                                {todaySession.status === 'in_progress' ? 'Continue Workout' : "Start Today's Workout"}
+                            </Button>
+                        </motion.div>
+                    );
+                }
+                return null;
+            })()}
 
             {/* Quick Stats */}
             <motion.div

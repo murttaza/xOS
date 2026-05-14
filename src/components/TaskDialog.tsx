@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ import { CalendarIcon, Plus, X, TimerOff } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { NoteLinkPicker } from "@/components/notes/NoteLinkPicker";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 interface TaskDialogProps {
     open: boolean;
@@ -25,6 +27,7 @@ import { useStore } from "@/store";
 
 export function TaskDialog({ open, onOpenChange, onSubmit, initialTask, defaultDueDate }: TaskDialogProps) {
     const stats = useStore(state => state.stats);
+    const isMobile = useIsMobile();
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [difficulty, setDifficulty] = useState(1);
@@ -36,6 +39,7 @@ export function TaskDialog({ open, onOpenChange, onSubmit, initialTask, defaultD
     const [existingLabels, setExistingLabels] = useState<string[]>([]);
     const [noteId, setNoteId] = useState<number | null>(null);
     const [time, setTime] = useState<string>("");
+    const [calendarOpen, setCalendarOpen] = useState(false);
 
     useEffect(() => {
         if (initialTask) {
@@ -87,6 +91,7 @@ export function TaskDialog({ open, onOpenChange, onSubmit, initialTask, defaultD
             setNoteId(null);
             setTime("");
         }
+        setCalendarOpen(false);
     }, [initialTask, open, defaultDueDate]);
 
     const handleSubmit = () => {
@@ -232,29 +237,45 @@ export function TaskDialog({ open, onOpenChange, onSubmit, initialTask, defaultD
                             <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                                 Due Date
                             </Label>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant={"outline"}
-                                        className={cn(
-                                            "w-full justify-start text-left font-normal bg-muted/50 border-border text-foreground hover:bg-muted hover:text-foreground h-10 sm:h-9 text-sm",
-                                            !date && "text-muted-foreground"
-                                        )}
-                                    >
-                                        <CalendarIcon className="mr-2 h-4 w-4 opacity-50 shrink-0" />
-                                        <span className="truncate">{date ? format(date, "MMM d") : "Pick date"}</span>
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[min(20rem,calc(100vw-1.5rem))] p-0 bg-popover/95 backdrop-blur-xl border-border text-foreground" align="start" sideOffset={8}>
-                                    <Calendar
-                                        mode="single"
-                                        selected={date}
-                                        onSelect={setDate}
-                                        initialFocus
-                                        className="bg-transparent text-foreground [&_.group\/day]:!bg-transparent [&_button[data-selected-single=true]]:!bg-primary [&_button[data-selected-single=true]]:!text-primary-foreground"
-                                    />
-                                </PopoverContent>
-                            </Popover>
+                            {isMobile ? (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setCalendarOpen(o => !o)}
+                                    aria-expanded={calendarOpen}
+                                    className={cn(
+                                        "w-full justify-start text-left font-normal bg-muted/50 border-border text-foreground hover:bg-muted hover:text-foreground h-10 sm:h-9 text-sm",
+                                        !date && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4 opacity-50 shrink-0" />
+                                    <span className="truncate">{date ? format(date, "MMM d") : "Pick date"}</span>
+                                </Button>
+                            ) : (
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                                "w-full justify-start text-left font-normal bg-muted/50 border-border text-foreground hover:bg-muted hover:text-foreground h-10 sm:h-9 text-sm",
+                                                !date && "text-muted-foreground"
+                                            )}
+                                        >
+                                            <CalendarIcon className="mr-2 h-4 w-4 opacity-50 shrink-0" />
+                                            <span className="truncate">{date ? format(date, "MMM d") : "Pick date"}</span>
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[min(20rem,calc(100vw-1.5rem))] p-0 bg-popover/95 backdrop-blur-xl border-border text-foreground" align="start" sideOffset={8}>
+                                        <Calendar
+                                            mode="single"
+                                            selected={date}
+                                            onSelect={setDate}
+                                            initialFocus
+                                            className="bg-transparent text-foreground [&_.group\/day]:!bg-transparent [&_button[data-selected-single=true]]:!bg-primary [&_button[data-selected-single=true]]:!text-primary-foreground"
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                            )}
                         </div>
 
                         {/* Time */}
@@ -270,6 +291,32 @@ export function TaskDialog({ open, onOpenChange, onSubmit, initialTask, defaultD
                             />
                         </div>
                     </div>
+
+                    {/* Mobile inline calendar reveal */}
+                    {isMobile && (
+                        <AnimatePresence initial={false}>
+                            {calendarOpen && (
+                                <motion.div
+                                    key="inline-calendar"
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    transition={{ duration: 0.18, ease: 'easeOut' }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="rounded-md border border-border bg-popover/95 backdrop-blur-xl">
+                                        <Calendar
+                                            mode="single"
+                                            selected={date}
+                                            onSelect={(d) => { setDate(d); setCalendarOpen(false); }}
+                                            initialFocus
+                                            className="bg-transparent text-foreground w-full [&_.group\/day]:!bg-transparent [&_button[data-selected-single=true]]:!bg-primary [&_button[data-selected-single=true]]:!text-primary-foreground"
+                                        />
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    )}
 
                     {/* Note Link */}
                     <div className="grid gap-2">

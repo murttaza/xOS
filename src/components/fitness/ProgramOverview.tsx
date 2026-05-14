@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useStore } from '../../store';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronRight, Plus, X, Pencil, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, X, Pencil, Trash2, ArrowUp, ArrowDown, CalendarDays, ListOrdered } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { cn } from '../../lib/utils';
@@ -80,6 +80,7 @@ export function ProgramOverview() {
 
     const updateProgram = useStore(s => s.updateProgram);
     const deleteProgram = useStore(s => s.deleteProgram);
+    const deleteUserProgram = useStore(s => s.deleteUserProgram);
     const addPhase = useStore(s => s.addPhase);
     const updatePhase = useStore(s => s.updatePhase);
     const deletePhase = useStore(s => s.deletePhase);
@@ -123,6 +124,12 @@ export function ProgramOverview() {
 
     const handleDeleteProgram = async () => {
         await deleteProgram(program.id);
+        setConfirmDelete(null);
+    };
+
+    const handleDeleteRun = async () => {
+        if (!activeProgram) return;
+        await deleteUserProgram(activeProgram.id);
         setConfirmDelete(null);
     };
 
@@ -235,6 +242,37 @@ export function ProgramOverview() {
                                 <>{program.total_weeks} weeks</>
                             )}
                         </p>
+                        {/* Scheduling mode pill */}
+                        <button
+                            type="button"
+                            disabled={!editMode}
+                            onClick={() => {
+                                const next = program.scheduling_mode === 'sequential' ? 'weekly' : 'sequential';
+                                if (next === program.scheduling_mode) return;
+                                if (confirm(
+                                    next === 'sequential'
+                                        ? 'Switch to next-up mode? Sessions will be created one at a time as you complete them. Existing planned sessions will stay in the database but stop being shown on the calendar.'
+                                        : 'Switch to weekly mode? Sessions will be pre-spawned each week on their day_of_week.'
+                                )) {
+                                    updateProgram(program.id, { scheduling_mode: next });
+                                }
+                            }}
+                            className={cn(
+                                "inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full border transition-colors",
+                                program.scheduling_mode === 'sequential'
+                                    ? "border-primary/40 bg-primary/5 text-primary"
+                                    : "border-border bg-muted/40 text-muted-foreground",
+                                editMode && "hover:bg-muted cursor-pointer",
+                                !editMode && "cursor-default"
+                            )}
+                            title={editMode ? 'Tap to switch scheduling mode' : 'Edit mode to change'}
+                        >
+                            {program.scheduling_mode === 'sequential' ? (
+                                <><ListOrdered className="h-3 w-3" /> Next-up mode</>
+                            ) : (
+                                <><CalendarDays className="h-3 w-3" /> Weekly mode</>
+                            )}
+                        </button>
                     </div>
                     <div className="flex items-center gap-1">
                         <Button
@@ -262,7 +300,7 @@ export function ProgramOverview() {
                 <AnimatePresence>
                     {confirmDelete === 'program' && (
                         <ConfirmDelete
-                            label="this entire program"
+                            label="the entire program template (and every run of it)"
                             onConfirm={handleDeleteProgram}
                             onCancel={() => setConfirmDelete(null)}
                         />
@@ -746,6 +784,31 @@ export function ProgramOverview() {
                     </button>
                 )}
             </div>
+
+            {/* Footer: Delete this run only */}
+            {editMode && activeProgram && (
+                <div className="pt-4 border-t border-border/50 space-y-2">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80 font-semibold">Danger zone</p>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs text-destructive hover:text-destructive hover:bg-destructive/10 gap-2"
+                        onClick={() => setConfirmDelete('run')}
+                    >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete this run only (keep the template)
+                    </Button>
+                    <AnimatePresence>
+                        {confirmDelete === 'run' && (
+                            <ConfirmDelete
+                                label="just this run (your sessions and logs — the template stays)"
+                                onConfirm={handleDeleteRun}
+                                onCancel={() => setConfirmDelete(null)}
+                            />
+                        )}
+                    </AnimatePresence>
+                </div>
+            )}
         </div>
     );
 }

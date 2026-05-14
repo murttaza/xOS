@@ -71,12 +71,14 @@ export function ProgramPicker() {
     const createCustomProgram = useStore(s => s.createCustomProgram);
     const updateProgram = useStore(s => s.updateProgram);
     const deleteProgram = useStore(s => s.deleteProgram);
+    const deleteUserProgram = useStore(s => s.deleteUserProgram);
     const setShowProgramPicker = useStore(s => s.setShowProgramPicker);
 
     const [starting, setStarting] = useState(false);
     const [showCreate, setShowCreate] = useState(false);
     const [step, setStep] = useState<'preset' | 'customize'>('preset');
     const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+    const [confirmDeleteRun, setConfirmDeleteRun] = useState<string | null>(null);
     const [confirmRestart, setConfirmRestart] = useState<string | null>(null);
     const [renamingId, setRenamingId] = useState<string | null>(null);
     const [renameValue, setRenameValue] = useState('');
@@ -84,6 +86,7 @@ export function ProgramPicker() {
     // Form state
     const [programName, setProgramName] = useState('');
     const [totalWeeks, setTotalWeeks] = useState(12);
+    const [schedulingMode, setSchedulingMode] = useState<'weekly' | 'sequential'>('weekly');
     const [days, setDays] = useState<DayEntry[]>([]);
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState('');
@@ -120,6 +123,11 @@ export function ProgramPicker() {
     const handleDelete = async (programId: string) => {
         await deleteProgram(programId);
         setConfirmDelete(null);
+    };
+
+    const handleDeleteRun = async (userProgramId: string) => {
+        await deleteUserProgram(userProgramId);
+        setConfirmDeleteRun(null);
     };
 
     const handleRename = async (programId: string) => {
@@ -172,6 +180,7 @@ export function ProgramPicker() {
             await createCustomProgram({
                 name: programName.trim(),
                 totalWeeks,
+                schedulingMode,
                 days: days.map(d => ({
                     dayOfWeek: d.dayOfWeek,
                     name: d.name.trim(),
@@ -276,6 +285,38 @@ export function ProgramPicker() {
                                         max={52}
                                         className="h-10 w-24"
                                     />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-xs font-medium text-muted-foreground">Schedule by</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setSchedulingMode('weekly')}
+                                            className={cn(
+                                                "rounded-xl border p-3 text-left transition-colors",
+                                                schedulingMode === 'weekly'
+                                                    ? "border-primary/60 bg-primary/5"
+                                                    : "border-border hover:bg-muted/30"
+                                            )}
+                                        >
+                                            <p className="text-xs font-semibold">Day of week</p>
+                                            <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">Mon/Tue/etc. anchored. Misses stay on the calendar.</p>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSchedulingMode('sequential')}
+                                            className={cn(
+                                                "rounded-xl border p-3 text-left transition-colors",
+                                                schedulingMode === 'sequential'
+                                                    ? "border-primary/60 bg-primary/5"
+                                                    : "border-border hover:bg-muted/30"
+                                            )}
+                                        >
+                                            <p className="text-xs font-semibold">Next-up</p>
+                                            <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">Day 1 → 2 → 3. Missed days don't shift the order.</p>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="space-y-3">
@@ -545,14 +586,41 @@ export function ProgramPicker() {
                     <div className="space-y-3 border-t border-border pt-4">
                         <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Paused Programs</p>
                         {pausedPrograms.map(up => (
-                            <div key={up.id} className="flex items-center justify-between border border-border rounded-lg p-3">
-                                <div>
-                                    <p className="text-sm font-medium">{up.program?.name || 'Program'}</p>
-                                    <p className="text-xs text-muted-foreground">Week {up.current_week}</p>
+                            <div key={up.id} className="border border-border rounded-lg">
+                                <div className="flex items-center justify-between p-3 gap-2">
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-sm font-medium truncate">{up.program?.name || 'Program'}</p>
+                                        <p className="text-xs text-muted-foreground">Week {up.current_week}</p>
+                                    </div>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <Button size="sm" variant="outline" onClick={() => handleResume(up.id)}>
+                                            Resume
+                                        </Button>
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                            onClick={() => setConfirmDeleteRun(up.id)}
+                                            title="Delete this run"
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
                                 </div>
-                                <Button size="sm" variant="outline" onClick={() => handleResume(up.id)}>
-                                    Resume
-                                </Button>
+                                <AnimatePresence>
+                                    {confirmDeleteRun === up.id && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            className="flex items-center gap-2 bg-destructive/10 mx-3 mb-3 rounded-lg px-3 py-2"
+                                        >
+                                            <span className="text-xs text-destructive flex-1">Delete this run and all its sessions?</span>
+                                            <Button size="sm" variant="destructive" className="h-6 text-xs px-2" onClick={() => handleDeleteRun(up.id)}>Delete</Button>
+                                            <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => setConfirmDeleteRun(null)}>Cancel</Button>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         ))}
                     </div>
@@ -562,14 +630,41 @@ export function ProgramPicker() {
                     <div className="space-y-3 border-t border-border pt-4">
                         <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Past Programs</p>
                         {completedPrograms.map(up => (
-                            <div key={up.id} className="flex items-center justify-between border border-border/50 rounded-lg p-3 opacity-60">
-                                <div>
-                                    <p className="text-sm font-medium">{up.program?.name || 'Program'}</p>
-                                    <p className="text-xs text-muted-foreground capitalize">{up.status}</p>
+                            <div key={up.id} className="border border-border/50 rounded-lg">
+                                <div className="flex items-center justify-between p-3 gap-2 opacity-60">
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-sm font-medium truncate">{up.program?.name || 'Program'}</p>
+                                        <p className="text-xs text-muted-foreground capitalize">{up.status}</p>
+                                    </div>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                        <Button size="sm" variant="ghost" onClick={() => handleStart(up.program_id)}>
+                                            Restart
+                                        </Button>
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                            onClick={() => setConfirmDeleteRun(up.id)}
+                                            title="Delete this run"
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                    </div>
                                 </div>
-                                <Button size="sm" variant="ghost" onClick={() => handleStart(up.program_id)}>
-                                    Restart
-                                </Button>
+                                <AnimatePresence>
+                                    {confirmDeleteRun === up.id && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            className="flex items-center gap-2 bg-destructive/10 mx-3 mb-3 rounded-lg px-3 py-2"
+                                        >
+                                            <span className="text-xs text-destructive flex-1">Delete this run and all its sessions?</span>
+                                            <Button size="sm" variant="destructive" className="h-6 text-xs px-2" onClick={() => handleDeleteRun(up.id)}>Delete</Button>
+                                            <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => setConfirmDeleteRun(null)}>Cancel</Button>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         ))}
                     </div>
