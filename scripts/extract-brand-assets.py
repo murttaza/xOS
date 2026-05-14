@@ -98,6 +98,29 @@ def export_png(img: Image.Image, dest: Path, size: int | tuple[int, int]) -> Non
     print(f"  wrote {dest.name}  size={size}")
 
 
+# Brand-book sheet bg color, sampled at corners of the source PNG. Used as the solid
+# fill behind icons destined for iOS / PWA tiles, which fill transparent pixels with
+# white (Safari) or otherwise mask in ways that expose the alpha channel.
+TILE_BG = (12, 12, 14)
+
+
+def to_tile_icon(icon_rgba: Image.Image, padding_pct: float = 0.10) -> Image.Image:
+    """Render the icon on a square, fully-opaque dark tile with safe-area padding.
+
+    iOS clips apple-touch-icon corners with its own mask, and Android maskable icons
+    use the inner 80% as the "safe zone". Composing the rounded-square artwork onto
+    a solid dark tile (rather than leaving transparency) avoids the white-halo + edge-
+    clipping artifacts the user saw when adding the site to their iPhone home screen.
+    """
+    w, h = icon_rgba.size
+    icon_side = max(w, h)
+    canvas_side = int(round(icon_side * (1 + 2 * padding_pct)))
+    canvas = Image.new("RGB", (canvas_side, canvas_side), TILE_BG)
+    pos = ((canvas_side - w) // 2, (canvas_side - h) // 2)
+    canvas.paste(icon_rgba, pos, icon_rgba)
+    return canvas
+
+
 def main() -> None:
     if not SRC.exists():
         raise SystemExit(f"Source brand book not found at {SRC}")
@@ -114,13 +137,21 @@ def main() -> None:
     icon_sq = square_pad(icon)
     print(f"Icon body bbox after trim+pad: {icon_sq.size}")
 
-    # Write all icon outputs from the same source.
+    # ICOs (browser tab favicon + Electron Windows installer/taskbar/tray) — keep the
+    # transparent rounded-square silhouette; this is what makes them feel well-incorporated
+    # against arbitrary tab/taskbar backgrounds.
     export_ico(icon_sq, OUT / "favicon.ico",  [16, 32, 48])
     export_ico(icon_sq, OUT / "app-icon.ico", [16, 32, 48, 64, 128, 256])
     export_ico(icon_sq, OUT / "logo.ico",     [16, 32, 48, 64, 128, 256])
-    export_png(icon_sq, OUT / "apple-touch-icon.png", 180)
-    export_png(icon_sq, OUT / "icon-192.png", 192)
-    export_png(icon_sq, OUT / "icon-512.png", 512)
+
+    # iOS apple-touch-icon + PWA / Android maskable icons — composite onto a solid dark
+    # tile with safe-area padding so the OS mask + corner-rounding don't reveal white
+    # halos or clip the icon's spiral / bookmark decorations.
+    tile = to_tile_icon(icon_sq, padding_pct=0.10)
+    print(f"Tile canvas (post-padding): {tile.size}")
+    export_png(tile, OUT / "apple-touch-icon.png", 180)
+    export_png(tile, OUT / "icon-192.png", 192)
+    export_png(tile, OUT / "icon-512.png", 512)
 
     # ---- Wordmark ----
     # Single alpha mask drives both color variants. The mask is built from the cream
