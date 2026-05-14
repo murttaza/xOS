@@ -20,7 +20,7 @@ Outputs:
 """
 from pathlib import Path
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "Rebrand" / "FavIcon Wordmark Logo BrandBook.png"
@@ -139,6 +139,45 @@ def export_png(img: Image.Image, dest: Path, size: int | tuple[int, int]) -> Non
 TILE_BG = (12, 12, 14)
 
 
+# Path to a system font that has full Arabic glyph coverage. Tahoma Bold is on every
+# Windows install and renders the isolated meem cleanly.
+_MEEM_FONT_CANDIDATES = [
+    Path(r"C:\Windows\Fonts\tahomabd.ttf"),
+    Path(r"C:\Windows\Fonts\segoeuib.ttf"),
+    Path(r"C:\Windows\Fonts\arialbd.ttf"),
+]
+
+
+def make_meem_tile(side: int = 1024,
+                   tile_bg: tuple[int, int, int] = TILE_BG,
+                   ink: tuple[int, int, int] = (212, 200, 188)) -> Image.Image:
+    """Render a centered Arabic letter meem (م) on a square dark tile.
+
+    Used as the iOS / PWA app icon while we work on the proper brand icon. The full
+    notebook design with its spiral / bookmark decorations doesn't survive iOS's
+    home-screen mask cleanly even with the simpler favicon-variant crop, so a single
+    glyph is a temporary minimalist alternative the user can ship now.
+
+    The glyph is rendered with anchor='mm', then its visible bbox is extracted and
+    re-centered on the tile — necessary because Arabic letterforms have descenders
+    so the font's logical center doesn't match the visible center.
+    """
+    font_path = next((p for p in _MEEM_FONT_CANDIDATES if p.exists()), None)
+    if font_path is None:
+        raise SystemExit("No Arabic-capable font found on the system")
+    canvas = Image.new("RGB", (side, side), tile_bg)
+    overlay = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    font = ImageFont.truetype(str(font_path), int(side * 0.7))
+    draw.text((side // 2, side // 2), "م", font=font, fill=ink + (255,), anchor="mm")
+    glyph_bbox = overlay.getbbox()
+    if glyph_bbox:
+        glyph = overlay.crop(glyph_bbox)
+        gw, gh = glyph.size
+        canvas.paste(glyph, ((side - gw) // 2, (side - gh) // 2), glyph)
+    return canvas
+
+
 def to_tile_icon(icon_rgba: Image.Image, padding_pct: float = 0.10) -> Image.Image:
     """Render the icon on a square, fully-opaque dark tile with safe-area padding.
 
@@ -180,29 +219,16 @@ def main() -> None:
     export_ico(icon_sq, PUBLIC / "app-icon.ico", [16, 32, 48, 64, 128, 256])
     export_ico(icon_sq, PUBLIC / "logo.ico",     [16, 32, 48, 64, 128, 256])
 
-    # ---- Clean rounded-square variant for iOS / PWA ----
-    # The main icon's spiral binding + bookmark tab don't survive iOS's home-screen mask.
-    # The FAVICON panel in the brand book has a simpler design: just the rounded square
-    # with the 4 sub-icons, no external decorations. Use that for iOS / Android tiles.
-    # bbox_threshold=40 makes the bbox hug the body (sub-icons + dark gutters between them)
-    # and ignore the drop shadow that extends bottom-right beyond it — keeps the body
-    # symmetrically centered on the dark tile after square_pad.
-    fav, bbox = extract_icon(
-        sheet.crop(ICON_FAVICON_BOX).convert("RGBA"),
-        close_passes=8,
-        bbox_threshold=40,
-    )
-    if bbox:
-        fav = fav.crop(bbox)
-    fav_sq = square_pad(fav)
-    # 12% padding inside the dark tile gives a tasteful margin without making the icon
-    # feel small. Because there's no spiral/bookmark, iOS's corner mask can crop the
-    # outer ~5% safely.
-    tile = to_tile_icon(fav_sq, padding_pct=0.12)
-    print(f"Clean icon bbox: {fav_sq.size}  Tile canvas: {tile.size}")
-    export_png(tile, PUBLIC / "apple-touch-icon.png", 180)
-    export_png(tile, PUBLIC / "icon-192.png", 192)
-    export_png(tile, PUBLIC / "icon-512.png", 512)
+    # ---- iOS / PWA icon: Arabic meem on dark tile ----
+    # Temporary, minimalist tile. The notebook design with its decorations doesn't
+    # survive iOS's home-screen mask cleanly enough yet, so the user asked for a
+    # single Arabic letter meem (م) on dark for now — the same letter that maps to
+    # the "m" in "mOS". Browser-tab favicon + Electron .ico keep the rich design.
+    meem = make_meem_tile(side=1024)
+    print(f"Meem tile: {meem.size}")
+    export_png(meem, PUBLIC / "apple-touch-icon.png", 180)
+    export_png(meem, PUBLIC / "icon-192.png", 192)
+    export_png(meem, PUBLIC / "icon-512.png", 512)
 
     # ---- Wordmark ----
     # Single alpha mask drives both color variants. The mask is built from the cream
