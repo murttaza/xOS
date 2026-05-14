@@ -29,8 +29,12 @@ ASSETS = ROOT / "src" / "assets"
 
 # Crop rectangles inside the 1448x1086 brand-book sheet.
 # Pinned empirically by inspecting the brand book.
-ICON_DARK_BOX     = (455, 60, 705, 415)        # main app icon (dark) — rich, with spiral
-ICON_FAVICON_BOX  = (1200, 125, 1300, 225)     # clean rounded-square variant from FAVICON panel
+# Bounds pinned by sampling brightness profiles on the source PNG. Previous crops were
+# too tight: the main-icon box sliced 34px off the right (clipping the bookmark tab),
+# and the favicon box missed 5px on top + left of the body and included an asymmetric
+# drop shadow that pulled the bbox bottom-right.
+ICON_DARK_BOX     = (435, 80, 745, 390)        # main app icon (dark): artwork at 441..739 / 86..385, +6px margin
+ICON_FAVICON_BOX  = (1185, 110, 1290, 215)     # clean rounded-square variant: body at 1195..1279 / 120..200, +10px margin
 WORDMARK_BOX      = (585, 488, 768, 590)       # 2nd "mOs" wordmark, the one with PREFERRED tag
 
 # Sheet background brightness on this brand book is in the range ~2..16. Anything brighter
@@ -38,13 +42,20 @@ WORDMARK_BOX      = (585, 488, 768, 590)       # 2nd "mOs" wordmark, the one wit
 BG_THRESHOLD = 18
 
 
-def extract_icon(rgba_crop: Image.Image, close_passes: int = 20) -> Image.Image:
+def extract_icon(rgba_crop: Image.Image, close_passes: int = 20,
+                 bbox_threshold: int | None = None) -> tuple[Image.Image, tuple[int, int, int, int] | None]:
     """Cut the icon silhouette out of the sheet background.
 
     The icon body is dark gray (~25-60 brightness) and the sheet is even darker (~2-16).
     A brightness threshold alone leaves holes where the icon's own dark shadows sit at
     sheet-level brightness, so we follow it with morphological closing (dilate then erode)
-    to fill those holes while keeping the rounded-square outer silhouette intact."""
+    to fill those holes while keeping the rounded-square outer silhouette intact.
+
+    Returns (rgba, bbox). The rgba uses the low-threshold alpha mask so antialiased edges
+    survive. The bbox is computed from a tighter `bbox_threshold` mask (if provided) so
+    callers can crop to just the bright body, ignoring soft drop shadows that would
+    otherwise inflate the bbox and break symmetric centering after square_pad.
+    """
     arr = np.array(rgba_crop.convert("RGBA"))
     lum = arr[..., :3].mean(axis=2)
     raw = (lum > BG_THRESHOLD).astype(np.uint8) * 255
@@ -59,7 +70,21 @@ def extract_icon(rgba_crop: Image.Image, close_passes: int = 20) -> Image.Image:
     # Slight blur for clean antialiased edges.
     mask = mask.filter(ImageFilter.GaussianBlur(radius=0.8))
     arr[..., 3] = np.array(mask)
-    return Image.fromarray(arr, "RGBA")
+    rgba = Image.fromarray(arr, "RGBA")
+
+    if bbox_threshold is not None:
+        # Compute a tight bbox from only the bright body — excludes the soft drop shadow.
+        body_mask = (lum > bbox_threshold).astype(np.uint8) * 255
+        body_mask_img = Image.fromarray(body_mask, "L")
+        # Same closing so the bbox spans the full body shape, not just the brightest pixels.
+        for _ in range(close_passes):
+            body_mask_img = body_mask_img.filter(ImageFilter.MaxFilter(3))
+        for _ in range(close_passes):
+            body_mask_img = body_mask_img.filter(ImageFilter.MinFilter(3))
+        bbox = body_mask_img.getbbox()
+    else:
+        bbox = rgba.getbbox()
+    return rgba, bbox
 
 
 def extract_wordmark_alpha(rgba_crop: Image.Image) -> Image.Image:
@@ -140,13 +165,13 @@ def main() -> None:
     print(f"Loaded {SRC.name}  ({sheet.size[0]}x{sheet.size[1]})")
 
     # ---- Main app icon (dark) ----
-    icon = extract_icon(sheet.crop(ICON_DARK_BOX).convert("RGBA"))
-    # Trim transparent margins to the visible bbox, then square-pad.
-    bbox = icon.getbbox()
+    # Rich design — body fill, spiral binding, bookmark tab all sit at similar brightness,
+    # so the default low-threshold bbox correctly includes every decoration.
+    icon, bbox = extract_icon(sheet.crop(ICON_DARK_BOX).convert("RGBA"))
     if bbox:
         icon = icon.crop(bbox)
     icon_sq = square_pad(icon)
-    print(f"Icon body bbox after trim+pad: {icon_sq.size}")
+    print(f"Main icon bbox after trim+pad: {icon_sq.size}")
 
     # ICOs (browser tab favicon + Electron Windows installer/taskbar/tray) — keep the
     # transparent rounded-square silhouette; this is what makes them feel well-incorporated
@@ -159,8 +184,14 @@ def main() -> None:
     # The main icon's spiral binding + bookmark tab don't survive iOS's home-screen mask.
     # The FAVICON panel in the brand book has a simpler design: just the rounded square
     # with the 4 sub-icons, no external decorations. Use that for iOS / Android tiles.
-    fav = extract_icon(sheet.crop(ICON_FAVICON_BOX).convert("RGBA"), close_passes=8)
-    bbox = fav.getbbox()
+    # bbox_threshold=40 makes the bbox hug the body (sub-icons + dark gutters between them)
+    # and ignore the drop shadow that extends bottom-right beyond it — keeps the body
+    # symmetrically centered on the dark tile after square_pad.
+    fav, bbox = extract_icon(
+        sheet.crop(ICON_FAVICON_BOX).convert("RGBA"),
+        close_passes=8,
+        bbox_threshold=40,
+    )
     if bbox:
         fav = fav.crop(bbox)
     fav_sq = square_pad(fav)
