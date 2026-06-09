@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Transaction } from '@/types';
+import { toCents, centsToAmount } from '@/lib/money';
 
 interface BudgetChartsProps {
     transactions: Transaction[];
@@ -22,9 +23,7 @@ export function BudgetCharts({ transactions }: BudgetChartsProps) {
                     cents: 0,
                 };
             }
-            // Round to nearest cent BEFORE adding, so a single bad input doesn't
-            // poison the running sum.
-            catCents[key].cents += Math.round(Number(tx.amount) * 100);
+            catCents[key].cents += toCents(tx.amount);
         }
 
         const sorted = Object.values(catCents)
@@ -120,22 +119,27 @@ export function BudgetCharts({ transactions }: BudgetChartsProps) {
 
 function DailySpendingChart({ transactions }: { transactions: Transaction[] }) {
     const dailyData = useMemo(() => {
-        const map = new Map<string, { income: number; expense: number }>();
+        // Aggregate in integer cents (see src/lib/money.ts)
+        const map = new Map<string, { incomeCents: number; expenseCents: number }>();
 
         for (const tx of transactions) {
             const day = tx.date.slice(-2); // DD
-            const existing = map.get(day) || { income: 0, expense: 0 };
+            const existing = map.get(day) || { incomeCents: 0, expenseCents: 0 };
             if (tx.isIncome) {
-                existing.income += Number(tx.amount);
+                existing.incomeCents += toCents(tx.amount);
             } else {
-                existing.expense += Number(tx.amount);
+                existing.expenseCents += toCents(tx.amount);
             }
             map.set(day, existing);
         }
 
         return [...map.entries()]
             .sort((a, b) => a[0].localeCompare(b[0]))
-            .map(([day, data]) => ({ day, ...data }));
+            .map(([day, data]) => ({
+                day,
+                income: centsToAmount(data.incomeCents),
+                expense: centsToAmount(data.expenseCents),
+            }));
     }, [transactions]);
 
     if (dailyData.length === 0) return null;

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Transaction, BudgetTarget } from '@/types';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { Progress } from '../ui/progress';
+import { toCents, centsToAmount, formatAmount } from '@/lib/money';
 
 interface BudgetDashboardProps {
     transactions: Transaction[];
@@ -9,34 +10,40 @@ interface BudgetDashboardProps {
 }
 
 export function BudgetDashboard({ transactions, budgetTargets }: BudgetDashboardProps) {
+    // All aggregation in integer cents — see src/lib/money.ts.
     const { totalIncome, totalExpenses, net, categoryBreakdown } = useMemo(() => {
-        let income = 0;
-        let expenses = 0;
-        const catSpending: Record<number, { name: string; color: string; spent: number }> = {};
+        let incomeCents = 0;
+        let expenseCents = 0;
+        const catSpending: Record<number, { name: string; color: string; spentCents: number }> = {};
 
         for (const tx of transactions) {
-            const amount = Number(tx.amount);
+            const cents = toCents(tx.amount);
             if (tx.isIncome) {
-                income += amount;
+                incomeCents += cents;
             } else {
-                expenses += amount;
+                expenseCents += cents;
                 if (!catSpending[tx.categoryId]) {
                     catSpending[tx.categoryId] = {
                         name: tx.categoryName || 'Unknown',
                         color: tx.categoryColor || '#6b7280',
-                        spent: 0,
+                        spentCents: 0,
                     };
                 }
-                catSpending[tx.categoryId].spent += amount;
+                catSpending[tx.categoryId].spentCents += cents;
             }
         }
 
         return {
-            totalIncome: income,
-            totalExpenses: expenses,
-            net: income - expenses,
+            totalIncome: centsToAmount(incomeCents),
+            totalExpenses: centsToAmount(expenseCents),
+            net: centsToAmount(incomeCents - expenseCents),
             categoryBreakdown: Object.entries(catSpending)
-                .map(([id, data]) => ({ categoryId: Number(id), ...data }))
+                .map(([id, data]) => ({
+                    categoryId: Number(id),
+                    name: data.name,
+                    color: data.color,
+                    spent: centsToAmount(data.spentCents),
+                }))
                 .sort((a, b) => b.spent - a.spent),
         };
     }, [transactions]);
@@ -49,7 +56,7 @@ export function BudgetDashboard({ transactions, budgetTargets }: BudgetDashboard
         return map;
     }, [budgetTargets]);
 
-    const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2 });
+    const fmt = formatAmount;
 
     return (
         <div className="space-y-4">

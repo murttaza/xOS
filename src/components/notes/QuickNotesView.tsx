@@ -110,8 +110,8 @@ export function QuickNotesView({ subjectId, onClose }: { subjectId: number; onCl
 
   return (
     <div className="fixed inset-0 z-[200] bg-background flex flex-col no-drag">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
+      {/* Header — top padding clears the notch/status bar on phones */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border/50" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top, 0px))' }}>
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold text-foreground">Quick Notes</h2>
           <span className="text-xs text-muted-foreground">{notes.length} notes</span>
@@ -146,8 +146,8 @@ export function QuickNotesView({ subjectId, onClose }: { subjectId: number; onCl
         <p className="text-[10px] text-muted-foreground mt-1 ml-1">Enter to save, Shift+Enter for new line</p>
       </div>
 
-      {/* Notes feed */}
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2">
+      {/* Notes feed — bottom padding clears the home indicator on phones */}
+      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2 mobile-safe-bottom">
         {sorted.length === 0 ? (
           <div className="text-center text-muted-foreground text-sm py-12">
             No quick notes yet. Type above to create one.

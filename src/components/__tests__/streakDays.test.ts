@@ -1,41 +1,64 @@
 import { describe, it, expect } from 'vitest';
-import { differenceInCalendarDays } from 'date-fns';
+import { anchorStreakDays } from '@/lib/streaks';
+import type { Streak } from '@/types';
 
-// Mirrors the implementation in StreaksWidget.tsx computeStreakDays —
-// kept here so the test is independent of the component module.
-function computeStreakDays(start: Date, now: Date): number {
-    return Math.max(0, differenceInCalendarDays(now, start));
+// Tests the REAL anchor-based streak math (src/lib/streaks.ts) used by
+// StreaksWidget, YearMode, and the daily currentStreak sync.
+
+function mkStreak(overrides: Partial<Streak>): Streak {
+    return {
+        id: 1,
+        title: 'Test',
+        currentStreak: 0,
+        lastUpdated: '',
+        isPaused: 0,
+        createdAt: '',
+        ...overrides,
+    } as Streak;
 }
 
-describe('computeStreakDays (calendar-day math)', () => {
-    it('returns 0 when start and now are the same day', () => {
-        const d = new Date(2026, 4, 10, 9, 0, 0);
-        const later = new Date(2026, 4, 10, 23, 30, 0);
-        expect(computeStreakDays(d, later)).toBe(0);
+describe('anchorStreakDays', () => {
+    it('returns 0 when the anchor is today', () => {
+        const now = new Date(2026, 4, 10, 23, 30, 0);
+        const s = mkStreak({ createdAt: new Date(2026, 4, 10, 9, 0, 0).toISOString() });
+        expect(anchorStreakDays(s, now)).toBe(0);
     });
 
     it('returns 1 across midnight, even with < 24h elapsed', () => {
-        const d = new Date(2026, 4, 10, 23, 0, 0); // 11pm
-        const later = new Date(2026, 4, 11, 1, 0, 0); // 1am next day
-        expect(computeStreakDays(d, later)).toBe(1);
-    });
-
-    it('handles DST "spring forward" boundary cleanly (US-style)', () => {
-        // March 12, 2026: 2am → 3am (US DST). Date works in local time, so this just verifies no off-by-one.
-        const d = new Date(2026, 2, 11, 23, 0, 0); // Mar 11 11pm
-        const later = new Date(2026, 2, 12, 9, 0, 0); // Mar 12 9am
-        expect(computeStreakDays(d, later)).toBe(1);
-    });
-
-    it('returns max 0 when now < start', () => {
-        const d = new Date(2026, 4, 10);
-        const earlier = new Date(2026, 4, 8);
-        expect(computeStreakDays(d, earlier)).toBe(0);
+        const now = new Date(2026, 4, 11, 1, 0, 0);
+        const s = mkStreak({ createdAt: new Date(2026, 4, 10, 23, 0, 0).toISOString() });
+        expect(anchorStreakDays(s, now)).toBe(1);
     });
 
     it('returns N for an N-day gap', () => {
-        const d = new Date(2026, 4, 1);
-        const later = new Date(2026, 4, 11);
-        expect(computeStreakDays(d, later)).toBe(10);
+        const now = new Date(2026, 4, 11);
+        const s = mkStreak({ createdAt: new Date(2026, 4, 1).toISOString() });
+        expect(anchorStreakDays(s, now)).toBe(10);
+    });
+
+    it('never goes negative when the anchor is in the future', () => {
+        const now = new Date(2026, 4, 8);
+        const s = mkStreak({ createdAt: new Date(2026, 4, 10).toISOString() });
+        expect(anchorStreakDays(s, now)).toBe(0);
+    });
+
+    it('freezes at lastUpdated while paused', () => {
+        const s = mkStreak({
+            createdAt: new Date(2026, 4, 1).toISOString(),
+            lastUpdated: new Date(2026, 4, 6).toISOString(),
+            isPaused: 1,
+        });
+        // "now" being weeks later must not matter while paused
+        expect(anchorStreakDays(s, new Date(2026, 5, 20))).toBe(5);
+    });
+
+    it('falls back to lastUpdated when createdAt is missing', () => {
+        const s = mkStreak({ createdAt: '', lastUpdated: new Date(2026, 4, 9).toISOString() });
+        expect(anchorStreakDays(s, new Date(2026, 4, 11))).toBe(2);
+    });
+
+    it('falls back to stored currentStreak when dates are invalid', () => {
+        const s = mkStreak({ createdAt: 'garbage', currentStreak: 7 });
+        expect(anchorStreakDays(s, new Date(2026, 4, 11))).toBe(7);
     });
 });

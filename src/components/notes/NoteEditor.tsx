@@ -1,3 +1,4 @@
+import DOMPurify from 'dompurify';
 import { Note } from '@/types';
 import { Book, X, Bold, Italic, Heading1, Heading2, List, AlignCenter, Minus, Quote, ListOrdered, Strikethrough, CheckSquare } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
@@ -128,75 +129,41 @@ function toEditorHtml(raw: string | undefined): string {
 }
 
 /**
- * Allow-list HTML sanitizer for the WYSIWYG editor. Everything not explicitly
- * allowed is stripped. Because note content is rendered via innerHTML, this
- * must be tight — treat every unlisted tag/attribute as hostile.
+ * Allow-list HTML sanitizer for the WYSIWYG editor, built on DOMPurify.
+ * Note content is user-authored, synced through Supabase, and rendered via
+ * innerHTML — DOMPurify handles the mutation-XSS / parser-differential cases
+ * a hand-rolled sanitizer can't. The app CSP (script-src 'self') is the
+ * second line of defense.
  */
-const ALLOWED_TAGS = new Set([
-    'p', 'div', 'span', 'br', 'hr',
-    'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-    'strong', 'b', 'em', 'i', 's', 'strike', 'u',
-    'ul', 'ol', 'li',
-    'blockquote', 'pre', 'code',
-    'a', 'input',
-]);
-const ALLOWED_ATTRS: Record<string, Set<string>> = {
-    a: new Set(['href', 'title']),
-    input: new Set(['type', 'checked', 'disabled']),
+const SANITIZE_CONFIG = {
+    ALLOWED_TAGS: [
+        'p', 'div', 'span', 'br', 'hr',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'strong', 'b', 'em', 'i', 's', 'strike', 'u',
+        'ul', 'ol', 'li',
+        'blockquote', 'pre', 'code',
+        'a', 'input',
+    ],
+    ALLOWED_ATTR: ['class', 'href', 'title', 'type', 'checked', 'disabled'],
+    // DOMPurify's default URI policy already blocks javascript:, vbscript:,
+    // and non-image data: URLs.
 };
-const GLOBAL_ALLOWED_ATTRS = new Set(['class']);
 
-function isSafeUrl(value: string): boolean {
-    const v = value.trim().toLowerCase();
-    // Block javascript:, vbscript:, and data: (other than data:image/* for future images)
-    if (v.startsWith('javascript:') || v.startsWith('vbscript:')) return false;
-    if (v.startsWith('data:') && !v.startsWith('data:image/')) return false;
-    return true;
-}
+DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+    // <input> must be a checkbox — anything else gets dropped.
+    if (node.nodeName === 'INPUT' && (node.getAttribute('type') || '').toLowerCase() !== 'checkbox') {
+        node.remove();
+        return;
+    }
+    // Force links to a safe rel
+    if (node.nodeName === 'A') {
+        node.setAttribute('rel', 'noopener noreferrer');
+    }
+});
 
 function sanitizeHtml(html: string): string {
     if (!html) return '';
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-
-    const walk = (node: Element) => {
-        // Iterate over a snapshot because we may replace/remove children.
-        const children = [...node.children];
-        for (const child of children) {
-            const tag = child.tagName.toLowerCase();
-            if (!ALLOWED_TAGS.has(tag)) {
-                // Replace the disallowed element with its text content so user
-                // text inside (e.g.) an <svg><text>hi</text></svg> is preserved.
-                const text = doc.createTextNode(child.textContent || '');
-                child.replaceWith(text);
-                continue;
-            }
-            // <input> must be a checkbox — anything else gets dropped.
-            if (tag === 'input' && (child.getAttribute('type') || '').toLowerCase() !== 'checkbox') {
-                child.remove();
-                continue;
-            }
-            // Scrub attributes
-            for (const attr of [...child.attributes]) {
-                const name = attr.name.toLowerCase();
-                const allowed =
-                    GLOBAL_ALLOWED_ATTRS.has(name) || ALLOWED_ATTRS[tag]?.has(name);
-                if (!allowed) {
-                    child.removeAttribute(attr.name);
-                    continue;
-                }
-                if ((name === 'href' || name === 'src') && !isSafeUrl(attr.value)) {
-                    child.removeAttribute(attr.name);
-                }
-            }
-            // Force external links to safe rel
-            if (tag === 'a') {
-                child.setAttribute('rel', 'noopener noreferrer');
-            }
-            walk(child);
-        }
-    };
-    walk(doc.body);
-    return doc.body.innerHTML;
+    return DOMPurify.sanitize(html, SANITIZE_CONFIG);
 }
 
 export const NoteEditor = ({
@@ -364,7 +331,9 @@ export const NoteEditor = ({
             </Button>
 
             {activeNote ? (
-                <div className="flex flex-col h-full min-h-0 p-4 sm:p-8 md:p-12 animate-in fade-in duration-150">
+                // mobile-safe-bottom: the "Last edited / Saving" row and the last
+                // lines of the editor must clear the home indicator on phones
+                <div className="flex flex-col h-full min-h-0 p-4 sm:p-8 md:p-12 animate-in fade-in duration-150 mobile-safe-bottom">
                     <input
                         className="bg-transparent text-xl sm:text-3xl md:text-4xl font-bold text-foreground mb-4 sm:mb-6 border-none outline-none placeholder:text-muted-foreground"
                         value={editingNote.title !== undefined ? editingNote.title : activeNote.title}

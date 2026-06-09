@@ -6,6 +6,8 @@ import { Book, Trash2, ArrowLeft, Zap, Maximize2, Minimize2, PanelLeftClose, Pan
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { showConfirm } from './ui/confirm-dialog';
+import { showErrorToast } from './ui/toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { cn } from '../lib/utils';
 import { ModeHeader } from './ModeHeader';
 
@@ -76,6 +78,7 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
             }
         } catch (e) {
             console.error(e);
+            showErrorToast('Could not create the note.');
         }
     };
 
@@ -84,26 +87,47 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
         activeStateRef.current = { activeNote, editingNote };
     }, [activeNote, editingNote]);
 
-    const savePendingChanges = React.useCallback(() => {
+    // Unsaved edits per note id. Edits land here the moment they exist and are
+    // only removed once a save SUCCEEDS — so a failed save or a quick note
+    // switch can never silently drop text. Selecting a note rehydrates its draft.
+    const draftsRef = React.useRef(new Map<number, Partial<Note>>());
+
+    /** Flush the current note's unsaved edits. Resolves true when persisted. */
+    const savePendingChanges = React.useCallback(async (): Promise<boolean> => {
         const currentActive = activeStateRef.current.activeNote;
         const currentEditing = activeStateRef.current.editingNote;
-        if (currentActive) {
-            const hasChanges = (currentEditing.title !== undefined && currentEditing.title !== currentActive.title) ||
-                (currentEditing.content !== undefined && currentEditing.content !== currentActive.content);
-            if (hasChanges) {
-                updateNote({
-                    ...currentActive,
-                    ...currentEditing,
-                    updatedAt: new Date().toISOString()
-                });
-            }
+        if (!currentActive?.id) return true;
+        const hasChanges = (currentEditing.title !== undefined && currentEditing.title !== currentActive.title) ||
+            (currentEditing.content !== undefined && currentEditing.content !== currentActive.content);
+        if (!hasChanges) return true;
+
+        const noteId = currentActive.id;
+        draftsRef.current.set(noteId, currentEditing);
+        try {
+            await updateNote({
+                ...currentActive,
+                ...currentEditing,
+                updatedAt: new Date().toISOString()
+            });
+            draftsRef.current.delete(noteId);
+            return true;
+        } catch {
+            // Store already toasted; the draft stays for recovery.
+            return false;
         }
     }, [updateNote]);
 
-    // Cleanup save on unmount
+    // Flush on unmount, when the window/tab goes hidden (mobile app switch,
+    // window close), and best-effort on unload.
     useEffect(() => {
+        const flush = () => { void savePendingChanges(); };
+        const onVisibility = () => { if (document.visibilityState === 'hidden') flush(); };
+        document.addEventListener('visibilitychange', onVisibility);
+        window.addEventListener('beforeunload', flush);
         return () => {
-            savePendingChanges();
+            document.removeEventListener('visibilitychange', onVisibility);
+            window.removeEventListener('beforeunload', flush);
+            flush();
         };
     }, [savePendingChanges]);
 
@@ -123,12 +147,18 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
         // the timer fires, the closure still references the correct note.
         const noteToSave = { ...activeNote, ...editingNote, updatedAt: new Date().toISOString() };
         const noteId = selectedNoteId;
+        draftsRef.current.set(noteId, editingNote);
 
         setIsSaving(true);
         const timer = setTimeout(async () => {
             // Only save if we're still on the same note (avoid stale write)
             if (noteId === activeStateRef.current.activeNote?.id) {
-                await updateNote(noteToSave);
+                try {
+                    await updateNote(noteToSave);
+                    draftsRef.current.delete(noteId);
+                } catch {
+                    // Store already toasted; the draft stays for recovery.
+                }
             }
             setIsSaving(false);
         }, 1000);
@@ -198,7 +228,9 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
                         selectedNoteId={selectedNoteId}
                         onSelectNote={(id) => {
                             setSelectedNoteId(id);
-                            setEditingNote({});
+                            // Rehydrate any unsaved draft for this note instead of
+                            // discarding it (drafts survive failed saves/switches).
+                            setEditingNote((id != null && draftsRef.current.get(id)) || {});
                         }}
                         onCreateNote={handleCreateNote}
                         onDeleteNote={handleDeleteNote}
@@ -383,6 +415,7 @@ export const NotesMode = () => {
                         "fixed inset-0 z-[55] text-foreground overflow-hidden flex flex-col font-sans no-drag",
                         "bg-background"
                     )}
+                    style={{ paddingLeft: 'env(safe-area-inset-left, 0px)', paddingRight: 'env(safe-area-inset-right, 0px)' }}
                 >
                     <div className="absolute inset-0 -z-10 pointer-events-none">
                         <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-background/95" />
@@ -430,10 +463,13 @@ export const NotesMode = () => {
                     {/* Bookshelf View (Scrollable) */}
                     <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-12">
 
-                        {isCreatingSubject && (
-                            <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center no-drag">
-                                <form onSubmit={handleCreateSubject} className="bg-background p-8 rounded-2xl border border-border w-full max-w-md space-y-4 shadow-2xl">
-                                    <h3 className="text-xl font-bold">New Subject</h3>
+                        {/* Radix Dialog: focus-trap, Escape-to-close, and aria come for free */}
+                        <Dialog open={isCreatingSubject} onOpenChange={(v) => { if (!v) setIsCreatingSubject(false); }}>
+                            <DialogContent className="max-w-md no-drag">
+                                <DialogHeader>
+                                    <DialogTitle className="text-xl font-bold">New Subject</DialogTitle>
+                                </DialogHeader>
+                                <form onSubmit={handleCreateSubject} className="space-y-4">
                                     <Input
                                         autoFocus
                                         placeholder="Subject Name (e.g., Project Alpha)"
@@ -446,8 +482,8 @@ export const NotesMode = () => {
                                         <Button type="submit" variant="destructive">Create Book</Button>
                                     </div>
                                 </form>
-                            </div>
-                        )}
+                            </DialogContent>
+                        </Dialog>
 
                         <BookShelf
                             subjects={subjects}
@@ -464,8 +500,9 @@ export const NotesMode = () => {
                         <div className="fixed inset-0 pointer-events-none -z-10 bg-[linear-gradient(rgba(0,0,0,0.05)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:100%_300px] bg-[position:0_40px]"></div>
                     </div>
 
-                    {/* Footer Navigation for Libraries */}
-                    <div className="h-12 border-t border-border/50 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-between px-3 sm:px-6 no-drag">
+                    {/* Footer Navigation for Libraries — min-h + mobile-safe-bottom keep
+                        the library buttons tappable above the home indicator */}
+                    <div className="min-h-12 border-t border-border/50 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-between px-3 sm:px-6 no-drag mobile-safe-bottom" style={{ '--msb-base': '0px' } as React.CSSProperties}>
                         <div className="flex-1" />
                         <div className="flex gap-1.5 sm:gap-2">
                             {libraryIndicesWithSubjects.map(idx => (

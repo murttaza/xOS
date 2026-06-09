@@ -31,6 +31,10 @@ export const useStore = create<AppState>()(
                 isHardcoreMode: state.isHardcoreMode,
                 osPrefix: state.osPrefix,
                 timerStartTimes: state.timerStartTimes,
+                // Pomodoro survives reloads — wall-clock anchored
+                pomodoroTime: state.pomodoroTime,
+                pomodoroEndsAt: state.pomodoroEndsAt,
+                isPomodoroRunning: state.isPomodoroRunning,
             }),
         }
     )

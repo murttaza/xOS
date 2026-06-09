@@ -9,13 +9,14 @@ import { showConfirm } from './ui/confirm-dialog';
 import {
     Shield, Search, Plus, Pin, PinOff, Copy, Eye, EyeOff, Trash2,
     ExternalLink, KeyRound, User, Link as LinkIcon, StickyNote, RefreshCw,
-    Pencil, Check
+    Pencil, Check, Lock, Unlock, Settings2, Download, Upload, ShieldCheck
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { ModeHeader } from './ModeHeader';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import type { VaultStatusResult } from '../shared/ipc-types';
 
 // ── Password generator ─────────────────────────────────────────
 const GEN_SETS = {
@@ -83,7 +84,13 @@ export function PasswordsMode() {
     const revealPassword = useStore(s => s.revealPassword);
     const touchPassword = useStore(s => s.touchPassword);
     const togglePinPassword = useStore(s => s.togglePinPassword);
+    const vaultStatus = useStore(s => s.vaultStatus);
+    const fetchVaultStatus = useStore(s => s.fetchVaultStatus);
+    const applyVaultState = useStore(s => s.applyVaultState);
+    const lockVault = useStore(s => s.lockVault);
 
+    const [setupOpen, setSetupOpen] = useState(false);
+    const [vaultSettingsOpen, setVaultSettingsOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [editorOpen, setEditorOpen] = useState(false);
@@ -131,8 +138,27 @@ export function PasswordsMode() {
     }, [isPasswordsMode]);
 
     useEffect(() => {
-        if (isPasswordsMode) fetchPasswords();
-    }, [isPasswordsMode, fetchPasswords]);
+        if (!isPasswordsMode) return;
+        // Status first — fetching entries while locked is rejected by the main process.
+        fetchVaultStatus().then(status => {
+            if (status && !status.locked) fetchPasswords();
+        });
+    }, [isPasswordsMode, fetchVaultStatus, fetchPasswords]);
+
+    // Main process pushes lock-state changes (auto-lock, OS screen lock, other windows).
+    useEffect(() => {
+        if (!isElectron || !window.ipcRenderer) return;
+        const unsub = window.ipcRenderer.on('vault-state-changed', (_e, status) => {
+            applyVaultState(status as VaultStatusResult);
+        });
+        return unsub;
+    }, [applyVaultState]);
+
+    // Drop any revealed plaintexts the moment the vault locks.
+    const isLocked = !!vaultStatus?.locked;
+    useEffect(() => {
+        if (isLocked) setRevealed({});
+    }, [isLocked]);
 
     // Esc closes mode
     useEffect(() => {
@@ -304,16 +330,64 @@ export function PasswordsMode() {
                     showMobileBack
                     onMobileBack={togglePasswordsMode}
                     rightContent={
-                        <Button
-                            size="sm"
-                            onClick={openCreate}
-                            className="h-8 gap-1.5"
-                        >
-                            <Plus className="h-3.5 w-3.5" />
-                            New
-                        </Button>
+                        <div className="flex items-center gap-1.5">
+                            {vaultStatus?.configured && !isLocked && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => lockVault()}
+                                    title="Lock vault"
+                                    aria-label="Lock vault"
+                                >
+                                    <Lock className="h-3.5 w-3.5" />
+                                </Button>
+                            )}
+                            {!isLocked && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => setVaultSettingsOpen(true)}
+                                    title="Vault settings"
+                                    aria-label="Vault settings"
+                                >
+                                    <Settings2 className="h-3.5 w-3.5" />
+                                </Button>
+                            )}
+                            {!isLocked && (
+                                <Button
+                                    size="sm"
+                                    onClick={openCreate}
+                                    className="h-8 gap-1.5"
+                                >
+                                    <Plus className="h-3.5 w-3.5" />
+                                    New
+                                </Button>
+                            )}
+                        </div>
                     }
                 />
+
+                {/* Locked vault: nothing renders until the passphrase unlocks it */}
+                {isLocked ? (
+                    <VaultUnlockScreen />
+                ) : (
+                <>
+                {/* Master-passphrase nudge — the single biggest hardening step for the vault */}
+                {vaultStatus && vaultStatus.configured === false && (
+                    <div className="mx-3 sm:mx-4 lg:mx-6 mb-2 max-w-screen-2xl lg:mx-auto lg:w-full lg:px-6">
+                        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-3 py-2">
+                            <ShieldCheck className="h-4 w-4 text-yellow-500 shrink-0" />
+                            <p className="text-xs text-foreground/90 flex-1 min-w-[200px]">
+                                Add a master passphrase so your passwords stay locked even when this computer is unlocked.
+                            </p>
+                            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setSetupOpen(true)}>
+                                Set up
+                            </Button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Body */}
                 <div className="flex-1 overflow-hidden px-3 sm:px-4 lg:px-6 pb-4 pt-1">
@@ -428,8 +502,292 @@ export function PasswordsMode() {
                         setEditingEntry(null);
                     }}
                 />
+
+                <SetupVaultDialog open={setupOpen} onClose={() => setSetupOpen(false)} />
+                <VaultSettingsDialog
+                    open={vaultSettingsOpen}
+                    onClose={() => setVaultSettingsOpen(false)}
+                    configured={!!vaultStatus?.configured}
+                    onOpenSetup={() => { setVaultSettingsOpen(false); setSetupOpen(true); }}
+                />
+                </>
+                )}
             </motion.div>
         </AnimatePresence>
+    );
+}
+
+// ── Vault lock screens & dialogs ───────────────────────────────
+function VaultUnlockScreen() {
+    const unlockVault = useStore(s => s.unlockVault);
+    const [passphrase, setPassphrase] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [busy, setBusy] = useState(false);
+
+    const handleUnlock = async () => {
+        if (!passphrase || busy) return;
+        setBusy(true);
+        setError(null);
+        try {
+            const result = await unlockVault(passphrase);
+            if (!result.ok) {
+                const wait = result.retryInMs ? ` Try again in ${Math.ceil(result.retryInMs / 1000)}s.` : '';
+                setError((result.error || 'Incorrect passphrase') + wait);
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Unlock failed');
+        } finally {
+            setBusy(false);
+            setPassphrase('');
+        }
+    };
+
+    return (
+        <div className="flex-1 flex items-center justify-center px-6">
+            <div className="w-full max-w-sm text-center space-y-4">
+                <div className="mx-auto h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Lock className="h-7 w-7 text-primary/80" />
+                </div>
+                <div className="space-y-1">
+                    <h2 className="text-lg font-semibold">Vault locked</h2>
+                    <p className="text-xs text-muted-foreground">
+                        Enter your master passphrase to unlock your passwords.
+                    </p>
+                </div>
+                <form
+                    className="space-y-3"
+                    onSubmit={(e) => { e.preventDefault(); handleUnlock(); }}
+                >
+                    <Input
+                        autoFocus
+                        type="password"
+                        value={passphrase}
+                        onChange={(e) => setPassphrase(e.target.value)}
+                        placeholder="Master passphrase"
+                        className="h-10 text-center"
+                        aria-label="Master passphrase"
+                    />
+                    {error && <p className="text-xs text-destructive">{error}</p>}
+                    <Button type="submit" className="w-full gap-1.5" disabled={!passphrase || busy}>
+                        <Unlock className="h-3.5 w-3.5" />
+                        {busy ? 'Unlocking…' : 'Unlock'}
+                    </Button>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+function SetupVaultDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+    const setupVault = useStore(s => s.setupVault);
+    const [passphrase, setPassphrase] = useState('');
+    const [confirm, setConfirm] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [busy, setBusy] = useState(false);
+    const s = strength(passphrase);
+
+    const reset = () => { setPassphrase(''); setConfirm(''); setError(null); };
+
+    const handleSetup = async () => {
+        if (busy) return;
+        if (passphrase.length < 10) { setError('Use at least 10 characters.'); return; }
+        if (passphrase !== confirm) { setError('Passphrases do not match.'); return; }
+        setBusy(true);
+        setError(null);
+        try {
+            const result = await setupVault(passphrase);
+            if (!result.ok) {
+                setError(result.error || 'Setup failed');
+            } else {
+                reset();
+                onClose();
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Setup failed');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={(v) => { if (!v) { reset(); onClose(); } }}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4 text-primary" />
+                        Set a master passphrase
+                    </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
+                    <p className="text-xs text-muted-foreground">
+                        Your passwords will be re-encrypted so they can only be read after
+                        entering this passphrase. It never leaves this device.
+                    </p>
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-foreground/90">
+                        There is <span className="font-semibold">no recovery</span> — if you forget the
+                        passphrase, the stored passwords cannot be decrypted. Keep an exported backup.
+                    </div>
+                    <div>
+                        <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Passphrase (min 10 characters)</label>
+                        <Input
+                            autoFocus
+                            type="password"
+                            value={passphrase}
+                            onChange={(e) => setPassphrase(e.target.value)}
+                            className="h-9 mt-1"
+                        />
+                        {passphrase && (
+                            <div className="mt-2 flex items-center gap-2">
+                                <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
+                                    <div className={cn("h-full transition-all duration-300", s.color)} style={{ width: `${Math.min(100, (s.score / 6) * 100)}%` }} />
+                                </div>
+                                <span className="text-[10px] text-muted-foreground w-14 text-right">{s.label}</span>
+                            </div>
+                        )}
+                    </div>
+                    <div>
+                        <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Confirm passphrase</label>
+                        <Input
+                            type="password"
+                            value={confirm}
+                            onChange={(e) => setConfirm(e.target.value)}
+                            className="h-9 mt-1"
+                        />
+                    </div>
+                    {error && <p className="text-xs text-destructive">{error}</p>}
+                    <div className="flex justify-end gap-2 pt-1">
+                        <Button variant="ghost" onClick={() => { reset(); onClose(); }} disabled={busy}>Cancel</Button>
+                        <Button onClick={handleSetup} disabled={busy || passphrase.length < 10 || passphrase !== confirm}>
+                            {busy ? 'Encrypting…' : 'Enable vault lock'}
+                        </Button>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function VaultSettingsDialog({
+    open, onClose, configured, onOpenSetup,
+}: {
+    open: boolean;
+    onClose: () => void;
+    configured: boolean;
+    onOpenSetup: () => void;
+}) {
+    const changeVaultPassphrase = useStore(s => s.changeVaultPassphrase);
+    const exportVaultBackup = useStore(s => s.exportVaultBackup);
+    const importVaultBackup = useStore(s => s.importVaultBackup);
+
+    const [current, setCurrent] = useState('');
+    const [next, setNext] = useState('');
+    const [backupPass, setBackupPass] = useState('');
+    const [message, setMessage] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+    const [busy, setBusy] = useState(false);
+
+    const reset = () => { setCurrent(''); setNext(''); setBackupPass(''); setMessage(null); };
+
+    const run = async (fn: () => Promise<{ ok: boolean; error?: string } & Record<string, unknown>>, okText: (r: Record<string, unknown>) => string) => {
+        if (busy) return;
+        setBusy(true);
+        setMessage(null);
+        try {
+            const result = await fn();
+            if (result.ok) setMessage({ kind: 'ok', text: okText(result) });
+            else if (!(result as { canceled?: boolean }).canceled) setMessage({ kind: 'err', text: result.error || 'Operation failed' });
+        } catch (err) {
+            setMessage({ kind: 'err', text: err instanceof Error ? err.message : 'Operation failed' });
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={(v) => { if (!v) { reset(); onClose(); } }}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <Settings2 className="h-4 w-4 text-primary" />
+                        Vault settings
+                    </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-5">
+                    {!configured && (
+                        <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground">
+                                No master passphrase is set — your vault relies on the OS account alone.
+                            </p>
+                            <Button size="sm" variant="outline" onClick={onOpenSetup} className="gap-1.5">
+                                <ShieldCheck className="h-3.5 w-3.5" />
+                                Set a master passphrase
+                            </Button>
+                        </div>
+                    )}
+
+                    {configured && (
+                        <div className="space-y-2">
+                            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Change passphrase</h3>
+                            <Input type="password" placeholder="Current passphrase" value={current} onChange={(e) => setCurrent(e.target.value)} className="h-9" />
+                            <Input type="password" placeholder="New passphrase (min 10 characters)" value={next} onChange={(e) => setNext(e.target.value)} className="h-9" />
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={busy || !current || next.length < 10}
+                                onClick={() => run(
+                                    () => changeVaultPassphrase(current, next).then(r => { if (r.ok) { setCurrent(''); setNext(''); } return r; }),
+                                    () => 'Passphrase changed.'
+                                )}
+                            >
+                                Change passphrase
+                            </Button>
+                        </div>
+                    )}
+
+                    <div className="space-y-2">
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Encrypted backup</h3>
+                        <p className="text-xs text-muted-foreground">
+                            Backups are portable files encrypted with a passphrase you choose —
+                            they work on any machine, independent of this computer's account.
+                        </p>
+                        <Input type="password" placeholder="Backup passphrase (min 10 characters)" value={backupPass} onChange={(e) => setBackupPass(e.target.value)} className="h-9" />
+                        <div className="flex gap-2">
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1.5"
+                                disabled={busy || backupPass.length < 10}
+                                onClick={() => run(
+                                    () => exportVaultBackup(backupPass),
+                                    (r) => `Exported ${r.count ?? 0} entries.`
+                                )}
+                            >
+                                <Download className="h-3.5 w-3.5" />
+                                Export backup
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1.5"
+                                disabled={busy || backupPass.length < 1}
+                                onClick={() => run(
+                                    () => importVaultBackup(backupPass),
+                                    (r) => `Imported ${r.imported ?? 0} entries.`
+                                )}
+                            >
+                                <Upload className="h-3.5 w-3.5" />
+                                Import backup
+                            </Button>
+                        </div>
+                    </div>
+
+                    {message && (
+                        <p className={cn("text-xs", message.kind === 'ok' ? 'text-emerald-400' : 'text-destructive')}>
+                            {message.text}
+                        </p>
+                    )}
+                </div>
+            </DialogContent>
+        </Dialog>
     );
 }
 

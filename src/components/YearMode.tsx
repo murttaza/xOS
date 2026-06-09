@@ -1,10 +1,12 @@
 import { useState, useEffect, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { differenceInCalendarDays } from 'date-fns';
 import { useStore } from '../store';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { getLocalDateString } from '../lib/utils';
+import { anchorStreakDays } from '../lib/streaks';
 import { CalendarDays, Pause, Play, Trash2, RotateCcw, Plus, Edit } from 'lucide-react';
 import { Streak } from '../types';
 import { ModeHeader } from './ModeHeader';
@@ -28,19 +30,23 @@ const StreakItem = memo(function StreakItem({ streak, now, updateStreak, deleteS
     const [editDate, setEditDate] = useState(toLocalISOString(initialDate));
 
     const handleSave = () => {
-        updateStreak({ ...streak, title: editTitle, createdAt: new Date(editDate).toISOString() });
+        const anchorIso = new Date(editDate).toISOString();
+        updateStreak({
+            ...streak,
+            title: editTitle,
+            createdAt: anchorIso,
+            // Keep the DB counter in sync with the new anchor so tray/widget agree.
+            currentStreak: Math.max(0, differenceInCalendarDays(new Date(), new Date(anchorIso))),
+            lastUpdated: new Date().toISOString(),
+        });
         setIsEditing(false);
     }
 
     const start = streak.createdAt ? new Date(streak.createdAt) : new Date(streak.lastUpdated || new Date());
 
-    // Days based on midnight crossed
-    const startMidnight = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-
     // If paused, freeze time at lastUpdated
     const effectiveNow = streak.isPaused ? new Date(streak.lastUpdated || new Date()) : now;
-    const effectiveNowMidnight = new Date(effectiveNow.getFullYear(), effectiveNow.getMonth(), effectiveNow.getDate());
-    const effectiveDaysPassed = Math.max(0, Math.round((effectiveNowMidnight.getTime() - startMidnight.getTime()) / (1000 * 60 * 60 * 24)));
+    const effectiveDaysPassed = anchorStreakDays(streak, now);
 
     // elapsed time in hours (modulo)
     const elapsedMs = Math.max(0, effectiveNow.getTime() - start.getTime());
@@ -89,7 +95,23 @@ const StreakItem = memo(function StreakItem({ streak, now, updateStreak, deleteS
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => {
-                                    updateStreak({ ...streak, isPaused: streak.isPaused ? 0 : 1, lastUpdated: new Date().toISOString() })
+                                    const nowIso = new Date().toISOString();
+                                    if (streak.isPaused) {
+                                        // Resume: shift the anchor forward by the paused interval
+                                        // so paused time never counts toward the streak.
+                                        const pausedMs = Math.max(0, Date.now() - new Date(streak.lastUpdated || nowIso).getTime());
+                                        const anchor = new Date(streak.createdAt || streak.lastUpdated || nowIso);
+                                        const shifted = new Date(anchor.getTime() + pausedMs).toISOString();
+                                        updateStreak({
+                                            ...streak,
+                                            isPaused: 0,
+                                            createdAt: shifted,
+                                            lastUpdated: nowIso,
+                                            currentStreak: Math.max(0, differenceInCalendarDays(new Date(), new Date(shifted))),
+                                        });
+                                    } else {
+                                        updateStreak({ ...streak, isPaused: 1, lastUpdated: nowIso });
+                                    }
                                 }}
                                 title={streak.isPaused ? "Resume tracking" : "Pause tracking"}
                                 className={`h-10 w-10 sm:h-8 sm:w-8 rounded-full hover:bg-muted ${streak.isPaused ? 'text-primary' : ''}`}
@@ -207,6 +229,7 @@ export function YearMode() {
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.3, ease: 'easeOut' }}
                     className="fixed inset-0 z-[55] bg-background flex flex-col overflow-hidden no-scrollbar no-drag"
+                    style={{ paddingLeft: 'env(safe-area-inset-left, 0px)', paddingRight: 'env(safe-area-inset-right, 0px)' }}
                 >
                     <ModeHeader
                         modeLabel="Year"
@@ -214,7 +237,7 @@ export function YearMode() {
                         onGoHome={toggleYearMode}
                     />
 
-                    <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col lg:flex-row w-full p-3 sm:p-4 lg:p-8 gap-3 lg:gap-8 pb-8 lg:pb-8">
+                    <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col lg:flex-row w-full p-3 sm:p-4 lg:p-8 gap-3 lg:gap-8 pb-8 lg:pb-8 mobile-safe-bottom" style={{ '--msb-base': '2rem' } as React.CSSProperties}>
                         {/* Left Column - Dots Grid */}
                         <div className="group w-full lg:w-1/2 lg:h-full min-h-0 lg:min-h-[500px] flex flex-col items-center justify-center p-2 sm:p-4 lg:p-8 lg:border-r border-b lg:border-b-0 border-border/50 relative transition-colors duration-150 hover:bg-muted/10 pb-4 lg:pb-8">
                             {/* Subtle Hover Glow */}

@@ -159,7 +159,7 @@ export function PaletteApp() {
 const t: Record<string, React.CSSProperties> = {
   root: {
     padding: 20,
-    fontFamily: 'Outfit, system-ui, sans-serif',
+    fontFamily: "'Outfit Variable', Outfit, system-ui, sans-serif",
   },
   bar: {
     display: 'flex',
@@ -177,7 +177,7 @@ const t: Record<string, React.CSSProperties> = {
     outline: 'none',
     color: 'hsl(0, 0%, 98%)',
     fontSize: 14,
-    fontFamily: 'Outfit, system-ui, sans-serif',
+    fontFamily: "'Outfit Variable', Outfit, system-ui, sans-serif",
     fontWeight: 400,
   },
   kbd: {

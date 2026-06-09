@@ -35,7 +35,6 @@ DECLARE
     v_phase1_id   UUID;
     v_phase2_id   UUID;
     v_phase3_id   UUID;
-    v_user_id     UUID;
     -- Phase 1 days (Day 1..6)
     v_p1_d1 UUID; v_p1_d2 UUID; v_p1_d3 UUID; v_p1_d4 UUID; v_p1_d5 UUID; v_p1_d6 UUID;
     -- Phase 2 days
@@ -424,24 +423,8 @@ BEGIN
     (v_program_id, 'No direct abs (yet)',
      'Skipped intentionally for this plan. Add later when bodyweight and comfort improve.', 12);
 
-    -- ═════════════════════════════════════════════════════════
-    -- Auto-start for murtazapirzada@gmail.com
-    -- ═════════════════════════════════════════════════════════
-    SELECT id INTO v_user_id FROM auth.users WHERE email = 'murtazapirzada@gmail.com';
-
-    IF v_user_id IS NULL THEN
-        RAISE NOTICE 'auth.users row for murtazapirzada@gmail.com not found — program created but NOT auto-started. Tap Start Program in the picker.';
-    ELSE
-        -- Pause any other active program so this one becomes the only active.
-        UPDATE user_programs
-            SET status = 'paused'
-            WHERE user_id = v_user_id AND status = 'active';
-
-        -- Activate the new run, starting today.
-        INSERT INTO user_programs (user_id, program_id, started_on, current_week, status)
-        VALUES (v_user_id, v_program_id, CURRENT_DATE, 1, 'active');
-
-        RAISE NOTICE 'Recomp Jul auto-started for murtazapirzada@gmail.com starting %', CURRENT_DATE;
-    END IF;
+    -- Seed only — no per-user auto-start. Users start the program from the
+    -- in-app picker. (An earlier revision auto-started this for the project
+    -- owner's account; that was personal data in a shared migration.)
 
 END $$;

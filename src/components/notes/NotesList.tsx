@@ -152,7 +152,9 @@ export const NotesList = ({
                     )}
                 </div>
 
-                <div className="p-4 pl-8 border-t border-border">
+                {/* mobile-safe-bottom keeps this button clear of the iOS home
+                    indicator — it sits at the very bottom of the screen on phones */}
+                <div className="p-4 pl-8 border-t border-border mobile-safe-bottom">
                     <Button className="w-full bg-primary/10 hover:bg-primary/20 text-primary" onClick={onCreateNote}>
                         <Plus className="h-4 w-4 mr-2" /> New Note
                     </Button>

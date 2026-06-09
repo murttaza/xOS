@@ -27,11 +27,16 @@ export interface SessionSlice {
     incrementTimers: () => void;
     syncTimers: () => Promise<void>;
 
-    // Pomodoro
+    // Pomodoro — wall-clock anchored (see pomodoroEndsAt)
     pomodoroTime: number;
+    /** Epoch ms when the running pomodoro completes; null while paused. */
+    pomodoroEndsAt: number | null;
     isPomodoroRunning: boolean;
     setPomodoroTime: (time: number) => void;
     setIsPomodoroRunning: (isRunning: boolean) => void;
+    /** Recompute remaining seconds from the wall clock. Returns true the tick
+     *  the pomodoro completes. */
+    syncPomodoro: () => boolean;
 
     fetchDailyLog: (date: string) => Promise<void>;
     fetchSessionsRange: (startDate: string, endDate: string) => Promise<void>;
@@ -46,10 +51,31 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
     activeTimers: {},
     timerStartTimes: {},
 
+    // The countdown is anchored to a wall-clock end timestamp instead of
+    // decrementing once per tick — browsers throttle background intervals,
+    // which made the old version drift, and reloads reset it. The anchor is
+    // persisted (store/index.ts), so a running pomodoro survives restarts.
     pomodoroTime: 25 * 60,
+    pomodoroEndsAt: null,
     isPomodoroRunning: false,
-    setPomodoroTime: (time) => set({ pomodoroTime: time }),
-    setIsPomodoroRunning: (isRunning) => set({ isPomodoroRunning: isRunning }),
+    setPomodoroTime: (time) => set((state) => ({
+        pomodoroTime: time,
+        pomodoroEndsAt: state.isPomodoroRunning ? Date.now() + time * 1000 : null,
+    })),
+    setIsPomodoroRunning: (isRunning) => set((state) => isRunning
+        ? { isPomodoroRunning: true, pomodoroEndsAt: Date.now() + state.pomodoroTime * 1000 }
+        : { isPomodoroRunning: false, pomodoroEndsAt: null }),
+    syncPomodoro: () => {
+        const { isPomodoroRunning, pomodoroEndsAt, pomodoroTime } = get();
+        if (!isPomodoroRunning || !pomodoroEndsAt) return false;
+        const remaining = Math.max(0, Math.round((pomodoroEndsAt - Date.now()) / 1000));
+        if (remaining <= 0) {
+            set({ pomodoroTime: 0, isPomodoroRunning: false, pomodoroEndsAt: null });
+            return true;
+        }
+        if (remaining !== pomodoroTime) set({ pomodoroTime: remaining });
+        return false;
+    },
 
     fetchDailyLog: async (date) => {
         const log = await api.getDailyLog(date);

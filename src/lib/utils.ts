@@ -106,6 +106,17 @@ export function calculateBudgetXP(isFirstTransactionOfDay: boolean): number {
     return baseXP + dailyBonus;
 }
 
+/**
+ * XP for completing a logged workout session. Scaled to sit between a prayer
+ * (~300-400) and a long focused task session (~800+): finishing a workout is a
+ * big daily win. Perceived effort (1-10) adds up to +300.
+ */
+export function calculateWorkoutXP(perceivedEffort?: number): number {
+    const baseXP = 500;
+    const effort = Math.max(0, Math.min(10, perceivedEffort ?? 0));
+    return baseXP + Math.round(effort * 30);
+}
+
 export function getLocalMonthString(date: Date = new Date()): string {
     return format(date, "yyyy-MM");
 }

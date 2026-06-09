@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { cn } from '../lib/utils';
 import { Dumbbell } from 'lucide-react';
 import { Button } from './ui/button';
 import { ModeHeader } from './ModeHeader';
+import { ModeLoading } from './ui/mode-loading';
 
 import { FitnessHome } from './fitness/FitnessHome';
 import { TodayWorkout } from './fitness/TodayWorkout';
@@ -39,9 +40,12 @@ export function FitnessMode() {
     const showProgramPicker = useStore(s => s.showProgramPicker);
     const setShowProgramPicker = useStore(s => s.setShowProgramPicker);
 
+    // Distinguish "still fetching" from "no program yet" on open
+    const [modeLoading, setModeLoading] = useState(true);
     useEffect(() => {
         if (isFitnessMode) {
-            fetchFitnessData();
+            setModeLoading(true);
+            Promise.resolve(fetchFitnessData()).finally(() => setModeLoading(false));
         }
     }, [isFitnessMode, fetchFitnessData]);
 
@@ -56,6 +60,7 @@ export function FitnessMode() {
     }, [isFitnessMode, toggleFitnessMode]);
 
     const renderContent = () => {
+        if (modeLoading) return <ModeLoading label="Loading fitness…" />;
         if (!activeProgram || showProgramPicker) return <ProgramPicker />;
 
         switch (fitnessTab) {
@@ -94,6 +99,7 @@ export function FitnessMode() {
                         "fixed inset-0 z-[55] text-foreground overflow-hidden flex flex-col font-sans no-drag",
                         "bg-background"
                     )}
+                    style={{ paddingLeft: 'env(safe-area-inset-left, 0px)', paddingRight: 'env(safe-area-inset-right, 0px)' }}
                 >
                     <ModeHeader
                         modeLabel="Fitness"
@@ -123,8 +129,9 @@ export function FitnessMode() {
                         ) : undefined}
                     />
 
-                    {/* Content */}
-                    <div className="flex-1 overflow-y-auto no-scrollbar">
+                    {/* Content — when the bottom tab bar isn't shown (program picker),
+                        the content itself reaches the screen bottom and needs clearance */}
+                    <div className={cn("flex-1 overflow-y-auto no-scrollbar", !activeProgram && "mobile-safe-bottom")}>
                         {renderContent()}
                     </div>
 

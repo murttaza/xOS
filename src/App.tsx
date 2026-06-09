@@ -34,9 +34,14 @@ import { Popover, PopoverContent, PopoverTrigger } from './components/ui/popover
 import { Button } from './components/ui/button';
 import { Switch } from './components/ui/switch';
 import { Label } from './components/ui/label';
-import { Settings2, HelpCircle, Download, BookOpen, CalendarDays, LogOut, Wallet, ChevronDown, Dumbbell } from 'lucide-react';
+import { Settings2, HelpCircle, Download, BookOpen, CalendarDays, LogOut, Wallet, ChevronDown, Dumbbell, Trash2 } from 'lucide-react';
+import { showConfirm } from './components/ui/confirm-dialog';
 import { api } from './api';
+import { hasPendingOfflineWrites } from './adapters/supabase';
 import { supabase } from './lib/supabase';
+import { APP_NAME, isOwnerAccount } from './lib/brand';
+import { showErrorToast } from './components/ui/toast';
+import { WelcomeDialog } from './components/WelcomeDialog';
 
 function DesktopSettings() {
   const [autoLaunch, setAutoLaunchState] = useState(false);
@@ -134,8 +139,26 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [idlePrompt, setIdlePrompt] = useState<number | null>(null);
   const [mobileStatsOpen, setMobileStatsOpen] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
 
   const APP_VERSION = (__APP_VERSION__ || '5.0.0').split('.')[0];
+
+  // Personal flourishes (Arabic signature/meem) only render for the owner's
+  // account — strangers get the neutral mOS brand.
+  useEffect(() => {
+    supabase.auth.getUser()
+      .then(({ data }) => setIsOwner(isOwnerAccount(data.user?.email)))
+      .catch(() => setIsOwner(false));
+  }, []);
+
+  // First-run onboarding: shown once per device until dismissed.
+  useEffect(() => {
+    if (isLoading) return;
+    try {
+      if (!localStorage.getItem('mos-welcomed')) setShowWelcome(true);
+    } catch { /* storage unavailable — skip onboarding */ }
+  }, [isLoading]);
 
   // Window focus state for pausing background work
   const isWindowFocused = useWindowFocus();
@@ -193,14 +216,18 @@ function App() {
     }).catch(() => setIsLoading(false));
   }, []); // Initial fetch only - run once
 
-  // Sync all data from Supabase when window regains focus (cross-device)
+  // Sync all data from Supabase when window regains focus (cross-device).
+  // Skipped while offline or while queued offline writes await replay —
+  // otherwise a stale server read would clobber local state that hasn't
+  // been pushed yet (last-write-wins the wrong way).
   useEffect(() => {
-    if (isWindowFocused) {
-      syncTimers();
-      fetchTasks();
-      fetchStats();
-      fetchDailyLog(getLocalDateString());
-    }
+    if (!isWindowFocused) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+    if (hasPendingOfflineWrites()) return;
+    syncTimers();
+    fetchTasks();
+    fetchStats();
+    fetchDailyLog(getLocalDateString());
   }, [isWindowFocused, syncTimers, fetchTasks, fetchStats, fetchDailyLog]);
 
   // Periodic timer sync while window is focused (cross-device, 30s interval)
@@ -350,13 +377,42 @@ function App() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `xOS_backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `${APP_NAME}_backup_${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Failed to export data', err);
+      showErrorToast('Export failed — check your connection and try again.');
+    }
+  }, []);
+
+  // Self-serve account deletion (calls the SECURITY DEFINER RPC from
+  // migration 013, which removes every row and the auth user itself).
+  const handleDeleteAccount = useCallback(async () => {
+    const ok = await showConfirm({
+      title: 'Delete account',
+      message: 'This permanently deletes your account and ALL cloud data — tasks, notes, budget, and fitness. (Desktop vault passwords stay on this device.) This cannot be undone. Consider exporting a backup first.',
+      confirmLabel: 'Delete everything',
+      destructive: true,
+    });
+    if (!ok) return;
+    const really = await showConfirm({
+      title: 'Are you absolutely sure?',
+      message: 'Last chance — your account and all of its data will be gone forever.',
+      confirmLabel: 'Yes, delete my account',
+      destructive: true,
+    });
+    if (!really) return;
+    try {
+      const { error } = await supabase.rpc('delete_account');
+      if (error) throw error;
+      localStorage.removeItem('lifeos-storage');
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Account deletion failed', err);
+      showErrorToast('Account deletion failed — try again, or contact support.');
     }
   }, []);
 
@@ -386,7 +442,7 @@ function App() {
                 transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
                 className="text-7xl text-primary drop-shadow-[0_0_15px_hsl(var(--primary)/0.6)]"
               >
-                م
+                {isOwner ? <span lang="ar">م</span> : <Wordmark height={40} />}
               </motion.div>
             </motion.div>
           )}
@@ -398,7 +454,7 @@ function App() {
   if (isLoading) {
     return (
       <ThemeProvider defaultTheme="dark" storageKey="mos-theme">
-        <div className="h-screen flex flex-col items-center justify-center bg-background gap-4">
+        <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-background gap-4">
           <motion.div
             animate={{ opacity: [0.4, 1, 0.4], scale: [0.95, 1.05, 0.95] }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
@@ -416,7 +472,7 @@ function App() {
       {isFocusMode ? (
         <FocusMode />
       ) : (
-        <div className={`h-[100dvh] relative overflow-x-hidden overflow-y-auto lg:overflow-hidden bg-background/95 rounded-none border border-border shadow-2xl no-scrollbar`} style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className={`h-[100dvh] relative overflow-x-hidden overflow-y-auto lg:overflow-hidden bg-background/95 rounded-none border border-border shadow-2xl no-scrollbar`} style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)', paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
           {/* Drag Bar — Electron only */}
           {isElectron && <div className="w-full h-2.5 drag shrink-0 fixed top-0 left-0 right-0 z-[100]" />}
 
@@ -444,12 +500,13 @@ function App() {
                   onClick={() => isElectron && setIsMurtazaMode(!isMurtazaMode)}
                 >
                   <Wordmark height={22} />
-                  {isMurtazaMode && (
+                  {isMurtazaMode && isOwner && (
                     <>
                       <span className="h-3 w-px bg-muted-foreground/20" aria-hidden="true" />
                       <span
                         className="text-[11px] text-muted-foreground/30 group-hover:text-muted-foreground/70 transition-colors duration-300 whitespace-nowrap"
                         dir="rtl"
+                        lang="ar"
                       >
                         مُرتضیٰ
                       </span>
@@ -461,8 +518,14 @@ function App() {
                 {!isMurtazaMode && (
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-5 w-5 opacity-0 hover:opacity-50 transition-opacity no-drag">
-                        <Settings2 className="h-3 w-3" />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 opacity-60 hover:opacity-100 transition-opacity no-drag"
+                        aria-label="Settings"
+                        title="Settings"
+                      >
+                        <Settings2 className="h-3.5 w-3.5" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-48 p-3 no-drag space-y-3" side="right">
@@ -500,6 +563,14 @@ function App() {
                           <LogOut className="h-3 w-3" />
                           Sign Out
                         </Button>
+                        <Button
+                          variant="ghost"
+                          className="w-full text-xs flex gap-2 items-center text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                          onClick={handleDeleteAccount}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          Delete Account…
+                        </Button>
                       </div>
                     </PopoverContent>
                   </Popover>
@@ -520,8 +591,10 @@ function App() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 rounded-full opacity-[0.08] hover:opacity-50 transition-opacity duration-300"
+                      className="h-7 w-7 rounded-full opacity-60 hover:opacity-100 transition-opacity duration-300"
                       id="help-guide-button"
+                      aria-label="Help and keyboard shortcuts"
+                      title="Help"
                     >
                       <HelpCircle className="h-3.5 w-3.5" />
                     </Button>
@@ -605,6 +678,7 @@ function App() {
                       className="h-10 w-10 lg:h-7 lg:w-7 rounded-full opacity-70 hover:opacity-100 transition-opacity"
                       onClick={() => toggleNotesMode()}
                       title="Notes Mode"
+                      aria-label="Notes Mode"
                     >
                       <BookOpen className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
                     </Button>
@@ -614,6 +688,7 @@ function App() {
                       className="h-10 w-10 lg:h-7 lg:w-7 rounded-full opacity-70 hover:opacity-100 transition-opacity"
                       onClick={() => toggleYearMode()}
                       title="Year Mode"
+                      aria-label="Year Mode"
                     >
                       <CalendarDays className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
                     </Button>
@@ -623,6 +698,7 @@ function App() {
                       className="h-10 w-10 lg:h-7 lg:w-7 rounded-full opacity-70 hover:opacity-100 transition-opacity"
                       onClick={() => toggleBudgetMode()}
                       title="Budget Mode"
+                      aria-label="Budget Mode"
                     >
                       <Wallet className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
                     </Button>
@@ -632,6 +708,7 @@ function App() {
                       className="h-10 w-10 lg:h-7 lg:w-7 rounded-full opacity-70 hover:opacity-100 transition-opacity"
                       onClick={() => toggleFitnessMode()}
                       title="Fitness Mode"
+                      aria-label="Fitness Mode"
                     >
                       <Dumbbell className="h-4 w-4 lg:h-3.5 lg:w-3.5" />
                     </Button>
@@ -732,11 +809,20 @@ function App() {
               transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
               className="text-7xl text-primary drop-shadow-[0_0_15px_hsl(var(--primary)/0.6)]"
             >
-              م
+              {isOwner ? <span lang="ar">م</span> : <Wordmark height={40} />}
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* First-run onboarding */}
+      <WelcomeDialog
+        open={showWelcome}
+        onClose={() => {
+          setShowWelcome(false);
+          try { localStorage.setItem('mos-welcomed', '1'); } catch { /* best effort */ }
+        }}
+      />
 
       {/* Idle Return Prompt */}
       <AnimatePresence>

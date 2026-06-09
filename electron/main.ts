@@ -1,6 +1,7 @@
-import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, desktopCapturer, nativeTheme, safeStorage, clipboard } from 'electron'
+import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, desktopCapturer, nativeTheme, clipboard, shell, dialog } from 'electron'
 import path from 'node:path'
 import db from './db'
+import * as vault from './vault'
 import { IpcChannels } from '../src/shared/ipc-types'
 import { __dirname, VITE_DEV_SERVER_URL, RENDERER_DIST } from './paths'
 import { togglePaletteWindow, hidePalette } from './palette-window'
@@ -34,6 +35,26 @@ app.commandLine.appendSwitch('disk-cache-size', '0');
 // Force dark mode at the native level — transparent window looks broken in light mode
 nativeTheme.themeSource = 'dark';
 
+// ── Web-contents hardening ───────────────────────────────────────────
+// Applies to every window (main, palette, widget): never open child windows
+// in-app, never navigate away from the app's own origin. External http(s)
+// links go to the system browser.
+app.on('web-contents-created', (_event, contents) => {
+  contents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//i.test(url)) {
+      shell.openExternal(url).catch((err) => console.error('openExternal failed:', err));
+    }
+    return { action: 'deny' };
+  });
+
+  contents.on('will-navigate', (event, url) => {
+    const allowed = VITE_DEV_SERVER_URL
+      ? url.startsWith(VITE_DEV_SERVER_URL)
+      : url.startsWith('file://');
+    if (!allowed) event.preventDefault();
+  });
+});
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1200,
@@ -52,6 +73,8 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       webSecurity: true,
+      // Tells the preload which IPC allow-list applies (see src/shared/ipc-types.ts)
+      additionalArguments: ['--mos-window=main'],
       // backgroundThrottling intentionally left as default (true)
       // This allows Chromium to throttle the renderer when minimized/hidden,
       // drastically reducing CPU usage. Timers are kept alive via main process IPC.
@@ -92,12 +115,16 @@ function createWindow() {
     win?.webContents.send('window-focus-state', win?.isFocused())
   })
 
-  // DevTools shortcut: Ctrl+Shift+I
-  win.webContents.on('before-input-event', (_event, input) => {
-    if (input.control && input.shift && input.key === 'I') {
-      win?.webContents.toggleDevTools();
-    }
-  });
+  // DevTools shortcut (Ctrl+Shift+I) — development builds only. The packaged
+  // renderer holds the Supabase session and the unlocked vault UI; don't ship
+  // an inspector into it.
+  if (!app.isPackaged) {
+    win.webContents.on('before-input-event', (_event, input) => {
+      if (input.control && input.shift && input.key === 'I') {
+        win?.webContents.toggleDevTools();
+      }
+    });
+  }
 
   // Log any renderer crash or failure
   win.webContents.on('render-process-gone', (_event, details) => {
@@ -111,7 +138,6 @@ function createWindow() {
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL)
   } else {
-    // win.loadFile('dist/index.html')
     win.loadFile(path.join(RENDERER_DIST, 'index.html'))
   }
 }
@@ -139,7 +165,6 @@ app.whenReady().then(() => {
   }
 
   // Handle permission requests for media (audio/video capture)
-  // const { session, desktopCapturer } = require('electron') as typeof import('electron'); // imported at top level
   session.defaultSession.setPermissionRequestHandler((_webContents: Electron.WebContents, permission: string, callback: (granted: boolean) => void) => {
     // Allow audio and video capture for system audio loopback
     if (permission === 'media' || permission === 'audioCapture' || permission === 'videoCapture') {
@@ -149,9 +174,21 @@ app.whenReady().then(() => {
     }
   });
 
-  // Also set display media request handler for screen/audio capture
+  // Screen/loopback-audio capture is only granted in a short window after the
+  // renderer explicitly arms it from a user action (the focus-mode audio
+  // visualizer). Anything else asking for display media is denied.
+  let audioCaptureArmedUntil = 0;
+  ipcMain.on(IpcChannels.ArmAudioCapture, () => {
+    audioCaptureArmedUntil = Date.now() + 15_000;
+  });
+
   session.defaultSession.setDisplayMediaRequestHandler((_request: unknown, callback: (streams: { video: Electron.DesktopCapturerSource; audio: 'loopback' }) => void) => {
-    // Auto-select the primary screen
+    if (Date.now() > audioCaptureArmedUntil) {
+      // Deny: invoke the callback with no streams
+      (callback as unknown as (streams?: unknown) => void)();
+      return;
+    }
+    audioCaptureArmedUntil = 0; // single use
     desktopCapturer.getSources({ types: ['screen'] }).then((sources: Electron.DesktopCapturerSource[]) => {
       if (sources.length > 0) {
         callback({ video: sources[0], audio: 'loopback' });
@@ -159,51 +196,8 @@ app.whenReady().then(() => {
     });
   });
 
-  // Pre-cache prepared statements for frequently-called IPC handlers
+  // ── Password vault (local-only; layered passphrase + OS keychain) ──
   const stmts = {
-    getTasks: db.prepare('SELECT * FROM tasks'),
-    addTask: db.prepare('INSERT INTO tasks (title, description, dueDate, difficulty, statTarget, labels, repeatingTaskId, subtasks, noteId, time) VALUES (@title, @description, @dueDate, @difficulty, @statTarget, @labels, @repeatingTaskId, @subtasks, @noteId, @time)'),
-    updateTask: db.prepare('UPDATE tasks SET title = @title, description = @description, dueDate = @dueDate, difficulty = @difficulty, isComplete = @isComplete, statTarget = @statTarget, labels = @labels, subtasks = @subtasks, completedAt = @completedAt, noteId = @noteId, time = @time WHERE id = @id'),
-    deleteTask: db.prepare('DELETE FROM tasks WHERE id = ?'),
-    addSession: db.prepare('INSERT INTO sessions (taskId, startTime, endTime, duration_minutes, dateLogged) VALUES (@taskId, @startTime, @endTime, @duration_minutes, @dateLogged)'),
-    getSessionsByDate: db.prepare('SELECT * FROM sessions WHERE dateLogged = ?'),
-    getSessionsRange: db.prepare('SELECT * FROM sessions WHERE dateLogged BETWEEN ? AND ?'),
-    getSessionsByTask: db.prepare('SELECT * FROM sessions WHERE taskId = ? ORDER BY startTime DESC'),
-    getStats: db.prepare('SELECT * FROM stats'),
-    updateStat: db.prepare('UPDATE stats SET currentXP = ?, currentLevel = ? WHERE statName = ?'),
-    addStat: db.prepare('INSERT INTO stats (statName) VALUES (?)'),
-    deleteStat: db.prepare('DELETE FROM stats WHERE statName = ?'),
-    getDailyLog: db.prepare('SELECT * FROM daily_logs WHERE date = ?'),
-    saveDailyLog: db.prepare('INSERT OR REPLACE INTO daily_logs (date, journalEntry, prayersCompleted) VALUES (@date, @journalEntry, @prayersCompleted)'),
-    getDailyLogForJournal: db.prepare('SELECT * FROM daily_logs WHERE date = ?'),
-    updateJournalEntry: db.prepare('UPDATE daily_logs SET journalEntry = ? WHERE date = ?'),
-    insertJournalEntry: db.prepare("INSERT INTO daily_logs (date, journalEntry, prayersCompleted) VALUES (?, ?, '{}')"),
-    getDevItems: db.prepare('SELECT * FROM dev_items'),
-    addDevItem: db.prepare('INSERT INTO dev_items (text) VALUES (?)'),
-    toggleDevItem: db.prepare('UPDATE dev_items SET isComplete = ? WHERE id = ?'),
-    deleteDevItem: db.prepare('DELETE FROM dev_items WHERE id = ?'),
-    getRepeatingTasks: db.prepare('SELECT * FROM repeating_tasks'),
-    addRepeatingTask: db.prepare('INSERT INTO repeating_tasks (title, description, difficulty, statTarget, labels, repeatType, repeatDays, isActive, lastGeneratedDate, subtasks, streak) VALUES (@title, @description, @difficulty, @statTarget, @labels, @repeatType, @repeatDays, @isActive, @lastGeneratedDate, @subtasks, @streak)'),
-    updateRepeatingTask: db.prepare('UPDATE repeating_tasks SET title = @title, description = @description, difficulty = @difficulty, statTarget = @statTarget, labels = @labels, repeatType = @repeatType, repeatDays = @repeatDays, isActive = @isActive, lastGeneratedDate = @lastGeneratedDate, subtasks = @subtasks, streak = @streak WHERE id = @id'),
-    deleteRepeatingTask: db.prepare('DELETE FROM repeating_tasks WHERE id = ?'),
-    getSubjects: db.prepare('SELECT * FROM subjects ORDER BY orderIndex ASC, id ASC'),
-    createSubject: db.prepare('INSERT INTO subjects (title, color, createdAt, orderIndex) VALUES (@title, @color, @createdAt, @orderIndex)'),
-    updateSubject: db.prepare('UPDATE subjects SET title = @title, color = @color WHERE id = @id'),
-    deleteSubject: db.prepare('DELETE FROM subjects WHERE id = ?'),
-    getNotes: db.prepare('SELECT * FROM notes WHERE subjectId = ? ORDER BY updatedAt DESC'),
-    createNote: db.prepare('INSERT INTO notes (subjectId, title, content, createdAt, updatedAt) VALUES (@subjectId, @title, @content, @createdAt, @updatedAt)'),
-    getNote: db.prepare('SELECT n.*, s.title as subjectTitle, s.color as subjectColor FROM notes n JOIN subjects s ON n.subjectId = s.id WHERE n.id = ?'),
-    updateNote: db.prepare('UPDATE notes SET title = @title, content = @content, updatedAt = @updatedAt WHERE id = @id'),
-    deleteNote: db.prepare('DELETE FROM notes WHERE id = ?'),
-    searchNotes: db.prepare('SELECT n.*, s.title as subjectTitle, s.color as subjectColor FROM notes n JOIN subjects s ON n.subjectId = s.id WHERE n.title LIKE ? OR n.content LIKE ? ORDER BY n.updatedAt DESC'),
-    getStreaks: db.prepare('SELECT * FROM streaks ORDER BY id ASC'),
-    createStreak: db.prepare('INSERT INTO streaks (title, currentStreak, lastUpdated, isPaused, createdAt) VALUES (@title, @currentStreak, @lastUpdated, @isPaused, @createdAt)'),
-    updateStreak: db.prepare('UPDATE streaks SET title = @title, currentStreak = @currentStreak, lastUpdated = @lastUpdated, isPaused = @isPaused, createdAt = @createdAt WHERE id = @id'),
-    deleteStreak: db.prepare('DELETE FROM streaks WHERE id = ?'),
-    renameStatUpdate: db.prepare('UPDATE stats SET statName = ? WHERE statName = ?'),
-    renameStatGetTasks: db.prepare('SELECT id, statTarget FROM tasks'),
-    renameStatUpdateTask: db.prepare('UPDATE tasks SET statTarget = ? WHERE id = ?'),
-    // Passwords (local-only, encrypted at rest via OS keychain/DPAPI)
     getPasswords: db.prepare('SELECT id, name, username, url, notes, category, isPinned, orderIndex, createdAt, updatedAt, lastUsed FROM passwords ORDER BY isPinned DESC, lastUsed DESC, name ASC'),
     createPassword: db.prepare('INSERT INTO passwords (name, username, passwordEnc, url, notes, category, isPinned, orderIndex, createdAt, updatedAt, lastUsed) VALUES (@name, @username, @passwordEnc, @url, @notes, @category, @isPinned, @orderIndex, @createdAt, @updatedAt, @lastUsed)'),
     updatePassword: db.prepare('UPDATE passwords SET name = @name, username = @username, url = @url, notes = @notes, category = @category, isPinned = @isPinned, updatedAt = @updatedAt WHERE id = @id'),
@@ -231,296 +225,25 @@ app.whenReady().then(() => {
     });
   };
 
-  // IPC Handlers (using cached prepared statements)
-  safeHandle(IpcChannels.GetTasks, () => {
-    return stmts.getTasks.all();
-  });
-
-  safeHandle(IpcChannels.AddTask, (_, task) => {
-    return stmts.addTask.run({
-      ...task,
-      statTarget: JSON.stringify(task.statTarget),
-      labels: JSON.stringify(task.labels),
-      repeatingTaskId: task.repeatingTaskId || null,
-      subtasks: JSON.stringify(task.subtasks || []),
-      noteId: task.noteId || null,
-      time: task.time || null
-    });
-  });
-
-  safeHandle(IpcChannels.UpdateTask, (_, task) => {
-    return stmts.updateTask.run({
-      ...task,
-      completedAt: task.completedAt || null,
-      statTarget: JSON.stringify(task.statTarget),
-      labels: JSON.stringify(task.labels),
-      subtasks: JSON.stringify(task.subtasks || []),
-      noteId: task.noteId || null,
-      time: task.time || null
-    });
-  });
-
-  safeHandle(IpcChannels.DeleteTask, (_, id) => {
-    return stmts.deleteTask.run(id);
-  });
-
-  // Batch insert multiple tasks in a single transaction
-  safeHandle(IpcChannels.BatchAddTasks, (_, tasks: any[]) => {
-    const batchInsert = db.transaction((taskList: any[]) => {
-      const results = [];
-      for (const task of taskList) {
-        results.push(stmts.addTask.run({
-          ...task,
-          statTarget: JSON.stringify(task.statTarget),
-          labels: JSON.stringify(task.labels),
-          repeatingTaskId: task.repeatingTaskId || null,
-          subtasks: JSON.stringify(task.subtasks || []),
-          noteId: task.noteId || null,
-          time: task.time || null
-        }));
-      }
-      return results;
-    });
-    return batchInsert(tasks);
-  });
-
-  // Sessions
-  safeHandle(IpcChannels.AddSession, (_, session) => {
-    return stmts.addSession.run(session);
-  });
-
-  safeHandle(IpcChannels.GetSessionsByDate, (_, date) => {
-    return stmts.getSessionsByDate.all(date);
-  });
-
-  safeHandle(IpcChannels.GetSessionsRange, (_, { startDate, endDate }) => {
-    return stmts.getSessionsRange.all(startDate, endDate);
-  });
-
-  safeHandle(IpcChannels.GetSessionsByTask, (_, taskId) => {
-    return stmts.getSessionsByTask.all(taskId);
-  });
-  // Stats
-  safeHandle(IpcChannels.GetStats, () => {
-    return stmts.getStats.all();
-  });
-
-  safeHandle(IpcChannels.UpdateStat, (_, { statName, currentXP, currentLevel }) => {
-    return stmts.updateStat.run(currentXP, currentLevel, statName);
-  });
-
-  safeHandle(IpcChannels.AddStat, (_, statName) => {
-    return stmts.addStat.run(statName);
-  });
-
-  safeHandle(IpcChannels.DeleteStat, (_, statName) => {
-    return stmts.deleteStat.run(statName);
-  });
-
-  safeHandle(IpcChannels.RenameStat, (_, { oldName, newName }) => {
-    const transaction = db.transaction(() => {
-      stmts.renameStatUpdate.run(newName, oldName);
-
-      const tasks = stmts.renameStatGetTasks.all();
-
-      tasks.forEach((task: { id: number; statTarget: string }) => {
-        let targets: string[] = [];
-        try {
-          targets = JSON.parse(task.statTarget || '[]');
-        } catch (e) {
-          targets = [];
-        }
-
-        if (Array.isArray(targets) && targets.includes(oldName)) {
-          targets = targets.map(t => t === oldName ? newName : t);
-          stmts.renameStatUpdateTask.run(JSON.stringify(targets), task.id);
-        }
-      });
-    });
-    return transaction();
-  });
-
-  // Daily Log
-  safeHandle(IpcChannels.GetDailyLog, (_, date) => {
-    return stmts.getDailyLog.get(date);
-  });
-
-  safeHandle(IpcChannels.SaveDailyLog, (_, log) => {
-    return stmts.saveDailyLog.run(log);
-  });
-
-  safeHandle(IpcChannels.SaveJournalEntry, (_, { date, entry }) => {
-    const row = stmts.getDailyLogForJournal.get(date);
-    if (row) {
-      return stmts.updateJournalEntry.run(entry, date);
-    } else {
-      return stmts.insertJournalEntry.run(date, entry);
-    }
-  });
-
-  // Dev Items
-  safeHandle(IpcChannels.GetDevItems, () => {
-    return stmts.getDevItems.all();
-  });
-
-  safeHandle(IpcChannels.AddDevItem, (_, text) => {
-    return stmts.addDevItem.run(text);
-  });
-
-  safeHandle(IpcChannels.ToggleDevItem, (_, { id, isComplete }) => {
-    return stmts.toggleDevItem.run(isComplete, id);
-  });
-
-  safeHandle(IpcChannels.DeleteDevItem, (_, id) => {
-    return stmts.deleteDevItem.run(id);
-  });
-
-  // Repeating Tasks
-  safeHandle(IpcChannels.GetRepeatingTasks, () => {
-    return stmts.getRepeatingTasks.all();
-  });
-
-  safeHandle(IpcChannels.AddRepeatingTask, (_, task) => {
-    return stmts.addRepeatingTask.run({
-      ...task,
-      lastGeneratedDate: task.lastGeneratedDate || null,
-      statTarget: JSON.stringify(task.statTarget),
-      labels: JSON.stringify(task.labels),
-      repeatDays: JSON.stringify(task.repeatDays),
-      subtasks: JSON.stringify(task.subtasks || []),
-      streak: task.streak || 0
-    });
-  });
-
-  safeHandle(IpcChannels.UpdateRepeatingTask, (_, task) => {
-    return stmts.updateRepeatingTask.run({
-      ...task,
-      lastGeneratedDate: task.lastGeneratedDate || null,
-      statTarget: JSON.stringify(task.statTarget),
-      labels: JSON.stringify(task.labels),
-      repeatDays: JSON.stringify(task.repeatDays),
-      subtasks: JSON.stringify(task.subtasks || []),
-      streak: task.streak || 0
-    });
-  });
-
-  safeHandle(IpcChannels.DeleteRepeatingTask, (_, id) => {
-    return stmts.deleteRepeatingTask.run(id);
-  });
-
-  // Notes Mode
-  safeHandle(IpcChannels.GetSubjects, () => {
-    return stmts.getSubjects.all();
-  });
-
-  safeHandle(IpcChannels.CreateSubject, (_, subject) => {
-    return stmts.createSubject.run({
-      ...subject,
-      createdAt: new Date().toISOString()
-    });
-  });
-
-  safeHandle(IpcChannels.UpdateSubject, (_, subject) => {
-    return stmts.updateSubject.run(subject);
-  });
-
-  safeHandle(IpcChannels.DeleteSubject, (_, id) => {
-    return stmts.deleteSubject.run(id);
-  });
-
-  safeHandle(IpcChannels.GetNotes, (_, subjectId) => {
-    return stmts.getNotes.all(subjectId);
-  });
-
-  safeHandle(IpcChannels.CreateNote, (_, note) => {
-    const now = new Date().toISOString();
-    return stmts.createNote.run({
-      ...note,
-      createdAt: now,
-      updatedAt: now
-    });
-  });
-
-  safeHandle(IpcChannels.GetNote, (_, id) => {
-    return stmts.getNote.get(id);
-  });
-
-  safeHandle(IpcChannels.UpdateNote, (_, note) => {
-    return stmts.updateNote.run({
-      ...note,
-      updatedAt: new Date().toISOString()
-    });
-  });
-
-  safeHandle(IpcChannels.DeleteNote, (_, id) => {
-    return stmts.deleteNote.run(id);
-  });
-
-  safeHandle(IpcChannels.SearchNotes, (_, query) => {
-    const likeQuery = `%${query}%`;
-    return stmts.searchNotes.all(likeQuery, likeQuery);
-  });
-
-  // Streaks
-  safeHandle(IpcChannels.GetStreaks, () => {
-    return stmts.getStreaks.all();
-  });
-
-  safeHandle(IpcChannels.CreateStreak, (_, streak) => {
-    const now = new Date().toISOString();
-    return stmts.createStreak.run({
-      ...streak,
-      lastUpdated: streak.lastUpdated || now,
-      createdAt: streak.createdAt || now
-    });
-  });
-
-  safeHandle(IpcChannels.UpdateStreak, (_, streak) => {
-    return stmts.updateStreak.run(streak);
-  });
-
-  safeHandle(IpcChannels.DeleteStreak, (_, id) => {
-    return stmts.deleteStreak.run(id);
-  });
-
-  // Data Export - dumps all tables into a single JSON object
-  safeHandle(IpcChannels.ExportAllData, () => {
-    return {
-      tasks: db.prepare('SELECT * FROM tasks').all(),
-      sessions: db.prepare('SELECT * FROM sessions').all(),
-      stats: db.prepare('SELECT * FROM stats').all(),
-      dailyLogs: db.prepare('SELECT * FROM daily_logs').all(),
-      devItems: db.prepare('SELECT * FROM dev_items').all(),
-      repeatingTasks: db.prepare('SELECT * FROM repeating_tasks').all(),
-      subjects: db.prepare('SELECT * FROM subjects').all(),
-      notes: db.prepare('SELECT * FROM notes').all(),
-      streaks: db.prepare('SELECT * FROM streaks').all(),
-      exportedAt: new Date().toISOString()
-    };
-  });
-
-  // ── Passwords (local-only, encrypted with OS keychain via safeStorage) ──
-  const encryptPw = (plaintext: string): string => {
-    if (!safeStorage.isEncryptionAvailable()) {
-      throw new Error('OS encryption is not available on this system');
-    }
-    return safeStorage.encryptString(plaintext).toString('base64');
-  };
-  const decryptPw = (cipherB64: string): string => {
-    if (!cipherB64) return '';
-    return safeStorage.decryptString(Buffer.from(cipherB64, 'base64'));
+  /** Throws when the vault has a passphrase and is locked — every password
+   *  operation (even metadata reads) requires an unlocked vault. */
+  const requireUnlockedVault = () => {
+    if (vault.isLocked()) throw new Error('vault-locked');
+    vault.touchActivity();
   };
 
   safeHandle(IpcChannels.GetPasswords, () => {
+    requireUnlockedVault();
     return stmts.getPasswords.all();
   });
 
   safeHandle(IpcChannels.CreatePassword, (_, { entry, plaintext }: { entry: any; plaintext: string }) => {
+    requireUnlockedVault();
     const now = new Date().toISOString();
     const result = stmts.createPassword.run({
       name: entry.name,
       username: entry.username || '',
-      passwordEnc: encryptPw(plaintext || ''),
+      passwordEnc: vault.encryptSecret(plaintext || ''),
       url: entry.url || '',
       notes: entry.notes || '',
       category: entry.category || '',
@@ -534,13 +257,14 @@ app.whenReady().then(() => {
   });
 
   safeHandle(IpcChannels.UpdatePassword, (_, { entry, plaintext }: { entry: any; plaintext?: string }) => {
+    requireUnlockedVault();
     const now = new Date().toISOString();
     if (typeof plaintext === 'string' && plaintext.length > 0) {
       return stmts.updatePasswordWithCipher.run({
         id: entry.id,
         name: entry.name,
         username: entry.username || '',
-        passwordEnc: encryptPw(plaintext),
+        passwordEnc: vault.encryptSecret(plaintext),
         url: entry.url || '',
         notes: entry.notes || '',
         category: entry.category || '',
@@ -561,27 +285,45 @@ app.whenReady().then(() => {
   });
 
   safeHandle(IpcChannels.DeletePassword, (_, id: number) => {
+    requireUnlockedVault();
     return stmts.deletePassword.run(id);
   });
 
   safeHandle(IpcChannels.RevealPassword, (_, id: number) => {
+    requireUnlockedVault();
     const row = stmts.getPasswordCipher.get(id) as { passwordEnc: string } | undefined;
     if (!row) return '';
-    try {
-      return decryptPw(row.passwordEnc);
-    } catch (err) {
-      console.error('Failed to decrypt password:', err);
-      return '';
-    }
+    return vault.decryptSecret(row.passwordEnc);
   });
 
   safeHandle(IpcChannels.TouchPassword, (_, id: number) => {
+    requireUnlockedVault();
     return stmts.touchPassword.run(new Date().toISOString(), id);
   });
 
   safeHandle(IpcChannels.TogglePinPassword, (_, { id, isPinned }: { id: number; isPinned: number }) => {
+    requireUnlockedVault();
     return stmts.togglePinPassword.run(isPinned, id);
   });
+
+  // ── Vault lock IPC ────────────────────────────────────────────────
+  safeHandle(IpcChannels.VaultStatus, () => vault.getStatus());
+  safeHandle(IpcChannels.VaultSetup, (_, passphrase: string) => vault.setup(passphrase));
+  safeHandle(IpcChannels.VaultUnlock, (_, passphrase: string) => vault.unlock(passphrase));
+  safeHandle(IpcChannels.VaultLock, () => vault.lock());
+  safeHandle(IpcChannels.VaultChangePassphrase, (_, { current, next }: { current: string; next: string }) =>
+    vault.changePassphrase(current, next));
+  safeHandle(IpcChannels.VaultExport, (_, { passphrase }: { passphrase: string }) =>
+    vault.exportVault(win, passphrase));
+  safeHandle(IpcChannels.VaultImport, (_, { passphrase }: { passphrase: string }) =>
+    vault.importVault(win, passphrase));
+
+  vault.setOnStateChanged(() => {
+    BrowserWindow.getAllWindows().forEach(w => {
+      if (!w.isDestroyed()) w.webContents.send(IpcChannels.VaultStateChanged, vault.getStatus());
+    });
+  });
+  vault.startAutoLock();
 
   // ── Clipboard (uses Electron's native clipboard module — more reliable than navigator.clipboard) ──
   safeHandle(IpcChannels.ClipboardWrite, (_, text: string) => {
@@ -624,10 +366,10 @@ app.whenReady().then(() => {
     const display = screen.getDisplayNearestPoint({ x: winBounds.x, y: winBounds.y });
     // Use workArea to avoid overlapping with the taskbar
     const { width, height, x, y } = display.workArea;
-    
+
     // Briefly enable resizing to allow the window size to change properly
     win.setResizable(true);
-    
+
     if (windowSizeState === 0) {
       if (win.isMaximized()) win.unmaximize();
       win.setAspectRatio(1200 / 800);
@@ -646,15 +388,13 @@ app.whenReady().then(() => {
       win.maximize();
       win.webContents.send('window-size-state', 2);
     }
-    
+
     win.setResizable(false);
   });
 
   ipcMain.on('toggle-pin', (_, shouldPin) => {
     win?.setAlwaysOnTop(shouldPin);
   });
-
-
 
   ipcMain.on('close-window', () => {
     // Hide to tray instead of closing
@@ -841,14 +581,33 @@ app.whenReady().then(() => {
     },
   );
 
-  // Auto-update: check for updates via GitHub Releases
+  // Auto-update: check via GitHub Releases. Downloads happen in the
+  // background, but installation always asks the user first — never
+  // silently swap the binary under them.
   import('electron-updater')
     .then(({ autoUpdater }) => {
       autoUpdater.autoDownload = true;
-      autoUpdater.autoInstallOnAppQuit = true;
+      autoUpdater.autoInstallOnAppQuit = false;
       autoUpdater.on('error', (err) => console.error('[auto-update]', err));
-      autoUpdater.checkForUpdatesAndNotify().catch((err) => {
-        console.warn('[auto-update] checkForUpdatesAndNotify rejected:', err?.message ?? err);
+      autoUpdater.on('update-downloaded', (info) => {
+        if (!win || win.isDestroyed()) return;
+        dialog.showMessageBox(win, {
+          type: 'info',
+          title: 'Update ready',
+          message: `mOS ${info.version} has been downloaded.`,
+          detail: 'Restart now to install it, or keep working and install later.',
+          buttons: ['Restart now', 'Later'],
+          defaultId: 0,
+          cancelId: 1,
+        }).then(({ response }) => {
+          if (response === 0) {
+            isQuitting = true; // allow the close handler to let windows close
+            autoUpdater.quitAndInstall();
+          }
+        });
+      });
+      autoUpdater.checkForUpdates().catch((err) => {
+        console.warn('[auto-update] checkForUpdates rejected:', err?.message ?? err);
       });
     })
     .catch((err) => {
@@ -866,4 +625,5 @@ app.on('will-quit', () => {
   destroyTray()
   stopAllNotificationTimers()
   stopIdleMonitor()
+  vault.stopAutoLock()
 })

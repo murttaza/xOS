@@ -19,12 +19,45 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
     }
 }
 
-// Lightweight offline queue — queues writes when offline, flushes on reconnect
-const offlineQueue: (() => Promise<unknown>)[] = [];
+// ── Offline queue ───────────────────────────────────────────────
+// Declarative (serializable) ops persisted to localStorage, so writes made
+// while offline survive a reload/crash. Replayed FIFO on reconnect. RLS
+// scopes every replayed write to whoever is signed in at replay time, which
+// is why the queue MUST be cleared on logout (AuthGate does).
 
-function enqueueIfOffline(fn: () => Promise<unknown>): boolean {
+type QueuedOp =
+    | { kind: 'insert'; table: string; payload: Record<string, unknown> }
+    | { kind: 'upsert'; table: string; payload: Record<string, unknown>; onConflict?: string }
+    | { kind: 'update'; table: string; payload: Record<string, unknown>; match: Record<string, unknown> }
+    | { kind: 'delete'; table: string; match: Record<string, unknown> };
+
+const QUEUE_KEY = 'mos-offline-queue';
+
+function loadQueue(): QueuedOp[] {
+    try {
+        const raw = localStorage.getItem(QUEUE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+}
+
+function saveQueue(queue: QueuedOp[]) {
+    try {
+        if (queue.length === 0) localStorage.removeItem(QUEUE_KEY);
+        else localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+    } catch {
+        // Storage unavailable/full — queue continues in memory only.
+    }
+}
+
+let offlineQueue: QueuedOp[] = typeof window !== 'undefined' ? loadQueue() : [];
+
+function enqueueIfOffline(op: QueuedOp): boolean {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        offlineQueue.push(fn);
+        offlineQueue.push(op);
+        saveQueue(offlineQueue);
         return true;
     }
     return false;
@@ -32,21 +65,52 @@ function enqueueIfOffline(fn: () => Promise<unknown>): boolean {
 
 /** Clear pending offline writes (must be called on logout to prevent data leakage between users) */
 export function clearOfflineQueue() {
-    offlineQueue.length = 0;
+    offlineQueue = [];
+    saveQueue(offlineQueue);
+}
+
+/** True while offline writes are waiting to be replayed — used to hold off
+ *  refetch-on-focus so server state can't clobber unreplayed local writes. */
+export function hasPendingOfflineWrites(): boolean {
+    return offlineQueue.length > 0;
+}
+
+async function runOp(op: QueuedOp): Promise<void> {
+    if (op.kind === 'insert') {
+        throwOnError(await supabase.from(op.table).insert(op.payload));
+    } else if (op.kind === 'upsert') {
+        throwOnError(await supabase.from(op.table).upsert(op.payload, op.onConflict ? { onConflict: op.onConflict } : undefined));
+    } else if (op.kind === 'update') {
+        let q = supabase.from(op.table).update(op.payload);
+        for (const [k, v] of Object.entries(op.match)) q = q.eq(k, v as never);
+        throwOnError(await q);
+    } else {
+        let q = supabase.from(op.table).delete();
+        for (const [k, v] of Object.entries(op.match)) q = q.eq(k, v as never);
+        throwOnError(await q);
+    }
 }
 
 // Track the listener so we can detach it on hot-reload (the module is re-evaluated
-// in dev) and on logout. Also logs failed replays instead of silently swallowing.
+// in dev) and on logout.
 let _onlineListener: (() => void) | null = null;
 
 function flushQueue() {
     void (async () => {
         while (offlineQueue.length > 0) {
-            const op = offlineQueue.shift()!;
+            const op = offlineQueue[0];
             try {
-                await op();
+                await runOp(op);
+                offlineQueue.shift();
+                saveQueue(offlineQueue);
             } catch (err) {
-                console.error('[offline-queue] replay failed:', err);
+                // Went offline again mid-replay → stop; the next 'online' event retries.
+                if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+                // Op is poisoned (e.g. conflicts with server state) — drop it so
+                // the queue can't wedge forever, but say so loudly.
+                console.error('[offline-queue] dropping op after failed replay:', op, err);
+                offlineQueue.shift();
+                saveQueue(offlineQueue);
             }
         }
     })();
@@ -57,6 +121,8 @@ if (typeof window !== 'undefined') {
     if (_onlineListener) window.removeEventListener('online', _onlineListener);
     _onlineListener = flushQueue;
     window.addEventListener('online', _onlineListener);
+    // Replay anything persisted by a previous session.
+    if (navigator.onLine && offlineQueue.length > 0) flushQueue();
 }
 
 export const supabaseBackend: ApiBackend = {
@@ -121,15 +187,15 @@ export const supabaseBackend: ApiBackend = {
 
     // ── Sessions ───────────────────────────────────────────────
     addSession: async (session) => {
-        const doInsert = async () => throwOnError(await supabase.from('sessions').insert({
+        const payload = {
             taskId: session.taskId,
             startTime: session.startTime,
             endTime: session.endTime,
             duration_minutes: session.duration_minutes,
             dateLogged: session.dateLogged,
-        }));
-        if (enqueueIfOffline(doInsert)) return;
-        return withRetry(doInsert);
+        };
+        if (enqueueIfOffline({ kind: 'insert', table: 'sessions', payload })) return;
+        return withRetry(async () => throwOnError(await supabase.from('sessions').insert(payload)));
     },
 
     getSessionsByDate: async (date) => {
@@ -294,11 +360,10 @@ export const supabaseBackend: ApiBackend = {
     },
 
     deleteSubject: async (id) => {
-        // Also delete associated notes (Supabase doesn't have ON DELETE CASCADE by default)
-        const notesResult = await supabase.from('notes').delete().eq('subjectId', id);
-        if (notesResult.error) {
-            console.error('Failed to delete notes for subject', id, notesResult.error);
-        }
+        // Delete associated notes first (kept for DBs that haven't applied
+        // migration 012's ON DELETE CASCADE yet). If this fails, ABORT — never
+        // delete the subject and strand its notes.
+        throwOnError(await supabase.from('notes').delete().eq('subjectId', id));
         return throwOnError(await supabase.from('subjects').delete().eq('id', id));
     },
 
@@ -430,19 +495,17 @@ export const supabaseBackend: ApiBackend = {
     },
 
     setActiveTimer: async (taskId, startTime) => {
-        const doUpsert = async () => throwOnError(
+        if (enqueueIfOffline({ kind: 'upsert', table: 'active_timers', payload: { taskId, startTime }, onConflict: 'taskId,user_id' })) return;
+        return withRetry(async () => throwOnError(
             await supabase.from('active_timers').upsert({ taskId, startTime }, { onConflict: 'taskId,user_id' })
-        );
-        if (enqueueIfOffline(doUpsert)) return;
-        return withRetry(doUpsert);
+        ));
     },
 
     removeActiveTimer: async (taskId) => {
-        const doDelete = async () => throwOnError(
+        if (enqueueIfOffline({ kind: 'delete', table: 'active_timers', match: { taskId } })) return;
+        return withRetry(async () => throwOnError(
             await supabase.from('active_timers').delete().eq('taskId', taskId)
-        );
-        if (enqueueIfOffline(doDelete)) return;
-        return withRetry(doDelete);
+        ));
     },
 
     sessionExistsForTimer: async (taskId, startTime) => {
@@ -797,11 +860,10 @@ export const supabaseBackend: ApiBackend = {
     },
 
     updateSession: async (id, updates) => {
-        const doUpdate = async () => throwOnError(
+        if (enqueueIfOffline({ kind: 'update', table: 'workout_sessions', payload: updates as Record<string, unknown>, match: { id } })) return;
+        return withRetry(async () => throwOnError(
             await supabase.from('workout_sessions').update(updates).eq('id', id)
-        );
-        if (enqueueIfOffline(doUpdate)) return;
-        return withRetry(doUpdate);
+        ));
     },
 
     createWeekSessions: async (userProgramId, programDays, weekStartDate) => {
@@ -859,11 +921,12 @@ export const supabaseBackend: ApiBackend = {
         };
         if (log.id) payload.id = log.id;
 
-        const doUpsert = async () => throwOnError(
+        if (enqueueIfOffline({ kind: 'upsert', table: 'exercise_logs', payload })) {
+            return { ...payload, id: `offline-${Date.now()}` } as any;
+        }
+        return withRetry(async () => throwOnError(
             await supabase.from('exercise_logs').upsert(payload).select('*, program_exercises(*)').single()
-        ) as any;
-        if (enqueueIfOffline(doUpsert)) return { ...payload, id: `offline-${Date.now()}` } as any;
-        return withRetry(doUpsert);
+        ) as any);
     },
 
     deleteExerciseLog: async (id) => {

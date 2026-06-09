@@ -63,13 +63,20 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
             await api.updateBudgetCategory(category);
         } catch (err) {
             console.error('updateBudgetCategory failed:', err);
+            showErrorToast('Failed to save category changes.');
             throw err;
         }
         await get().fetchBudgetCategories();
     },
 
     deleteBudgetCategory: async (id) => {
-        await api.deleteBudgetCategory(id);
+        try {
+            await api.deleteBudgetCategory(id);
+        } catch (err) {
+            console.error('deleteBudgetCategory failed:', err);
+            showErrorToast('Failed to delete the category.');
+            return;
+        }
         await get().fetchBudgetCategories();
         await get().fetchTransactions();
     },
@@ -135,12 +142,24 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     },
 
     updateTransaction: async (tx) => {
-        await api.updateTransaction(tx);
+        try {
+            await api.updateTransaction(tx);
+        } catch (err) {
+            console.error('updateTransaction failed:', err);
+            showErrorToast('Failed to save transaction changes.');
+            throw err;
+        }
         await get().fetchTransactions();
     },
 
     deleteTransaction: async (id) => {
-        await api.deleteTransaction(id);
+        try {
+            await api.deleteTransaction(id);
+        } catch (err) {
+            console.error('deleteTransaction failed:', err);
+            showErrorToast('Failed to delete the transaction.');
+            return;
+        }
         await get().fetchTransactions();
     },
 
@@ -155,12 +174,24 @@ export const createBudgetSlice: StateCreator<AppState, [], [], BudgetSlice> = (s
     },
 
     setBudgetTarget: async (target) => {
-        await api.setBudgetTarget(target);
+        try {
+            await api.setBudgetTarget(target);
+        } catch (err) {
+            console.error('setBudgetTarget failed:', err);
+            showErrorToast('Failed to save the budget target.');
+            return;
+        }
         await get().fetchBudgetTargets();
     },
 
     deleteBudgetTarget: async (id) => {
-        await api.deleteBudgetTarget(id);
+        try {
+            await api.deleteBudgetTarget(id);
+        } catch (err) {
+            console.error('deleteBudgetTarget failed:', err);
+            showErrorToast('Failed to remove the budget target.');
+            return;
+        }
         await get().fetchBudgetTargets();
     },
 

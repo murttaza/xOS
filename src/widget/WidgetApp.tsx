@@ -144,7 +144,7 @@ export function WidgetApp() {
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    fontFamily: 'Outfit, system-ui, sans-serif',
+    fontFamily: "'Outfit Variable', Outfit, system-ui, sans-serif",
     background: 'rgba(15, 15, 20, 0.92)',
     borderRadius: 12,
     border: '1px solid rgba(255,255,255,0.08)',

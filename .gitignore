@@ -30,3 +30,13 @@ dist-ssr
 
 # Claude Code agent worktrees (ephemeral sandbox checkouts)
 .claude/worktrees/
+
+# Build/lint scratch output — never commit tool dumps
+*.tsbuildinfo
+build_*.txt
+build_*.log
+*lint*.json
+*lint*.txt
+eslint-output.txt
+report.json
+src_errors.txt

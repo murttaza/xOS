@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { DevItem } from '@/types';
 import { api } from '@/api';
+import { showErrorToast } from '@/components/ui/toast';
 import type { AppState } from './index';
 
 export interface UiSlice {
@@ -96,23 +97,45 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
 
     devItems: [],
     fetchDevItems: async () => {
-        const devItems = await api.getDevItems();
-        set({ devItems });
+        try {
+            const devItems = await api.getDevItems();
+            set({ devItems });
+        } catch (error) {
+            console.error('Failed to fetch dev items:', error);
+        }
     },
     addDevItem: async (text) => {
-        await api.addDevItem(text);
+        try {
+            await api.addDevItem(text);
+        } catch (error) {
+            console.error('Failed to add dev item:', error);
+            showErrorToast('Could not add the item.');
+            return;
+        }
         get().fetchDevItems();
     },
     toggleDevItem: async (id) => {
         const state = get();
         const item = state.devItems.find(i => i.id === id);
         if (item) {
-            await api.toggleDevItem(id, item.isComplete ? 0 : 1);
+            try {
+                await api.toggleDevItem(id, item.isComplete ? 0 : 1);
+            } catch (error) {
+                console.error('Failed to toggle dev item:', error);
+                showErrorToast('Could not update the item.');
+                return;
+            }
             get().fetchDevItems();
         }
     },
     deleteDevItem: async (id) => {
-        await api.deleteDevItem(id);
+        try {
+            await api.deleteDevItem(id);
+        } catch (error) {
+            console.error('Failed to delete dev item:', error);
+            showErrorToast('Could not delete the item.');
+            return;
+        }
         get().fetchDevItems();
     },
 });

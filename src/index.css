@@ -3,6 +3,16 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
+    /* Brand typeface — self-hosted via @fontsource-variable/outfit (imported in
+       each entry point), so it works offline in the desktop app. Without this
+       --font-sans the v4 build falls back to the system stack. */
+    --font-sans: 'Outfit Variable', 'Outfit', ui-sans-serif, system-ui, sans-serif;
+
+    /* Smallest legible label size (generates the text-2xs utility). Use this
+       instead of arbitrary text-[8px]/text-[9px] — 10px is the legibility floor. */
+    --text-2xs: 0.625rem;
+    --text-2xs--line-height: 0.875rem;
+
     --color-border: hsl(var(--border));
     --color-input: hsl(var(--input));
     --color-ring: hsl(var(--ring));
@@ -156,8 +166,10 @@
         --popover: 0 0% 100%;
         --popover-foreground: 220 15% 10%;
 
-        /* Sophisticated Blue Primary for Light Mode */
-        --primary: 217 91% 60%;
+        /* Sophisticated Blue Primary for Light Mode.
+           48% lightness keeps white-on-primary AND primary-on-white at AA
+           contrast (the old 60% was ~3.6:1 for primary text on white). */
+        --primary: 217 91% 48%;
         --primary-foreground: 0 0% 100%;
 
         --secondary: 220 20% 95%;
@@ -174,7 +186,7 @@
 
         --border: 220 15% 90%;
         --input: 220 15% 90%;
-        --ring: 217 91% 60%;
+        --ring: 217 91% 48%;
 
         --radius: 1rem;
 
@@ -223,6 +235,32 @@
         --glass-border: rgba(255, 255, 255, 0.08);
         --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         --glass-highlight: rgba(255, 255, 255, 0.05);
+    }
+}
+
+/* Mobile bottom-edge clearance.
+   Full-screen overlays (notes, modes, focus) reach the physical bottom of the
+   screen; with viewport-fit=cover the iOS home indicator / gesture bar sits ON
+   TOP of the last ~20-34px, making bottom buttons (e.g. "New Note") hard to
+   tap. This class swaps an element's bottom padding for a safe-area-aware
+   value on phones only — desktop keeps its designed spacing. Override the
+   base with --msb-base when the design's mobile padding exceeds 1rem.
+   !important is deliberate: it must beat Tailwind padding utilities. */
+@media (max-width: 767px) {
+    .mobile-safe-bottom {
+        padding-bottom: max(var(--msb-base, 1rem), calc(env(safe-area-inset-bottom, 0px) + 0.75rem)) !important;
+    }
+}
+
+/* Respect the OS "reduce motion" preference: collapse every CSS animation
+   and transition to a single frame. framer-motion is handled separately via
+   <MotionConfig reducedMotion="user"> in the entry points. */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
     }
 }
 

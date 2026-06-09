@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Progress } from '../ui/progress';
 import { Plus, X, Check, Settings2 } from 'lucide-react';
+import { toCents, centsToAmount } from '@/lib/money';
 
 interface BudgetTargetsProps {
     categories: BudgetCategory[];
@@ -24,13 +25,16 @@ export function BudgetTargets({ categories, targets, transactions, selectedMonth
     const expenseCategories = categories.filter(c => !c.isIncome);
     const targetMap = new Map(targets.map(t => [t.categoryId, t]));
 
-    // Calculate spending per category
-    const spendingMap = new Map<number, number>();
+    // Calculate spending per category — in integer cents (see src/lib/money.ts)
+    const spendingCents = new Map<number, number>();
     for (const tx of transactions) {
         if (!tx.isIncome) {
-            spendingMap.set(tx.categoryId, (spendingMap.get(tx.categoryId) || 0) + Number(tx.amount));
+            spendingCents.set(tx.categoryId, (spendingCents.get(tx.categoryId) || 0) + toCents(tx.amount));
         }
     }
+    const spendingMap = new Map<number, number>(
+        [...spendingCents.entries()].map(([id, cents]) => [id, centsToAmount(cents)])
+    );
 
     const categoriesWithoutTargets = expenseCategories.filter(c => !targetMap.has(c.id!));
 

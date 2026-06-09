@@ -34,7 +34,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
     }, []);
 
     if (!ready) return (
-        <div className="h-screen flex items-center justify-center bg-background">
+        <div className="min-h-[100dvh] flex items-center justify-center bg-background">
             <Wordmark height={36} className="animate-pulse" />
         </div>
     );

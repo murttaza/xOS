@@ -1,5 +1,7 @@
 import { StateCreator } from 'zustand';
 import { api } from '@/api';
+import { calculateWorkoutXP, calculateLevelFromXP } from '@/lib/utils';
+import { showErrorToast } from '@/components/ui/toast';
 import type { AppState } from './index';
 import type {
     Exercise, Program, ProgramPhase, ProgramDay, ProgramExercise, ProgramPrinciple,
@@ -88,6 +90,17 @@ function getLocalDate(): string {
 }
 
 const _ensureWeekInFlight = new Map<number, Promise<void>>();
+
+/** Wraps a plan mutation: failures toast + log instead of escaping as
+ *  unhandled rejections (the refetch inside fn is skipped on failure). */
+async function guardPlanOp(label: string, fn: () => Promise<void>): Promise<void> {
+    try {
+        await fn();
+    } catch (err) {
+        console.error(`Plan op "${label}" failed:`, err);
+        showErrorToast(`Could not ${label}.`);
+    }
+}
 
 export const createFitnessSlice: StateCreator<AppState, [], [], FitnessSlice> = (set, get) => ({
     exercises: [],
@@ -344,19 +357,60 @@ export const createFitnessSlice: StateCreator<AppState, [], [], FitnessSlice> = 
     },
 
     updateSessionStatus: async (sessionId, status, opts) => {
+        // Award XP only on the transition INTO completed (re-saving a completed
+        // session must not double-award).
+        const wasCompleted = get().workoutSessions.find(s => s.id === sessionId)?.status === 'completed';
+
         const updates: any = { status };
         if (status === 'completed') updates.completed_at = new Date().toISOString();
         if (opts?.effort !== undefined) updates.perceived_effort = opts.effort;
         if (opts?.notes !== undefined) updates.notes = opts.notes;
-        await api.updateSession(sessionId, updates);
+        try {
+            await api.updateSession(sessionId, updates);
+        } catch (err) {
+            console.error('updateSessionStatus failed:', err);
+            showErrorToast('Could not save the workout status.');
+            return;
+        }
         await get().fetchSessions();
         if (get().selectedSessionId === sessionId) {
             await get().fetchSessionDetail(sessionId);
         }
+
+        // Completing a workout feeds the Fitness stat — same pattern as
+        // budgetStore's Finance XP award.
+        if (status === 'completed' && !wasCompleted) {
+            try {
+                await get().fetchStats();
+                const fitnessStat = get().stats.find(s => s.statName === 'Fitness');
+                if (fitnessStat) {
+                    const xpEarned = calculateWorkoutXP(opts?.effort);
+                    const { newXP, newLevel } = calculateLevelFromXP(
+                        fitnessStat.currentXP + xpEarned,
+                        fitnessStat.currentLevel
+                    );
+                    await api.updateStat({ statName: 'Fitness', currentXP: newXP, currentLevel: newLevel });
+                    set((state) => ({
+                        stats: state.stats.map(s =>
+                            s.statName === 'Fitness' ? { ...s, currentXP: newXP, currentLevel: newLevel } : s
+                        ),
+                    }));
+                }
+            } catch (e) {
+                console.error('Failed to award workout XP', e);
+            }
+        }
     },
 
     saveExerciseLog: async (log) => {
-        const result = await api.upsertExerciseLog(log);
+        let result: ExerciseLog;
+        try {
+            result = await api.upsertExerciseLog(log);
+        } catch (err) {
+            console.error('saveExerciseLog failed:', err);
+            showErrorToast('Could not save the exercise log.');
+            throw err;
+        }
         // Update local state
         set(state => {
             const logs = [...state.exerciseLogs];
@@ -375,11 +429,27 @@ export const createFitnessSlice: StateCreator<AppState, [], [], FitnessSlice> = 
     },
 
     saveExerciseSets: async (logId, sets) => {
-        await api.upsertExerciseSets(logId, sets);
+        try {
+            await api.upsertExerciseSets(logId, sets);
+        } catch (err) {
+            console.error('saveExerciseSets failed:', err);
+            showErrorToast('Could not save the sets.');
+            throw err;
+        }
+        // Refresh the logs holding these sets so per-set edits don't appear stale.
+        const sessionId = get().currentSession?.id ?? get().selectedSessionId;
+        if (sessionId) get().fetchExerciseLogs(sessionId);
+        get().fetchAllExerciseLogs();
     },
 
     upsertBodyMetric: async (metric) => {
-        await api.upsertBodyMetric(metric);
+        try {
+            await api.upsertBodyMetric(metric);
+        } catch (err) {
+            console.error('upsertBodyMetric failed:', err);
+            showErrorToast('Could not save the body metric.');
+            return;
+        }
         await get().fetchBodyMetrics();
     },
 
@@ -432,16 +502,18 @@ export const createFitnessSlice: StateCreator<AppState, [], [], FitnessSlice> = 
     },
 
     // ── Plan Management ─────────────────────────────────────────
+    // All plan edits funnel through guardPlanOp so a failed write surfaces a
+    // toast instead of an unhandled rejection (and skips the refetch).
 
-    updateProgram: async (id, updates) => {
+    updateProgram: async (id, updates) => guardPlanOp('save plan changes', async () => {
         await api.updateProgram(id, updates);
         await get().fetchProgramData(get().activeProgram?.program_id || id);
         // Refresh programs list too
         const programs = await api.getPrograms();
         set({ programs });
-    },
+    }),
 
-    deleteProgram: async (id) => {
+    deleteProgram: async (id) => guardPlanOp('delete the plan', async () => {
         const wasActiveTpl = get().activeProgram?.program_id === id;
         // Remove FK references first (user_programs has no ON DELETE CASCADE for program_id).
         // workout_sessions, exercise_logs, exercise_sets cascade from user_programs.
@@ -458,9 +530,9 @@ export const createFitnessSlice: StateCreator<AppState, [], [], FitnessSlice> = 
             });
         }
         await get().fetchFitnessData();
-    },
+    }),
 
-    deleteUserProgram: async (id) => {
+    deleteUserProgram: async (id) => guardPlanOp('remove the program run', async () => {
         const wasActive = get().activeProgram?.id === id;
         await api.deleteUserProgram(id);
         if (wasActive) {
@@ -474,59 +546,59 @@ export const createFitnessSlice: StateCreator<AppState, [], [], FitnessSlice> = 
             });
         }
         await get().fetchFitnessData();
-    },
+    }),
 
-    addPhase: async (phase) => {
+    addPhase: async (phase) => guardPlanOp('add the phase', async () => {
         await api.createProgramPhase(phase);
         await get().fetchProgramData(phase.program_id);
-    },
+    }),
 
-    updatePhase: async (id, updates) => {
+    updatePhase: async (id, updates) => guardPlanOp('save the phase', async () => {
         await api.updateProgramPhase(id, updates);
         const active = get().activeProgram;
         if (active) await get().fetchProgramData(active.program_id);
-    },
+    }),
 
-    deletePhase: async (id) => {
+    deletePhase: async (id) => guardPlanOp('delete the phase', async () => {
         await api.deleteProgramPhase(id);
         const active = get().activeProgram;
         if (active) await get().fetchProgramData(active.program_id);
-    },
+    }),
 
-    addDay: async (day) => {
+    addDay: async (day) => guardPlanOp('add the day', async () => {
         await api.createProgramDay(day);
         await get().fetchProgramData(day.program_id);
-    },
+    }),
 
-    updateDay: async (id, updates) => {
+    updateDay: async (id, updates) => guardPlanOp('save the day', async () => {
         await api.updateProgramDay(id, updates);
         const active = get().activeProgram;
         if (active) await get().fetchProgramData(active.program_id);
-    },
+    }),
 
-    deleteDay: async (id) => {
+    deleteDay: async (id) => guardPlanOp('delete the day', async () => {
         await api.deleteProgramDay(id);
         const active = get().activeProgram;
         if (active) await get().fetchProgramData(active.program_id);
-    },
+    }),
 
-    addExercise: async (exercise) => {
+    addExercise: async (exercise) => guardPlanOp('add the exercise', async () => {
         await api.createProgramExercise(exercise);
         const active = get().activeProgram;
         if (active) await get().fetchProgramData(active.program_id);
-    },
+    }),
 
-    updateExercise: async (id, updates) => {
+    updateExercise: async (id, updates) => guardPlanOp('save the exercise', async () => {
         await api.updateProgramExercise(id, updates);
         const active = get().activeProgram;
         if (active) await get().fetchProgramData(active.program_id);
-    },
+    }),
 
-    deleteExercise: async (id) => {
+    deleteExercise: async (id) => guardPlanOp('delete the exercise', async () => {
         await api.deleteProgramExercise(id);
         const active = get().activeProgram;
         if (active) await get().fetchProgramData(active.program_id);
-    },
+    }),
 
     // ── Computed Helpers ─────────────────────────────────────────
 
@@ -585,6 +657,7 @@ export const createFitnessSlice: StateCreator<AppState, [], [], FitnessSlice> = 
         const phases = state.programPhases.slice().sort((a, b) => a.order - b.order);
         for (const p of phases) {
             const days = state.getDaysForPhase(p.id);
+            if (days.length === 0) continue; // empty phase — never Math.min() over []
             // Per-phase: count how many times each day's id appears as completed/skipped.
             const counts: Record<string, number> = {};
             for (const d of days) counts[d.id] = 0;

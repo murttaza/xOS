@@ -28,8 +28,14 @@
       }
     ],
     "artifactName": "${productName}-Windows-${version}-Setup.${ext}",
+    // TODO(launch blocker): obtain a Windows code-signing certificate and flip
+    // forceCodeSigning to true. Provide the cert to CI via CSC_LINK /
+    // CSC_KEY_PASSWORD (electron-builder picks them up automatically).
     "forceCodeSigning": false,
-    "verifyUpdateCodeSignature": false
+    // Verify that downloaded updates are signed by the same publisher as the
+    // installed app. No-op while builds are unsigned; enforced as soon as
+    // signing is in place.
+    "verifyUpdateCodeSignature": true
   },
   "nsis": {
     "oneClick": false,

@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { LogIn, UserPlus, KeyRound } from 'lucide-react';
+import { LogIn, UserPlus, KeyRound, MailCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wordmark } from './Wordmark';
+import { evaluateAccountPassword, authRedirectTo, MIN_ACCOUNT_PASSWORD_LENGTH } from '../lib/passwordPolicy';
 
-type Mode = 'signin' | 'signup' | 'reset';
+type Mode = 'signin' | 'signup' | 'reset' | 'confirm-email';
+
+const METER_COLORS = ['bg-red-500', 'bg-red-500', 'bg-yellow-500', 'bg-emerald-500', 'bg-emerald-400'];
 
 export function LoginPage({ onLogin }: { onLogin: () => void }) {
     const [email, setEmail] = useState('');
@@ -13,6 +16,8 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
     const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
     const [mode, setMode] = useState<Mode>('signin');
+
+    const evaluation = evaluateAccountPassword(password);
 
     const switchMode = (newMode: Mode) => {
         setMode(newMode);
@@ -24,11 +29,17 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
         e.preventDefault();
         setError('');
         setSuccess('');
+
+        if (mode === 'signup' && !evaluation.ok) {
+            setError(evaluation.problems[0]);
+            return;
+        }
         setLoading(true);
 
         if (mode === 'reset') {
+            const redirectTo = authRedirectTo();
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: window.location.origin,
+                ...(redirectTo ? { redirectTo } : {}),
             });
             if (error) {
                 setError(error.message);
@@ -40,23 +51,22 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
         }
 
         if (mode === 'signup') {
-            const { data, error } = await supabase.auth.signUp({ email, password });
+            const redirectTo = authRedirectTo();
+            const { data, error } = await supabase.auth.signUp({
+                email,
+                password,
+                options: { ...(redirectTo ? { emailRedirectTo: redirectTo } : {}) },
+            });
             if (error) {
-                // If the error is from a DB trigger but the user was created, try signing in
-                if (error.message?.toLowerCase().includes('database')) {
-                    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-                    if (!signInError) {
-                        onLogin();
-                        return;
-                    }
-                }
                 setError(error.message);
                 setLoading(false);
             } else if (data.session) {
+                // Email confirmation disabled on the project — signed in directly.
                 onLogin();
             } else {
-                setSuccess('Account created! Sign in to continue.');
-                setMode('signin');
+                // Confirmation required: tell the user to verify instead of
+                // pretending they can sign in already.
+                setMode('confirm-email');
                 setLoading(false);
             }
         } else {
@@ -72,14 +82,46 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
 
     const icon = mode === 'signup' ? <UserPlus className="h-4 w-4 text-emerald-400" />
         : mode === 'reset' ? <KeyRound className="h-4 w-4 text-amber-400" />
+        : mode === 'confirm-email' ? <MailCheck className="h-4 w-4 text-emerald-400" />
         : <LogIn className="h-4 w-4 text-primary" />;
 
     const subtitle = mode === 'signup' ? 'Create an account'
         : mode === 'reset' ? 'Reset your password'
+        : mode === 'confirm-email' ? 'Confirm your email'
         : 'Sign in to continue';
 
+    if (mode === 'confirm-email') {
+        return (
+            <div className="min-h-[100dvh] flex items-center justify-center bg-emerald-950/20">
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="w-full max-w-sm space-y-4 p-8 text-center"
+                >
+                    <div className="flex justify-center"><Wordmark height={24} /></div>
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                        {icon}
+                        <span>{subtitle}</span>
+                    </div>
+                    <p className="text-sm text-foreground/90">
+                        We sent a confirmation link to <span className="font-medium">{email}</span>.
+                        Open it to activate your account, then come back and sign in.
+                    </p>
+                    <button
+                        type="button"
+                        onClick={() => switchMode('signin')}
+                        className="w-full py-3 h-12 rounded-lg font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                    >
+                        Back to sign in
+                    </button>
+                </motion.div>
+            </div>
+        );
+    }
+
     return (
-        <div className={`min-h-screen flex items-center justify-center transition-colors duration-500 ${
+        <div className={`min-h-[100dvh] flex items-center justify-center transition-colors duration-500 ${
             mode === 'signup' ? 'bg-emerald-950/20' : mode === 'reset' ? 'bg-amber-950/20' : 'bg-background'
         }`}>
             <AnimatePresence mode="wait">
@@ -117,6 +159,7 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="w-full px-4 py-3 h-12 rounded-lg border border-border bg-card text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                        autoComplete="email"
                         required
                     />
 
@@ -128,18 +171,36 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="w-full px-4 py-3 h-12 rounded-lg border border-border bg-card text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                                 required
-                                minLength={6}
+                                minLength={mode === 'signup' ? MIN_ACCOUNT_PASSWORD_LENGTH : undefined}
                             />
                             {mode === 'signup' && (
-                                <p className="text-xs text-muted-foreground mt-1.5 ml-1">Min. 6 characters</p>
+                                <div className="mt-2 space-y-1.5">
+                                    {password && (
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
+                                                <div
+                                                    className={`h-full transition-all duration-300 ${METER_COLORS[evaluation.score]}`}
+                                                    style={{ width: `${Math.max(8, (evaluation.score / 4) * 100)}%` }}
+                                                />
+                                            </div>
+                                            <span className="text-[11px] text-muted-foreground w-16 text-right">{evaluation.label}</span>
+                                        </div>
+                                    )}
+                                    <p className="text-xs text-muted-foreground ml-1">
+                                        {password && !evaluation.ok
+                                            ? evaluation.problems[0]
+                                            : `Min. ${MIN_ACCOUNT_PASSWORD_LENGTH} characters — a few random words work great`}
+                                    </p>
+                                </div>
                             )}
                         </div>
                     )}
 
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || (mode === 'signup' && !evaluation.ok)}
                         className={`w-full py-3 h-12 rounded-lg font-medium disabled:opacity-50 transition-colors ${
                             mode === 'signup'
                                 ? 'bg-emerald-600 hover:bg-emerald-500 text-white'

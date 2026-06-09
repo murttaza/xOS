@@ -124,7 +124,15 @@ export function FitnessHome() {
                     </Button>
                 </div>
                 {isSequential ? (
-                    <div className={cn("grid gap-2", weekSessions.length <= 4 ? `grid-cols-${Math.max(weekSessions.length, 1)}` : "grid-cols-5")}>
+                    // Static class list — Tailwind only emits classes it can see at
+                    // build time, so a template-literal `grid-cols-${n}` silently
+                    // produces no column rule at all.
+                    <div className={cn(
+                        "grid gap-2",
+                        ['grid-cols-1', 'grid-cols-2', 'grid-cols-3', 'grid-cols-4', 'grid-cols-5'][
+                            Math.min(Math.max(weekSessions.length, 1), 5) - 1
+                        ]
+                    )}>
                         {weekSessions.map((session, i) => {
                             const isVirtual = session.id.startsWith('virtual:');
                             const status = session.status;

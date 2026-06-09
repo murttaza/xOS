@@ -41,7 +41,7 @@ export function createTray(
   const icon = createTrayIcon(path.join(iconDir, 'app-icon.ico'))
 
   tray = new Tray(icon)
-  tray.setToolTip('xOS')
+  tray.setToolTip('mOS')
 
   tray.on('click', () => {
     callbacks.onOpenApp()
@@ -83,7 +83,7 @@ function buildContextMenu(callbacks: {
     },
     { type: 'separator' },
     { label: 'Show Widget', click: callbacks.onToggleWidget },
-    { label: 'Open xOS', click: callbacks.onOpenApp },
+    { label: 'Open mOS', click: callbacks.onOpenApp },
     { type: 'separator' },
     { label: 'Quit', click: callbacks.onQuit },
   )
@@ -102,7 +102,7 @@ export function updateTrayState(state: AppStateSnapshot, _iconDir: string) {
     `Streak: ${state.maxStreak}`,
     state.hasActiveTimer ? 'Timer running' : '',
   ].filter(Boolean)
-  tray.setToolTip(`xOS - ${parts.join(' | ')}`)
+  tray.setToolTip(`mOS - ${parts.join(' | ')}`)
 }
 
 export function requestAppState(mainWindow: BrowserWindow): Promise<AppStateSnapshot | null> {

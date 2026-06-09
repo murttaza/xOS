@@ -66,6 +66,8 @@ export function createWidgetWindow(preloadPath: string) {
     webPreferences: {
       preload: preloadPath,
       backgroundThrottling: true,
+      // Tells the preload which IPC allow-list applies (see src/shared/ipc-types.ts)
+      additionalArguments: ['--mos-window=widget'],
     },
   })
 

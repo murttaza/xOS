@@ -1,16 +1,9 @@
 import { describe, it, expect } from 'vitest';
+import { parseTopSet } from '@/lib/fitnessParsing';
 
-// Re-implement the regex inline to avoid component-import overhead in vitest.
-// Mirrors the implementation in src/components/fitness/ProgressTracker.tsx.
-function parseTopSet(val: string | null): number | null {
-    if (!val) return null;
-    const match = val.match(/^\s*([\d.]+)/);
-    if (!match) return null;
-    const n = parseFloat(match[1]);
-    return Number.isFinite(n) ? n : null;
-}
+// Tests the REAL parser used by ProgressTracker (src/lib/fitnessParsing.ts).
 
-describe('parseTopSet (fitness PR regex)', () => {
+describe('parseTopSet (fitness PR parser)', () => {
     it('parses integer weight from "275x5"', () => {
         expect(parseTopSet('275x5')).toBe(275);
     });

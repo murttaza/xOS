@@ -1,22 +1,15 @@
 import { useEffect, useState, useMemo, memo } from 'react';
-import { differenceInCalendarDays } from 'date-fns';
 import { useStore } from '@/store';
 import { Streak } from '@/types';
 import { Pause, Repeat } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { anchorStreakDays } from '@/lib/streaks';
 
 // Synthetic streak source — either a manual streak entry, or a repeating task with a streak count.
 type StreakLike =
     | { kind: 'manual'; streak: Streak }
     | { kind: 'repeating'; id: number; title: string; days: number };
-
-function computeStreakDays(streak: Streak, now: Date) {
-    const start = streak.createdAt ? new Date(streak.createdAt) : new Date(streak.lastUpdated || new Date());
-    const effectiveNow = streak.isPaused ? new Date(streak.lastUpdated || new Date()) : now;
-    // Calendar-day diff handles DST + timezone changes cleanly.
-    return Math.max(0, differenceInCalendarDays(effectiveNow, start));
-}
 
 function getHeatColor(days: number) {
     if (days >= 30) return { text: "text-red-400", bg: "bg-red-400", border: "border-red-400/20", badgeBg: "bg-red-400/10", glow: "shadow-[0_0_8px_rgba(248,113,113,0.3)]" };
@@ -28,7 +21,7 @@ function getHeatColor(days: number) {
 function resolve(item: StreakLike, now: Date): { days: number; title: string; isPaused: boolean; isRepeating: boolean } {
     if (item.kind === 'manual') {
         return {
-            days: computeStreakDays(item.streak, now),
+            days: anchorStreakDays(item.streak, now),
             title: item.streak.title,
             isPaused: !!item.streak.isPaused,
             isRepeating: false,

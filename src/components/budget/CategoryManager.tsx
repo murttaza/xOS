@@ -192,10 +192,10 @@ export function CategoryManager({ open, onOpenChange, categories, onCreate, onUp
                                             <span className="text-lg shrink-0">{cat.icon}</span>
                                             <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
                                             <span className="text-sm flex-1">{cat.name}</span>
-                                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => startEdit(cat)}>
+                                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => startEdit(cat)} aria-label={`Edit ${cat.name}`} title="Edit">
                                                 <Pencil className="h-4 w-4" />
                                             </Button>
-                                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => cat.id && handleDelete(cat.id)}>
+                                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => cat.id && handleDelete(cat.id)} aria-label={`Delete ${cat.name}`} title="Delete">
                                                 <Trash2 className="h-4 w-4 text-destructive" />
                                             </Button>
                                         </div>
@@ -212,10 +212,10 @@ export function CategoryManager({ open, onOpenChange, categories, onCreate, onUp
                                             <span className="text-lg shrink-0">{cat.icon}</span>
                                             <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
                                             <span className="text-sm flex-1">{cat.name}</span>
-                                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => startEdit(cat)}>
+                                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => startEdit(cat)} aria-label={`Edit ${cat.name}`} title="Edit">
                                                 <Pencil className="h-4 w-4" />
                                             </Button>
-                                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => cat.id && handleDelete(cat.id)}>
+                                            <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => cat.id && handleDelete(cat.id)} aria-label={`Delete ${cat.name}`} title="Delete">
                                                 <Trash2 className="h-4 w-4 text-destructive" />
                                             </Button>
                                         </div>

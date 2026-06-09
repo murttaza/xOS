@@ -295,22 +295,24 @@ export const createTaskSlice: StateCreator<AppState, [], [], TaskSlice> = (set, 
             });
         }
 
-        // Always sync streaks for new day (not gated behind hardcore mode)
+        // Always sync streaks for new day (not gated behind hardcore mode).
+        // currentStreak is DERIVED from the createdAt anchor (the single source
+        // of truth — see YearMode's anchorStreakDays): pause/resume adjust the
+        // anchor, so deriving here is idempotent and can't double-count when
+        // multiple devices run this concurrently. The tray/widget read
+        // currentStreak directly, which is why it must be kept in sync at all.
         const streaks = await api.getStreaks() as import('@/types').Streak[];
+        const nowDate = new Date();
         for (const streak of streaks) {
-            if (streak.isPaused !== 1 && streak.lastUpdated < todayStr) {
-                // Use calendar-day diff so DST transitions and partial days
-                // don't round to zero or to an off-by-one.
-                const last = new Date(streak.lastUpdated);
-                const today = new Date(todayStr);
-                let diffDays = 1;
-                if (!isNaN(last.getTime()) && !isNaN(today.getTime())) {
-                    diffDays = Math.max(1, differenceInCalendarDays(today, last));
-                }
+            if (streak.isPaused === 1) continue;
+            const anchor = new Date(streak.createdAt || streak.lastUpdated || nowDate.toISOString());
+            if (isNaN(anchor.getTime())) continue;
+            const days = Math.max(0, differenceInCalendarDays(nowDate, anchor));
+            if (days !== streak.currentStreak) {
                 await api.updateStreak({
                     ...streak,
-                    currentStreak: streak.currentStreak + diffDays,
-                    lastUpdated: todayStr
+                    currentStreak: days,
+                    lastUpdated: nowDate.toISOString(),
                 });
             }
         }

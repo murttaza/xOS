@@ -473,15 +473,17 @@ export function TaskBoard() {
             </Dialog>
 
 
-            {/* Manual Duration Dialog */}
-            {untimedTaskToComplete && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                    <div className="w-full max-w-sm bg-popover/95 border border-border rounded-xl shadow-2xl p-6">
-                        <h3 className="text-lg font-light text-foreground mb-2">
-                            {existingLoggedMinutes > 0 ? 'Add additional time?' : 'Duration Worked'}
-                        </h3>
+            {/* Manual Duration Dialog — Radix Dialog for focus-trap/Escape/aria */}
+            <Dialog open={!!untimedTaskToComplete} onOpenChange={(v) => { if (!v) setUntimedTaskToComplete(null); }}>
+                {untimedTaskToComplete && (
+                    <DialogContent className="max-w-sm">
+                        <DialogHeader>
+                            <DialogTitle className="text-lg font-light">
+                                {existingLoggedMinutes > 0 ? 'Add additional time?' : 'Duration Worked'}
+                            </DialogTitle>
+                        </DialogHeader>
                         {existingLoggedMinutes > 0 ? (
-                            <p className="text-xs text-muted-foreground mb-4">
+                            <p className="text-xs text-muted-foreground mb-2">
                                 You've already logged{' '}
                                 <span className="text-foreground font-medium">
                                     {Math.floor(existingLoggedMinutes / 60)}h {existingLoggedMinutes % 60}m
@@ -489,7 +491,7 @@ export function TaskBoard() {
                                 on "{untimedTaskToComplete.title}". Add more time before completing?
                             </p>
                         ) : (
-                            <p className="text-xs text-muted-foreground mb-4">
+                            <p className="text-xs text-muted-foreground mb-2">
                                 How many minutes did you work on "{untimedTaskToComplete.title}"?
                             </p>
                         )}
@@ -551,9 +553,9 @@ export function TaskBoard() {
                                 </Button>
                             </div>
                         </div>
-                    </div>
-                </div>
-            )}
+                    </DialogContent>
+                )}
+            </Dialog>
         </Card>
     );
 }

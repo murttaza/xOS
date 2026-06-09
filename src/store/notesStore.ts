@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { Subject, Note } from '@/types';
 import { api } from '@/api';
+import { showErrorToast } from '@/components/ui/toast';
 import type { AppState } from './index';
 
 export interface NotesSlice {
@@ -34,8 +35,13 @@ export const createNotesSlice: StateCreator<AppState, [], [], NotesSlice> = (set
     searchResults: [],
 
     fetchSubjects: async () => {
-        const subjects = await api.getSubjects();
-        set({ subjects });
+        try {
+            const subjects = await api.getSubjects();
+            set({ subjects });
+        } catch (error) {
+            console.error('Failed to fetch notebooks:', error);
+            showErrorToast('Could not load notebooks — check your connection.');
+        }
     },
 
     createSubject: async (subject) => {
@@ -50,23 +56,38 @@ export const createNotesSlice: StateCreator<AppState, [], [], NotesSlice> = (set
             // Rollback: remove the temp subject from state
             set(state => ({ subjects: state.subjects.filter(s => s.id !== tempId) }));
             console.error('Failed to create subject:', error);
+            showErrorToast('Could not create the notebook.');
             return;
         }
         get().fetchSubjects();
     },
 
     updateSubject: async (subject) => {
-        // Optimistic update
+        // Optimistic update — snapshot for rollback
+        const prev = get().subjects;
         set(state => ({
             subjects: state.subjects.map(s => s.id === subject.id ? subject : s)
         }));
 
-        await api.updateSubject(subject);
+        try {
+            await api.updateSubject(subject);
+        } catch (error) {
+            set({ subjects: prev });
+            console.error('Failed to update subject:', error);
+            showErrorToast('Could not save notebook changes.');
+            return;
+        }
         get().fetchSubjects();
     },
 
     deleteSubject: async (id) => {
-        await api.deleteSubject(id);
+        try {
+            await api.deleteSubject(id);
+        } catch (error) {
+            console.error('Failed to delete subject:', error);
+            showErrorToast('Could not delete the notebook.');
+            return;
+        }
         get().fetchSubjects();
     },
 
@@ -78,8 +99,13 @@ export const createNotesSlice: StateCreator<AppState, [], [], NotesSlice> = (set
     closeSubject: () => set({ currentSubjectId: null, notes: [] }),
 
     fetchNotes: async (subjectId) => {
-        const notes = await api.getNotes(subjectId);
-        set({ notes });
+        try {
+            const notes = await api.getNotes(subjectId);
+            set({ notes });
+        } catch (error) {
+            console.error('Failed to fetch notes:', error);
+            showErrorToast('Could not load notes — check your connection.');
+        }
     },
 
     createNote: async (note) => {
@@ -91,7 +117,22 @@ export const createNotesSlice: StateCreator<AppState, [], [], NotesSlice> = (set
     },
 
     updateNote: async (note) => {
-        await api.updateNote(note);
+        // A failed note save is the worst data-loss path in the app, so retry
+        // once before surfacing — and ALWAYS rethrow on final failure so the
+        // editor knows the edits never landed (it keeps them as a draft).
+        try {
+            await api.updateNote(note);
+        } catch (error) {
+            console.error('Note save failed, retrying:', error);
+            await new Promise(r => setTimeout(r, 2000));
+            try {
+                await api.updateNote(note);
+            } catch (retryError) {
+                console.error('Note save retry failed:', retryError);
+                showErrorToast('Note save failed — your edits are kept in the editor. Check your connection.');
+                throw retryError;
+            }
+        }
         if (get().currentSubjectId === note.subjectId) {
             get().fetchNotes(note.subjectId);
         }
@@ -100,7 +141,13 @@ export const createNotesSlice: StateCreator<AppState, [], [], NotesSlice> = (set
     deleteNote: async (id) => {
         const note = get().notes.find(n => n.id === id);
         if (note) {
-            await api.deleteNote(id);
+            try {
+                await api.deleteNote(id);
+            } catch (error) {
+                console.error('Failed to delete note:', error);
+                showErrorToast('Could not delete the note.');
+                return;
+            }
             if (get().currentSubjectId === note.subjectId) {
                 get().fetchNotes(note.subjectId);
             }
@@ -112,7 +159,12 @@ export const createNotesSlice: StateCreator<AppState, [], [], NotesSlice> = (set
             set({ searchResults: [] });
             return;
         }
-        const results = await api.searchNotes(query);
-        set({ searchResults: results });
+        try {
+            const results = await api.searchNotes(query);
+            set({ searchResults: results });
+        } catch (error) {
+            console.error('Search failed:', error);
+            showErrorToast('Search failed — check your connection.');
+        }
     },
 });

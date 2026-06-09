@@ -6,6 +6,7 @@ import { cn } from '../lib/utils';
 import { Wallet, Plus } from 'lucide-react';
 import { Button } from './ui/button';
 import { ModeHeader } from './ModeHeader';
+import { ModeLoading } from './ui/mode-loading';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
 import { MonthSelector } from './budget/MonthSelector';
@@ -45,14 +46,19 @@ export function BudgetMode() {
     const [txDialogOpen, setTxDialogOpen] = useState(false);
     const [editingTx, setEditingTx] = useState<Transaction | null>(null);
     const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
+    // Distinguish "still fetching" from "genuinely empty" on open
+    const [modeLoading, setModeLoading] = useState(true);
 
     useEffect(() => {
         if (isBudgetMode) {
+            setModeLoading(true);
             Promise.all([
                 fetchBudgetCategories(),
                 fetchTransactions(),
                 fetchBudgetTargets(),
-            ]).catch(err => console.error('Budget mode failed to load data:', err));
+            ])
+                .catch(err => console.error('Budget mode failed to load data:', err))
+                .finally(() => setModeLoading(false));
         }
     }, [isBudgetMode, fetchBudgetCategories, fetchTransactions, fetchBudgetTargets]);
 
@@ -97,6 +103,7 @@ export function BudgetMode() {
                         "fixed inset-0 z-[55] text-foreground overflow-hidden flex flex-col font-sans no-drag",
                         "bg-background"
                     )}
+                    style={{ paddingLeft: 'env(safe-area-inset-left, 0px)', paddingRight: 'env(safe-area-inset-right, 0px)' }}
                 >
                     <ModeHeader
                         modeLabel="Budget"
@@ -114,6 +121,9 @@ export function BudgetMode() {
                     </div>
 
                     {/* Content */}
+                    {modeLoading ? (
+                        <ModeLoading label="Loading budget…" />
+                    ) : (
                     <div className="flex-1 overflow-hidden">
                         {/* Desktop Layout */}
                         <div className="hidden lg:grid lg:grid-cols-12 lg:gap-6 h-full p-6">
@@ -162,7 +172,7 @@ export function BudgetMode() {
                                     <TabsTrigger value="budget" className="flex-1 text-xs">Budget</TabsTrigger>
                                 </TabsList>
 
-                                <TabsContent value="summary" className="flex-1 overflow-y-auto p-4 space-y-6 no-scrollbar">
+                                <TabsContent value="summary" className="flex-1 overflow-y-auto p-4 space-y-6 no-scrollbar mobile-safe-bottom">
                                     <BudgetDashboard
                                         transactions={transactions}
                                         budgetTargets={budgetTargets}
@@ -170,7 +180,7 @@ export function BudgetMode() {
                                     <BudgetCharts transactions={transactions} />
                                 </TabsContent>
 
-                                <TabsContent value="transactions" className="flex-1 overflow-hidden p-4">
+                                <TabsContent value="transactions" className="flex-1 overflow-hidden p-4 mobile-safe-bottom">
                                     <TransactionList
                                         transactions={transactions}
                                         categories={budgetCategories}
@@ -182,7 +192,7 @@ export function BudgetMode() {
                                     />
                                 </TabsContent>
 
-                                <TabsContent value="budget" className="flex-1 overflow-y-auto p-4 no-scrollbar">
+                                <TabsContent value="budget" className="flex-1 overflow-y-auto p-4 no-scrollbar mobile-safe-bottom">
                                     <BudgetTargets
                                         categories={budgetCategories}
                                         targets={budgetTargets}
@@ -196,6 +206,7 @@ export function BudgetMode() {
                             </Tabs>
                         </div>
                     </div>
+                    )}
 
                     {/* Floating Add Button */}
                     <Button

@@ -7,10 +7,20 @@ import { cn } from '../lib/utils';
 import { format } from "date-fns";
 import { Button } from './ui/button';
 import { Wordmark } from './Wordmark';
+import { supabase } from '../lib/supabase';
+import { isOwnerAccount } from '../lib/brand';
 
 export function FocusOverlay() {
     const [isHovered, setIsHovered] = useState(false);
+    const [isOwner, setIsOwner] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+
+    // Personal signature renders only for the owner's account (see lib/brand.ts)
+    useEffect(() => {
+        supabase.auth.getUser()
+            .then(({ data }) => setIsOwner(isOwnerAccount(data.user?.email)))
+            .catch(() => setIsOwner(false));
+    }, []);
 
     const tasks = useStore(state => state.tasks);
     const activeTimers = useStore(state => state.activeTimers);
@@ -146,10 +156,10 @@ export function FocusOverlay() {
 
                                     {/* Center: Title */}
                                     <span className={cn(
-                                        "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-lg font-bold transition-all duration-150",
+                                        "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-lg font-bold transition-all duration-150 flex items-center",
                                         isHovered ? "text-primary opacity-100" : "text-primary/30 blur-[0.5px]"
                                     )}>
-                                        مرتضیٰ
+                                        {isOwner ? <span lang="ar">مرتضیٰ</span> : <Wordmark height={16} />}
                                     </span>
 
                                     {/* Right: mOS */}

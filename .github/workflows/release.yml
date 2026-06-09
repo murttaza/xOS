@@ -41,8 +41,15 @@ jobs:
           $version = (Get-Content package.json | ConvertFrom-Json).version
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
 
+      - name: Test
+        run: npm test
+
       - name: Build
         env:
+          # The anon key is publishable by design (it ships inside every client
+          # bundle); these literals carry no extra exposure. TODO: move to repo
+          # Actions secrets (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY) so key
+          # rotation is a one-place change — flip these to ${{ secrets.* }} then.
           VITE_SUPABASE_URL: https://wzsylueaydrjdpyrpsjh.supabase.co
           VITE_SUPABASE_ANON_KEY: sb_publishable_F08DcFWkcrMYGirI0dPaGA_Q2BvrBEB
         run: npx tsc && npx vite build

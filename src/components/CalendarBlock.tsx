@@ -188,7 +188,7 @@ export function CalendarBlock() {
                 className="flex items-center justify-between p-4 pb-2 shrink-0 cursor-pointer lg:cursor-default"
                 onClick={() => setIsMobileExpanded(prev => !prev)}
             >
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors hidden lg:flex" onClick={(e) => { e.stopPropagation(); prevMonth(); }}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors hidden lg:flex" onClick={(e) => { e.stopPropagation(); prevMonth(); }} aria-label="Previous month" title="Previous month">
                     <ChevronLeft className="h-4 w-4" />
                 </Button>
 
@@ -209,10 +209,11 @@ export function CalendarBlock() {
                         className={cn("h-8 w-8 rounded-full transition-colors hidden lg:flex", showWeekRecap ? "bg-primary/15 text-primary" : "hover:bg-primary/10 hover:text-primary")}
                         onClick={(e) => { e.stopPropagation(); setShowWeekRecap(prev => !prev); }}
                         title="Week Overview"
+                        aria-label="Week overview"
                     >
                         <TrendingUp className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors hidden lg:flex" onClick={(e) => { e.stopPropagation(); nextMonth(); }}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors hidden lg:flex" onClick={(e) => { e.stopPropagation(); nextMonth(); }} aria-label="Next month" title="Next month">
                         <ChevronRight className="h-4 w-4" />
                     </Button>
                 </div>

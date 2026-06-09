@@ -24,6 +24,10 @@ const buttonVariants = cva(
         sm: "h-9 rounded-md px-3",
         lg: "h-11 rounded-md px-8",
         icon: "h-10 w-10",
+        // Standardized icon-button sizes — prefer these over per-instance
+        // h-*/w-* overrides so the same control renders the same everywhere.
+        "icon-sm": "h-8 w-8 [&_svg]:size-3.5",
+        "icon-xs": "h-6 w-6 [&_svg]:size-3",
       },
     },
     defaultVariants: {

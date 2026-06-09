@@ -5,21 +5,13 @@ import { Input } from '../ui/input';
 import { motion } from 'framer-motion';
 import { Plus, Save, X } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { parseTopSet } from '../../lib/fitnessParsing';
 import type { BodyMetric } from '../../types';
 
 const PEAK_BENCH = 280;
 const PEAK_SQUAT = 405;
 const PEAK_DEADLIFT = 495;
 const PEAK_WEIGHT = 180;
-
-function parseTopSet(val: string | null): number | null {
-    if (!val) return null;
-    // Capture leading weight as a float so "275.5x5" doesn't round down to 275.
-    const match = val.match(/^\s*([\d.]+)/);
-    if (!match) return null;
-    const n = parseFloat(match[1]);
-    return Number.isFinite(n) ? n : null;
-}
 
 export function ProgressTracker() {
     const bodyMetrics = useStore(s => s.bodyMetrics);

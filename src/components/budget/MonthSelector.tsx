@@ -16,11 +16,11 @@ export function MonthSelector({ selectedMonth, onMonthChange }: MonthSelectorPro
 
     return (
         <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={goPrev}>
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={goPrev} aria-label="Previous month" title="Previous month">
                 <ChevronLeft className="h-5 w-5" />
             </Button>
-            <span className="text-sm font-medium min-w-[140px] text-center select-none">{label}</span>
-            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={goNext}>
+            <span className="text-sm font-medium min-w-[140px] text-center select-none" aria-live="polite">{label}</span>
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={goNext} aria-label="Next month" title="Next month">
                 <ChevronRight className="h-5 w-5" />
             </Button>
         </div>

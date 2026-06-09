@@ -46,58 +46,56 @@ export function FocusMode() {
     const activeTask = tasks.find(t => t.id === activeTaskId);
     const textDuration = activeTaskId ? activeTimers[activeTaskId] : 0;
 
-    // Use ref to access current time without triggering effect re-runs
-    const pomodoroTimeRef = useRef(pomodoroTime);
-    pomodoroTimeRef.current = pomodoroTime;
-
     // Track the initial duration for accurate progress display
     const pomodoroDurationRef = useRef(25 * 60);
 
     // Pomodoro presets in minutes
     const POMODORO_PRESETS = [15, 25, 50];
 
-    // Pomodoro timer countdown - optimized to not recreate interval every second
+    // Pomodoro timer — wall-clock anchored (syncPomodoro recomputes remaining
+    // from the persisted end timestamp), so background throttling can't make
+    // it drift and reloads resume mid-countdown. The interval only drives UI
+    // refresh + completion detection.
+    const syncPomodoro = useStore(state => state.syncPomodoro);
     useEffect(() => {
         if (!isPomodoroRunning) return;
 
-        const interval = setInterval(() => {
-            const currentTime = pomodoroTimeRef.current;
-            if (currentTime > 0) {
-                setPomodoroTime(currentTime - 1);
-            } else {
-                setIsPomodoroRunning(false);
-                // Notification when Pomodoro ends
-                try {
-                    if (Notification.permission === 'granted') {
-                        new Notification('Pomodoro Complete', {
-                            body: 'Time for a break!',
-                            silent: false
-                        });
-                    } else if (Notification.permission !== 'denied') {
-                        Notification.requestPermission();
-                    }
-                    // Play a subtle audio ping
-                    const audioCtx = new AudioContext();
-                    const osc = audioCtx.createOscillator();
-                    const gain = audioCtx.createGain();
-                    osc.connect(gain);
-                    gain.connect(audioCtx.destination);
-                    osc.frequency.value = 800;
-                    osc.type = 'sine';
-                    gain.gain.value = 0.15;
-                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
-                    osc.start();
-                    osc.stop(audioCtx.currentTime + 1.5);
-                    // Close AudioContext after playback to prevent memory leak
-                    osc.onended = () => audioCtx.close();
-                } catch (e) {
-                    // Audio context may fail in some environments
+        const tick = () => {
+            const justCompleted = syncPomodoro();
+            if (!justCompleted) return;
+            // Notification when Pomodoro ends
+            try {
+                if (Notification.permission === 'granted') {
+                    new Notification('Pomodoro Complete', {
+                        body: 'Time for a break!',
+                        silent: false
+                    });
+                } else if (Notification.permission !== 'denied') {
+                    Notification.requestPermission();
                 }
+                // Play a subtle audio ping
+                const audioCtx = new AudioContext();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 800;
+                osc.type = 'sine';
+                gain.gain.value = 0.15;
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 1.5);
+                // Close AudioContext after playback to prevent memory leak
+                osc.onended = () => audioCtx.close();
+            } catch (e) {
+                // Audio context may fail in some environments
             }
-        }, 1000);
+        };
 
+        tick(); // catch up immediately (e.g. after reload or returning from sleep)
+        const interval = setInterval(tick, 1000);
         return () => clearInterval(interval);
-    }, [isPomodoroRunning, setPomodoroTime, setIsPomodoroRunning]);
+    }, [isPomodoroRunning, syncPomodoro]);
 
     const handleStop = async () => {
         if (activeTaskId) {
@@ -119,7 +117,7 @@ export function FocusMode() {
 
     if (!activeTask) {
         return (
-            <div className="flex flex-col items-center justify-center h-screen bg-background text-foreground">
+            <div className="flex flex-col items-center justify-center min-h-[100dvh] bg-background text-foreground">
                 <h1 className="text-4xl font-bold mb-4">No Active Task</h1>
                 <Button onClick={() => setIsFocusMode(false)}>Exit Focus Mode</Button>
             </div>
@@ -203,31 +201,37 @@ export function FocusMode() {
             </div>
 
 
-            {/* Audio Visualizer - Vertical on Left - Centered Vertically */}
-            <motion.div
-                initial={{ opacity: 0, x: -50 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 }}
-                className="hidden lg:flex absolute left-0 top-24 bottom-24 w-64 no-drag items-center z-0"
-                style={{ WebkitMaskImage: 'linear-gradient(to right, black 50%, transparent 100%)', maskImage: 'linear-gradient(to right, black 50%, transparent 100%)' }}
-            >
-                <div className="w-full h-full opacity-60 hover:opacity-100 transition-opacity duration-150">
-                    <AudioVisualizer
-                        isActive={true}
-                        barCount={80}
-                        orientation="vertical"
-                        className="h-full w-full"
-                        isWindowFocused={isWindowFocused}
-                    />
-                </div>
-            </motion.div>
+            {/* Audio Visualizer - Vertical on Left - Centered Vertically.
+                Desktop only: it captures system loopback audio via Electron's
+                display-media handler; in a browser it would just trigger a
+                confusing screen-share prompt. */}
+            {isElectron && (
+                <motion.div
+                    initial={{ opacity: 0, x: -50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="hidden lg:flex absolute left-0 top-24 bottom-24 w-64 no-drag items-center z-0"
+                    style={{ WebkitMaskImage: 'linear-gradient(to right, black 50%, transparent 100%)', maskImage: 'linear-gradient(to right, black 50%, transparent 100%)' }}
+                >
+                    <div className="w-full h-full opacity-60 hover:opacity-100 transition-opacity duration-150">
+                        <AudioVisualizer
+                            isActive={true}
+                            barCount={80}
+                            orientation="vertical"
+                            className="h-full w-full"
+                            isWindowFocused={isWindowFocused}
+                        />
+                    </div>
+                </motion.div>
+            )}
 
-            {/* Pomodoro bar at bottom (always visible) */}
+            {/* Pomodoro bar at bottom (always visible) — mobile-safe-bottom keeps
+                the play/pause + presets above the home indicator on phones */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="w-full p-3 pb-4 sm:p-6 sm:pb-8"
+                className="w-full p-3 pb-4 sm:p-6 sm:pb-8 mobile-safe-bottom"
             >
                 <div className={`max-w-2xl mx-auto rounded-2xl p-3 sm:p-4 border border-border backdrop-blur-xl ${isMurtazaMode ? 'bg-background/20' : 'glass'}`}>
                     {/* Row 1: timer + progress bar */}
@@ -260,6 +264,8 @@ export function FocusMode() {
                             size="icon"
                             className="h-9 w-9 sm:h-10 sm:w-10 rounded-full border-2 border-primary/30 hover:bg-primary/10 hover:border-primary/60 transition-all shadow-[0_0_10px_-3px_hsl(var(--primary)/0.3)] hover:scale-105 active:scale-95 shrink-0 no-drag"
                             onClick={() => setIsPomodoroRunning(!isPomodoroRunning)}
+                            aria-label={isPomodoroRunning ? 'Pause pomodoro' : 'Start pomodoro'}
+                            title={isPomodoroRunning ? 'Pause pomodoro' : 'Start pomodoro'}
                         >
                             {isPomodoroRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
                         </Button>

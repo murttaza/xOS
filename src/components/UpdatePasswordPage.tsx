@@ -3,6 +3,9 @@ import { supabase } from '../lib/supabase';
 import { KeyRound } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Wordmark } from './Wordmark';
+import { evaluateAccountPassword, MIN_ACCOUNT_PASSWORD_LENGTH } from '../lib/passwordPolicy';
+
+const METER_COLORS = ['bg-red-500', 'bg-red-500', 'bg-yellow-500', 'bg-emerald-500', 'bg-emerald-400'];
 
 export function UpdatePasswordPage({ onDone }: { onDone: () => void }) {
     const [password, setPassword] = useState('');
@@ -10,10 +13,16 @@ export function UpdatePasswordPage({ onDone }: { onDone: () => void }) {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
+    const evaluation = evaluateAccountPassword(password);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
+        if (!evaluation.ok) {
+            setError(evaluation.problems[0]);
+            return;
+        }
         if (password !== confirm) {
             setError('Passwords do not match.');
             return;
@@ -30,7 +39,7 @@ export function UpdatePasswordPage({ onDone }: { onDone: () => void }) {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-amber-950/20">
+        <div className="min-h-[100dvh] flex items-center justify-center bg-amber-950/20">
             <motion.form
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -51,33 +60,52 @@ export function UpdatePasswordPage({ onDone }: { onDone: () => void }) {
                     </div>
                 )}
 
-                <input
-                    type="password"
-                    placeholder="New password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 h-12 rounded-lg border border-border bg-card text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                    minLength={6}
-                    autoFocus
-                />
-
                 <div>
                     <input
                         type="password"
-                        placeholder="Confirm password"
-                        value={confirm}
-                        onChange={(e) => setConfirm(e.target.value)}
+                        placeholder="New password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                         className="w-full px-4 py-3 h-12 rounded-lg border border-border bg-card text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                        autoComplete="new-password"
                         required
-                        minLength={6}
+                        minLength={MIN_ACCOUNT_PASSWORD_LENGTH}
+                        autoFocus
                     />
-                    <p className="text-xs text-muted-foreground mt-1.5 ml-1">Min. 6 characters</p>
+                    <div className="mt-2 space-y-1.5">
+                        {password && (
+                            <div className="flex items-center gap-2">
+                                <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
+                                    <div
+                                        className={`h-full transition-all duration-300 ${METER_COLORS[evaluation.score]}`}
+                                        style={{ width: `${Math.max(8, (evaluation.score / 4) * 100)}%` }}
+                                    />
+                                </div>
+                                <span className="text-[11px] text-muted-foreground w-16 text-right">{evaluation.label}</span>
+                            </div>
+                        )}
+                        <p className="text-xs text-muted-foreground ml-1">
+                            {password && !evaluation.ok
+                                ? evaluation.problems[0]
+                                : `Min. ${MIN_ACCOUNT_PASSWORD_LENGTH} characters — a few random words work great`}
+                        </p>
+                    </div>
                 </div>
+
+                <input
+                    type="password"
+                    placeholder="Confirm password"
+                    value={confirm}
+                    onChange={(e) => setConfirm(e.target.value)}
+                    className="w-full px-4 py-3 h-12 rounded-lg border border-border bg-card text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    autoComplete="new-password"
+                    required
+                    minLength={MIN_ACCOUNT_PASSWORD_LENGTH}
+                />
 
                 <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !evaluation.ok || password !== confirm}
                     className="w-full py-3 h-12 rounded-lg font-medium disabled:opacity-50 transition-colors bg-amber-600 hover:bg-amber-500 text-white"
                 >
                     {loading ? 'Updating...' : 'Update Password'}

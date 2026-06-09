@@ -226,6 +226,9 @@ export function AudioVisualizer({
         try {
             setError(null);
 
+            // Arm the capture in the main process — display-media requests are
+            // denied unless armed by an explicit user action moments before.
+            window.ipcRenderer?.send('arm-audio-capture');
 
             // Use getDisplayMedia - the main process will auto-select the screen
             // This is the proper way to get system audio in Electron
