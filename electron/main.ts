@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, desktopCapturer, nativeTheme, clipboard, shell, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, screen, globalShortcut, session, desktopCapturer, nativeTheme, clipboard, shell, Notification } from 'electron'
 import path from 'node:path'
 import db from './db'
 import * as vault from './vault'
@@ -581,30 +581,29 @@ app.whenReady().then(() => {
     },
   );
 
-  // Auto-update: check via GitHub Releases. Downloads happen in the
-  // background, but installation always asks the user first — never
-  // silently swap the binary under them.
+  // Auto-update: checked on every launch via GitHub Releases. The update
+  // downloads in the background and installs itself with an automatic restart
+  // as soon as it's ready (owner decision 2026-06-11 — replaces the earlier
+  // confirm-dialog flow). A short toast precedes the restart so it doesn't
+  // read as a crash; install-on-quit stays armed as the fallback if the app
+  // is closed before the timer fires.
   import('electron-updater')
     .then(({ autoUpdater }) => {
       autoUpdater.autoDownload = true;
-      autoUpdater.autoInstallOnAppQuit = false;
+      autoUpdater.autoInstallOnAppQuit = true;
       autoUpdater.on('error', (err) => console.error('[auto-update]', err));
       autoUpdater.on('update-downloaded', (info) => {
-        if (!win || win.isDestroyed()) return;
-        dialog.showMessageBox(win, {
-          type: 'info',
-          title: 'Update ready',
-          message: `mOS ${info.version} has been downloaded.`,
-          detail: 'Restart now to install it, or keep working and install later.',
-          buttons: ['Restart now', 'Later'],
-          defaultId: 0,
-          cancelId: 1,
-        }).then(({ response }) => {
-          if (response === 0) {
-            isQuitting = true; // allow the close handler to let windows close
-            autoUpdater.quitAndInstall();
-          }
-        });
+        try {
+          new Notification({
+            title: `mOS ${info.version} is ready`,
+            body: 'Restarting in a few seconds to finish updating…',
+            silent: true,
+          }).show();
+        } catch { /* notifications unavailable — restart anyway */ }
+        setTimeout(() => {
+          isQuitting = true; // allow the close handler to let windows close
+          autoUpdater.quitAndInstall();
+        }, 4000);
       });
       autoUpdater.checkForUpdates().catch((err) => {
         console.warn('[auto-update] checkForUpdates rejected:', err?.message ?? err);

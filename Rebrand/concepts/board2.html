@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>mOS — mark exploration 02 · the m. system</title>
+<style>
+  @font-face {
+    font-family: 'Outfit Variable';
+    src: url('outfit.woff2') format('woff2-variations');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: block;
+  }
+
+  :root {
+    --page: #0A0A0B;
+    --panel: #101012;
+    --line: #1D1D20;
+    --bone: #D4C8BC;
+    --bone-bright: #EDE6DB;
+    --body: #8E8B86;
+    --faint: #66635F;
+    --red: #EF4444;
+    --blue: #3B82F6;
+    --tile: #0C0C0E;
+    --paper: #EDE7DE;
+    --paper-ink: #16130F;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: var(--page); }
+  body {
+    font-family: 'Outfit Variable', system-ui, sans-serif;
+    color: var(--body);
+    -webkit-font-smoothing: antialiased;
+    width: 1480px;
+  }
+  .page { padding: 72px 80px 56px; }
+
+  .eyebrow {
+    font-size: 13px; font-weight: 500; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--faint);
+  }
+  h1 {
+    margin-top: 18px; font-size: 44px; font-weight: 480;
+    letter-spacing: -0.01em; color: var(--bone-bright);
+  }
+  .brief { margin-top: 12px; font-size: 16.5px; font-weight: 380; line-height: 1.55; max-width: 760px; }
+  .brief em { font-style: normal; color: var(--bone); }
+
+  .concepts { margin-top: 52px; display: flex; flex-direction: column; gap: 30px; }
+
+  .concept {
+    display: grid;
+    grid-template-columns: 330px 1fr 500px;
+    gap: 44px; align-items: center;
+    padding: 34px 38px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 26px;
+  }
+
+  .hero {
+    height: 252px; border-radius: 18px;
+    background: radial-gradient(circle at 50% 42%, #141416 0%, #0D0D0F 100%);
+    border: 1px solid #1A1A1D;
+    display: grid; place-items: center; color: var(--bone);
+  }
+  .hero svg { width: 196px; height: 196px; }
+
+  .copy .num { font-size: 12.5px; font-weight: 500; letter-spacing: 0.2em; color: var(--faint); }
+  .copy h2 { margin-top: 8px; font-size: 27px; font-weight: 530; letter-spacing: -0.005em; color: var(--bone-bright); }
+  .copy .tag { margin-top: 2px; font-size: 15.5px; font-weight: 420; color: var(--bone); opacity: 0.75; }
+  .copy p.why { margin-top: 14px; font-size: 14.5px; font-weight: 380; line-height: 1.6; }
+  .copy p.watch { margin-top: 10px; font-size: 13px; line-height: 1.5; color: var(--faint); }
+  .copy p.watch b { font-weight: 520; color: #7C7974; }
+
+  .proofs { display: flex; flex-direction: column; gap: 24px; }
+  .prooflabel {
+    font-size: 11.5px; font-weight: 500; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--faint); margin-bottom: 12px;
+  }
+  .tiles { display: flex; align-items: flex-end; gap: 18px; }
+  .tile {
+    background: var(--tile); color: var(--bone);
+    display: grid; place-items: center;
+    box-shadow: 0 0 0 1px #222226;
+    position: relative;
+  }
+  .tile svg { width: 64%; height: 64%; }
+  .tile.paper { background: var(--paper); color: var(--paper-ink); box-shadow: none; }
+  .t116 { width: 116px; height: 116px; border-radius: 29px; }
+  .t96 { width: 96px; height: 96px; border-radius: 24px; }
+  .t64 { width: 64px; height: 64px; border-radius: 16px; }
+  .t48 { width: 48px; height: 48px; border-radius: 12px; }
+  .t32 { width: 32px; height: 32px; border-radius: 8px; }
+  .t16 { width: 16px; height: 16px; border-radius: 4.5px; }
+
+  .cap { font-size: 11.5px; color: var(--faint); text-align: center; margin-top: 8px; font-weight: 420; }
+  .tilecol { display: flex; flex-direction: column; align-items: center; }
+
+  .wordmark {
+    font-weight: 545; letter-spacing: -0.015em;
+    color: var(--bone-bright); font-size: 54px; line-height: 1;
+  }
+  .wordmark .dot-red { color: var(--red); }
+  .wordmark .dot-bone { color: var(--bone); }
+  .wordmark-row { display: flex; align-items: baseline; gap: 34px; }
+  .wordmark-sub { font-size: 13px; color: var(--faint); font-weight: 400; }
+
+  .footer {
+    margin-top: 50px; padding-top: 32px;
+    border-top: 1px solid var(--line);
+    font-size: 14px; line-height: 1.7; font-weight: 380;
+    max-width: 980px;
+  }
+  .footer b { color: var(--bone); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- m (no dot) — for favicon duty -->
+    <symbol id="m-plain" viewBox="0 0 240 240">
+      <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round">
+        <path d="M46 70 V170"/>
+        <path d="M46 107 A37 37 0 0 1 120 107 V170"/>
+        <path d="M120 107 A37 37 0 0 1 194 107 V170"/>
+      </g>
+    </symbol>
+
+    <!-- m. — regular weight -->
+    <symbol id="mdot" viewBox="0 0 240 240">
+      <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round">
+        <path d="M18 70 V170"/>
+        <path d="M18 107 A37 37 0 0 1 92 107 V170"/>
+        <path d="M92 107 A37 37 0 0 1 166 107 V170"/>
+      </g>
+      <circle cx="219" cy="167" r="16" fill="var(--dot, currentColor)"/>
+    </symbol>
+
+    <!-- m. — display weight (wider box; scales to fit) -->
+    <symbol id="mdot-heavy" viewBox="0 0 280 240">
+      <g fill="none" stroke="currentColor" stroke-width="40" stroke-linecap="round">
+        <path d="M39 74 V166"/>
+        <path d="M39 109 A35 35 0 0 1 109 109 V166"/>
+        <path d="M109 109 A35 35 0 0 1 179 109 V166"/>
+      </g>
+      <circle cx="239" cy="164" r="22" fill="var(--dot, currentColor)"/>
+    </symbol>
+
+    <!-- meem — the round-01 cut -->
+    <symbol id="meem" viewBox="0 0 240 240">
+      <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round">
+        <circle cx="137" cy="86" r="40"/>
+        <path d="M97 86 V150 C97 178 86 190 62 193"/>
+      </g>
+    </symbol>
+
+    <!-- .meem — Arabic full stop sits to the LEFT; bottom-aligned with the tail -->
+    <symbol id="meemdot" viewBox="0 0 240 240">
+      <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round">
+        <circle cx="162" cy="86" r="40"/>
+        <path d="M122 86 V150 C122 178 111 190 87 193"/>
+      </g>
+      <circle cx="41" cy="190" r="16" fill="var(--dot, currentColor)"/>
+    </symbol>
+
+    <!-- fusion — Latin m, Arabic exit. v2: the full meem tail on a stem read
+         as "mj", so the exit is now a short flick tucked under the arch —
+         a handwritten exit stroke, not a descender -->
+    <symbol id="mtail" viewBox="0 0 240 240">
+      <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round">
+        <path d="M46 55 V155"/>
+        <path d="M46 92 A37 37 0 0 1 120 92 V155"/>
+        <path d="M120 92 A37 37 0 0 1 194 92 V159 C194 177 186 184 171 185"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="page">
+
+  <div class="eyebrow">mOS &nbsp;·&nbsp; mark exploration 02 &nbsp;·&nbsp; the m. system</div>
+  <h1>m.&nbsp; and&nbsp; .م</h1>
+  <p class="brief">
+    Round two, built on what you picked: the <em>m.</em> for everyone, the <em>meem</em> for you.
+    The quiet discovery — in Arabic the full stop sits to the <em>left</em>, so the owner icon can be
+    a true mirror of the public one. Same mark, same idea, each script reading in its own direction.
+  </p>
+
+  <div class="concepts">
+
+    <!-- ============ A · the dot ============ -->
+    <div class="concept">
+      <div class="hero"><svg style="--dot: var(--red)"><use href="#mdot"/></svg></div>
+      <div class="copy">
+        <div class="num">A</div>
+        <h2>the dot</h2>
+        <div class="tag">color · position · weight</div>
+        <p class="why">
+          The dot is the only voice the brand has, so it earns a study. Color: bone is quietest,
+          red is yours — the app's dark-mode accent. Blue belongs to light-mode UI, not the brand.
+          Position: the baseline period is the meaning ("done"); raised dots read as math or
+          punctuation tricks. Weight: the display cut keeps the dot honest at icon sizes.
+        </p>
+        <p class="watch"><b>call:</b> red dot, baseline, both weights mastered.</p>
+      </div>
+      <div class="proofs">
+        <div>
+          <div class="prooflabel">color — bone · red · blue</div>
+          <div class="tiles">
+            <div class="tilecol"><div class="tile t96"><svg><use href="#mdot"/></svg></div><div class="cap">bone</div></div>
+            <div class="tilecol"><div class="tile t96"><svg style="--dot: var(--red)"><use href="#mdot"/></svg></div><div class="cap">red</div></div>
+            <div class="tilecol"><div class="tile t96"><svg style="--dot: var(--blue)"><use href="#mdot"/></svg></div><div class="cap">blue</div></div>
+            <div class="tilecol"><div class="tile t96"><svg style="--dot: var(--red)"><use href="#mdot-heavy"/></svg></div><div class="cap">display weight</div></div>
+          </div>
+        </div>
+        <div>
+          <div class="prooflabel">position — baseline wins</div>
+          <div class="tiles">
+            <div class="tilecol">
+              <div class="tile t64"><svg style="--dot: var(--red)"><use href="#mdot"/></svg></div>
+              <div class="cap">period</div>
+            </div>
+            <div class="tilecol">
+              <div class="tile t64"><svg viewBox="0 0 240 240" style="color:var(--bone)">
+                <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round">
+                  <path d="M18 70 V170"/><path d="M18 107 A37 37 0 0 1 92 107 V170"/><path d="M92 107 A37 37 0 0 1 166 107 V170"/>
+                </g><circle cx="219" cy="120" r="16" fill="var(--red)"/>
+              </svg></div>
+              <div class="cap">interpunct</div>
+            </div>
+            <div class="tilecol">
+              <div class="tile t64"><svg viewBox="0 0 240 240" style="color:var(--bone)">
+                <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round">
+                  <path d="M18 70 V170"/><path d="M18 107 A37 37 0 0 1 92 107 V170"/><path d="M92 107 A37 37 0 0 1 166 107 V170"/>
+                </g><circle cx="219" cy="73" r="16" fill="var(--red)"/>
+              </svg></div>
+              <div class="cap">floating</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ B · the meem, mirrored ============ -->
+    <div class="concept">
+      <div class="hero"><svg style="--dot: var(--red)"><use href="#meemdot"/></svg></div>
+      <div class="copy">
+        <div class="num">B</div>
+        <h2>.م &nbsp;— the mirror</h2>
+        <div class="tag">the owner cut, finished</div>
+        <p class="why">
+          Your meem with the same red period — placed where Arabic puts it, after the letter,
+          which is to the <i>left</i>. Public builds get m. reading left-to-right; your build gets
+          .م reading right-to-left. Nobody else will ever notice. You always will.
+        </p>
+        <p class="watch"><b>watch:</b> at 32&nbsp;px and below the dot retires, exactly like the Latin cut.</p>
+      </div>
+      <div class="proofs">
+        <div>
+          <div class="prooflabel">in place — with and without the period</div>
+          <div class="tiles">
+            <div class="tilecol"><div class="tile t96"><svg style="--dot: var(--red)"><use href="#meemdot"/></svg></div><div class="cap">.م — owner</div></div>
+            <div class="tilecol"><div class="tile t96"><svg><use href="#meemdot"/></svg></div><div class="cap">bone dot</div></div>
+            <div class="tilecol"><div class="tile t96"><svg><use href="#meem"/></svg></div><div class="cap">plain</div></div>
+            <div class="tile paper t96"><svg style="--dot: var(--red)"><use href="#meemdot"/></svg></div>
+            <div class="tile t48"><svg><use href="#meem"/></svg></div>
+            <div class="tile t32"><svg><use href="#meem"/></svg></div>
+          </div>
+        </div>
+        <div class="wordmark-row">
+          <div class="wordmark">mos<span class="dot-red">.</span></div>
+          <div class="wordmark-sub">the wordmark stays Latin — the meem lives only in your tiles</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ C · the fusion ============ -->
+    <div class="concept">
+      <div class="hero"><svg><use href="#mtail"/></svg></div>
+      <div class="copy">
+        <div class="num">C</div>
+        <h2>the fusion — killed</h2>
+        <div class="tag">shown for the record</div>
+        <p class="why">
+          The idea was one glyph in both scripts: the m's last stem ending in the meem's tail.
+          Two cuts were drawn; both read as <i>"mj"</i>, not calligraphy. The meem's tail works
+          because it falls out of a round head — on a straight stem it's a typo. Killed rather
+          than polished.
+        </p>
+        <p class="watch"><b>but it pointed somewhere:</b> the heritage carrier was already in the
+        system. Arabic builds its alphabet with dots — a dot completing a letter <i>is</i> the
+        Arabic gesture. m. was bilingual before we tried to force it.</p>
+      </div>
+      <div class="proofs">
+        <div>
+          <div class="prooflabel">the evidence — reads "mj" at every size</div>
+          <div class="tiles">
+            <div class="tile t96"><svg><use href="#mtail"/></svg></div>
+            <div class="tile t64"><svg><use href="#mtail"/></svg></div>
+            <div class="tile t48"><svg><use href="#mtail"/></svg></div>
+          </div>
+        </div>
+        <div class="wordmark-row">
+          <div class="wordmark" style="font-family: 'Segoe UI', system-ui; font-weight: 400; opacity: 0.85;">ب ت ث</div>
+          <div class="wordmark-sub">one skeleton, dots apart — the dot was always the bridge between the scripts</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ D · as it ships ============ -->
+    <div class="concept">
+      <div class="hero" style="display:flex; gap:22px; align-items:center; justify-content:center;">
+        <div class="tile t116"><svg style="--dot: var(--red)"><use href="#mdot"/></svg></div>
+        <div class="tile t116"><svg style="--dot: var(--red)"><use href="#meemdot"/></svg></div>
+      </div>
+      <div class="copy">
+        <div class="num">D</div>
+        <h2>as it ships</h2>
+        <div class="tag">the pair, side by side</div>
+        <p class="why">
+          The system in one sentence: <b style="color:var(--bone); font-weight:500;">m. for everyone,
+          .م for you.</b> Distributed builds carry the Latin mark everywhere; your
+          VITE_OWNER_EMAIL build swaps the home-screen tile to the mirror. Favicons drop the dot,
+          the wordmark keeps it.
+        </p>
+        <p class="watch"><b>masters:</b> one SVG each → favicon/app .ico, PWA + apple-touch tiles, tray, wordmark PNGs.</p>
+      </div>
+      <div class="proofs">
+        <div>
+          <div class="prooflabel">favicon duty — the dot retires, the m holds</div>
+          <div class="tiles">
+            <div class="tile t64"><svg style="--dot: var(--red)"><use href="#mdot"/></svg></div>
+            <div class="tile t48"><svg><use href="#m-plain"/></svg></div>
+            <div class="tile t32"><svg><use href="#m-plain"/></svg></div>
+            <div class="tile t16"><svg><use href="#m-plain"/></svg></div>
+            <div class="tile t64" style="margin-left:18px"><svg style="--dot: var(--red)"><use href="#meemdot"/></svg></div>
+            <div class="tile t48"><svg><use href="#meem"/></svg></div>
+            <div class="tile t32"><svg><use href="#meem"/></svg></div>
+            <div class="tile t16"><svg><use href="#meem"/></svg></div>
+          </div>
+        </div>
+        <div class="wordmark-row">
+          <div class="wordmark">mos<span class="dot-red">.</span></div>
+          <div class="wordmark" style="font-size:34px;">mos<span class="dot-red">.</span></div>
+          <div class="wordmark-sub">settings header · about · exports</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <b>Recommendation.</b> Ship <b>A + B</b>: the m. with the red baseline period as the public brand,
+    the .م mirror as your owner tile — they're the same drawing, so the system stays one idea.
+    The fusion (C) is the wildcard: keep it if it moves you, but it trades away some of the calm
+    that made you reject the old brandbook. Say the word and I'll master the winners and regenerate
+    every asset in the repo — favicon, .ico set, PWA tiles, tray, wordmarks.
+  </div>
+
+</div>
+</body>
+</html>

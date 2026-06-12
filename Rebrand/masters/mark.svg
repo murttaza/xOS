@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
+  <!--
+    mOS brand mark — ".م" (meem, full stop)
+    The Arabic letter meem (= the m in mOS) followed by a period, placed where
+    Arabic puts it: after the letter, to the LEFT. The same idea as the Latin
+    wordmark "mos." — everything, period — reading in its own direction.
+
+    Construction: one pen. Perfect-circle head (r37), tail drops from the ring
+    and flicks left (single cubic), stroke 26, round terminals. Dot r16 sits on
+    the tail's optical baseline. Calibrated Jun 2026: dot r16 · stroke 26 ·
+    smaller-head/longer-tail balance · 64% tile presence.
+
+    Colors: bone #D4C8BC on tile #0C0C0E · signal red #EF4444.
+    Generated assets: run  py scripts/generate-brand-assets.py
+  -->
+  <g fill="none" stroke="#D4C8BC" stroke-width="26" stroke-linecap="round">
+    <circle cx="165" cy="83" r="37"/>
+    <path d="M128 83 V148 C128 180 114 192 86 195"/>
+  </g>
+  <circle cx="38" cy="192" r="16" fill="#EF4444"/>
+</svg>

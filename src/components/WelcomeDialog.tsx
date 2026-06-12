@@ -46,7 +46,7 @@ const FEATURES = [
         : []),
 ];
 
-/** First-run onboarding — shown once per device (see App.tsx). */
+/** First-run onboarding — shown once per account (gating lives in App.tsx). */
 export function WelcomeDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
     return (
         <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>

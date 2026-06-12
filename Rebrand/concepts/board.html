@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>mOS — mark exploration 01</title>
+<style>
+  @font-face {
+    font-family: 'Outfit Variable';
+    src: url('outfit.woff2') format('woff2-variations');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: block;
+  }
+
+  :root {
+    --page: #0A0A0B;
+    --panel: #101012;
+    --line: #1D1D20;
+    --bone: #D4C8BC;
+    --bone-bright: #EDE6DB;
+    --body: #8E8B86;
+    --faint: #66635F;
+    --red: #EF4444;
+    --tile: #0C0C0E;
+    --paper: #EDE7DE;
+    --paper-ink: #16130F;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body { background: var(--page); }
+
+  body {
+    font-family: 'Outfit Variable', system-ui, sans-serif;
+    color: var(--body);
+    -webkit-font-smoothing: antialiased;
+    width: 1480px;
+  }
+
+  .page { padding: 72px 80px 56px; }
+
+  /* ---------- header ---------- */
+  .eyebrow {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  h1 {
+    margin-top: 18px;
+    font-size: 44px;
+    font-weight: 480;
+    letter-spacing: -0.01em;
+    color: var(--bone-bright);
+  }
+  .brief {
+    margin-top: 12px;
+    font-size: 16.5px;
+    font-weight: 380;
+    line-height: 1.55;
+    max-width: 720px;
+  }
+  .brief em { font-style: normal; color: var(--bone); }
+
+  /* ---------- concept rows ---------- */
+  .concepts { margin-top: 56px; display: flex; flex-direction: column; gap: 30px; }
+
+  .concept {
+    display: grid;
+    grid-template-columns: 330px 1fr 470px;
+    gap: 44px;
+    align-items: center;
+    padding: 34px 38px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 26px;
+  }
+
+  .hero {
+    height: 252px;
+    border-radius: 18px;
+    background: radial-gradient(circle at 50% 42%, #141416 0%, #0D0D0F 100%);
+    border: 1px solid #1A1A1D;
+    display: grid;
+    place-items: center;
+    color: var(--bone);
+  }
+  .hero svg { width: 196px; height: 196px; }
+
+  .copy .num {
+    font-size: 12.5px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    color: var(--faint);
+  }
+  .copy h2 {
+    margin-top: 8px;
+    font-size: 27px;
+    font-weight: 530;
+    letter-spacing: -0.005em;
+    color: var(--bone-bright);
+  }
+  .copy .tag {
+    margin-top: 2px;
+    font-size: 15.5px;
+    font-weight: 420;
+    color: var(--bone);
+    opacity: 0.75;
+  }
+  .copy p.why {
+    margin-top: 14px;
+    font-size: 14.5px;
+    font-weight: 380;
+    line-height: 1.6;
+  }
+  .copy p.watch {
+    margin-top: 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--faint);
+  }
+  .copy p.watch b { font-weight: 520; color: #7C7974; }
+
+  /* ---------- proofs ---------- */
+  .proofs { display: flex; flex-direction: column; gap: 26px; }
+
+  .prooflabel {
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin-bottom: 12px;
+  }
+
+  .tiles { display: flex; align-items: flex-end; gap: 18px; }
+
+  .tile {
+    background: var(--tile);
+    color: var(--bone);
+    display: grid;
+    place-items: center;
+    box-shadow: 0 0 0 1px #222226;
+  }
+  .tile svg { width: 64%; height: 64%; }
+  .tile.paper { background: var(--paper); color: var(--paper-ink); box-shadow: none; }
+
+  .t96 { width: 96px; height: 96px; border-radius: 24px; }
+  .t64 { width: 64px; height: 64px; border-radius: 16px; }
+  .t48 { width: 48px; height: 48px; border-radius: 12px; }
+  .t32 { width: 32px; height: 32px; border-radius: 8px; }
+  .t16 { width: 16px; height: 16px; border-radius: 4.5px; }
+
+  .wordmark {
+    font-weight: 545;
+    letter-spacing: -0.015em;
+    color: var(--bone-bright);
+    font-size: 54px;
+    line-height: 1;
+  }
+  .wordmark .dot { color: var(--red); }
+  .wordmark-row { display: flex; align-items: baseline; gap: 26px; }
+  .wordmark-sub {
+    font-size: 13px;
+    color: var(--faint);
+    font-weight: 400;
+  }
+
+  /* ---------- footer ---------- */
+  .footer {
+    margin-top: 54px;
+    padding-top: 34px;
+    border-top: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+  }
+  .chips { display: flex; gap: 14px; }
+  .chip { width: 92px; }
+  .chip .swatch {
+    height: 56px;
+    border-radius: 14px;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.07);
+  }
+  .chip .name { margin-top: 8px; font-size: 12.5px; font-weight: 480; color: #A8A49E; }
+  .chip .hex { font-size: 11.5px; color: var(--faint); }
+
+  .footnotes { font-size: 13.5px; line-height: 1.65; font-weight: 380; }
+  .footnotes b { color: var(--bone); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<!-- ====== mark geometry — drawn, not typed ====== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- 01 · arch m — geometric monoline -->
+    <symbol id="mark-arch" viewBox="0 0 240 240">
+      <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round">
+        <path d="M46 70 V170"/>
+        <path d="M46 107 A37 37 0 0 1 120 107 V170"/>
+        <path d="M120 107 A37 37 0 0 1 194 107 V170"/>
+      </g>
+    </symbol>
+
+    <!-- 02 · m. — same m, plus a period -->
+    <symbol id="mark-mdot" viewBox="0 0 240 240">
+      <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round">
+        <path d="M18 70 V170"/>
+        <path d="M18 107 A37 37 0 0 1 92 107 V170"/>
+        <path d="M92 107 A37 37 0 0 1 166 107 V170"/>
+      </g>
+      <circle cx="219" cy="167" r="16" fill="var(--dot, currentColor)"/>
+    </symbol>
+
+    <!-- 03 · soft m — display weight, drawn for icon duty -->
+    <symbol id="mark-heavy" viewBox="0 0 240 240">
+      <g fill="none" stroke="currentColor" stroke-width="40" stroke-linecap="round">
+        <path d="M50 74 V166"/>
+        <path d="M50 109 A35 35 0 0 1 120 109 V166"/>
+        <path d="M120 109 A35 35 0 0 1 190 109 V166"/>
+      </g>
+    </symbol>
+
+    <!-- 04 · meem — owner flourish, redrawn as geometry. Matched against the
+         shipped Tahoma tile: ring head, tail drops vertically from 9 o'clock,
+         then a calligraphic flick left (cubic) — the pen gesture of the
+         original, with an open counter and even stroke. -->
+    <symbol id="mark-meem" viewBox="0 0 240 240">
+      <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="137" cy="86" r="40"/>
+        <path d="M97 86 V150 C97 178 86 190 62 193"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="page">
+
+  <div class="eyebrow">mOS &nbsp;·&nbsp; mark exploration 01 &nbsp;·&nbsp; jun 2026</div>
+  <h1>a quieter m.</h1>
+  <p class="brief">
+    Four directions, <em>one idea each</em> — no gradients, no mascots, no cleverness for its own sake.
+    Every mark is drawn geometry (circles and lines, round terminals), sized to survive a
+    16-px tray icon and an iOS squircle. The app is calm; the logo should be too.
+  </p>
+
+  <div class="concepts">
+
+    <!-- ============ 01 arch m ============ -->
+    <div class="concept">
+      <div class="hero"><svg><use href="#mark-arch"/></svg></div>
+      <div class="copy">
+        <div class="num">01</div>
+        <h2>arch m</h2>
+        <div class="tag">the quiet default</div>
+        <p class="why">
+          A monoline lowercase m: three stems, two perfect semicircles, every terminal rounded.
+          No trick — the brand is the restraint. It matches Outfit's geometry, so mark and
+          wordmark feel cut from the same metal.
+        </p>
+        <p class="watch"><b>watch:</b> it's so quiet it leans on the wordmark for personality.</p>
+      </div>
+      <div class="proofs">
+        <div>
+          <div class="prooflabel">in place — dark · paper · down to 16 px</div>
+          <div class="tiles">
+            <div class="tile t96"><svg><use href="#mark-arch"/></svg></div>
+            <div class="tile paper t96"><svg><use href="#mark-arch"/></svg></div>
+            <div class="tile t64"><svg><use href="#mark-arch"/></svg></div>
+            <div class="tile t48"><svg><use href="#mark-arch"/></svg></div>
+            <div class="tile t32"><svg><use href="#mark-arch"/></svg></div>
+            <div class="tile t16"><svg><use href="#mark-arch"/></svg></div>
+          </div>
+        </div>
+        <div class="wordmark-row">
+          <div class="wordmark">mos</div>
+          <div class="wordmark-sub">wordmark — Outfit, lowercase, −1.5% tracking</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 02 m. ============ -->
+    <div class="concept">
+      <div class="hero"><svg style="--dot: var(--red)"><use href="#mark-mdot"/></svg></div>
+      <div class="copy">
+        <div class="num">02</div>
+        <h2>m.</h2>
+        <div class="tag">everything, period</div>
+        <p class="why">
+          The same m, plus a full stop. One small piece of voice: a task done, a sentence
+          finished, your whole life in one place — <i>period</i>. The dot can stay bone
+          (quietest) or carry the app's red. Mark and wordmark say the same word.
+        </p>
+        <p class="watch"><b>watch:</b> the dot retires below 24 px — the m alone is the favicon.</p>
+      </div>
+      <div class="proofs">
+        <div>
+          <div class="prooflabel">in place — dot drops at small sizes</div>
+          <div class="tiles">
+            <div class="tile t96"><svg style="--dot: var(--red)"><use href="#mark-mdot"/></svg></div>
+            <div class="tile paper t96"><svg style="--dot: var(--red)"><use href="#mark-mdot"/></svg></div>
+            <div class="tile t64"><svg><use href="#mark-mdot"/></svg></div>
+            <div class="tile t48"><svg><use href="#mark-arch"/></svg></div>
+            <div class="tile t32"><svg><use href="#mark-arch"/></svg></div>
+            <div class="tile t16"><svg><use href="#mark-arch"/></svg></div>
+          </div>
+        </div>
+        <div class="wordmark-row">
+          <div class="wordmark">mos<span class="dot">.</span></div>
+          <div class="wordmark-sub">the period reads as a wordmark, an app icon, a sign-off</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 03 soft m ============ -->
+    <div class="concept">
+      <div class="hero"><svg><use href="#mark-heavy"/></svg></div>
+      <div class="copy">
+        <div class="num">03</div>
+        <h2>soft m</h2>
+        <div class="tag">drawn for icon duty</div>
+        <p class="why">
+          The same skeleton at display weight — chunky, warm, almost furniture. This is the
+          cut that never thins out: taskbar, tray, home screen, 16-px tab. If 01 is the
+          letter, this is the object.
+        </p>
+        <p class="watch"><b>watch:</b> counters tighten at 16 px; large print sizes pair better with 01's weight.</p>
+      </div>
+      <div class="proofs">
+        <div>
+          <div class="prooflabel">in place — holds its weight everywhere</div>
+          <div class="tiles">
+            <div class="tile t96"><svg><use href="#mark-heavy"/></svg></div>
+            <div class="tile paper t96"><svg><use href="#mark-heavy"/></svg></div>
+            <div class="tile t64"><svg><use href="#mark-heavy"/></svg></div>
+            <div class="tile t48"><svg><use href="#mark-heavy"/></svg></div>
+            <div class="tile t32"><svg><use href="#mark-heavy"/></svg></div>
+            <div class="tile t16"><svg><use href="#mark-heavy"/></svg></div>
+          </div>
+        </div>
+        <div class="wordmark-row">
+          <div class="wordmark" style="font-weight:600">mos</div>
+          <div class="wordmark-sub">heavier wordmark cut to match</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 04 meem ============ -->
+    <div class="concept">
+      <div class="hero"><svg><use href="#mark-meem"/></svg></div>
+      <div class="copy">
+        <div class="num">04</div>
+        <h2>meem</h2>
+        <div class="tag">the personal cut — owner builds only</div>
+        <p class="why">
+          Your current icon, redrawn as real geometry instead of a Tahoma glyph: a perfect-circle
+          head with an open counter, and a tail that drops from the ring and flicks left — the
+          pen gesture of the original. Same stroke, same terminals as the m — family, not a second brand.
+        </p>
+        <p class="watch"><b>watch:</b> stays the VITE_OWNER_EMAIL flourish; distributed builds ship the neutral m.</p>
+      </div>
+      <div class="proofs">
+        <div>
+          <div class="prooflabel">in place — your tiles, redrawn</div>
+          <div class="tiles">
+            <div class="tile t96"><svg><use href="#mark-meem"/></svg></div>
+            <div class="tile paper t96"><svg><use href="#mark-meem"/></svg></div>
+            <div class="tile t64"><svg><use href="#mark-meem"/></svg></div>
+            <div class="tile t48"><svg><use href="#mark-meem"/></svg></div>
+            <div class="tile t32"><svg><use href="#mark-meem"/></svg></div>
+            <div class="tile t16"><svg><use href="#mark-meem"/></svg></div>
+          </div>
+        </div>
+        <div class="wordmark-row">
+          <div class="wordmark">mos</div>
+          <div class="wordmark-sub">wordmark unchanged — the meem is the icon's secret, not a second logo</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ footer ============ -->
+  <div class="footer">
+    <div>
+      <div class="prooflabel">palette — already yours</div>
+      <div class="chips">
+        <div class="chip"><div class="swatch" style="background:#0C0C0E"></div><div class="name">tile</div><div class="hex">#0C0C0E</div></div>
+        <div class="chip"><div class="swatch" style="background:#D4C8BC"></div><div class="name">bone</div><div class="hex">#D4C8BC</div></div>
+        <div class="chip"><div class="swatch" style="background:#EDE7DE"></div><div class="name">paper</div><div class="hex">#EDE7DE</div></div>
+        <div class="chip"><div class="swatch" style="background:#EF4444"></div><div class="name">signal</div><div class="hex">#EF4444</div></div>
+      </div>
+    </div>
+    <div class="footnotes">
+      <b>Notes.</b> The product name stays <b>mOS</b> in text; the wordmark relaxes to lowercase.
+      01 and 02 share the exact same drawn m — 02 just lets it speak. Whatever direction wins,
+      I'll master one SVG and generate the full suite from it: favicon/app icons (.ico),
+      PWA + apple-touch tiles, tray, and crisp wordmark PNGs to replace the bitmap extractions.
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

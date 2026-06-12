@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>mOS — calibration · the .م icon</title>
+<style>
+  @font-face {
+    font-family: 'Outfit Variable';
+    src: url('outfit.woff2') format('woff2-variations');
+    font-weight: 100 900;
+    font-display: block;
+  }
+  :root {
+    --page: #0A0A0B; --panel: #101012; --line: #1D1D20;
+    --bone: #D4C8BC; --bone-bright: #EDE6DB; --body: #8E8B86; --faint: #66635F;
+    --red: #EF4444; --tile: #0C0C0E;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: var(--page); }
+  body { font-family: 'Outfit Variable', system-ui, sans-serif; color: var(--body); width: 1480px; -webkit-font-smoothing: antialiased; }
+  .page { padding: 72px 80px 60px; }
+
+  .eyebrow { font-size: 13px; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: var(--faint); }
+  h1 { margin-top: 18px; font-size: 44px; font-weight: 480; letter-spacing: -0.01em; color: var(--bone-bright); }
+  .brief { margin-top: 12px; font-size: 16.5px; font-weight: 380; line-height: 1.55; max-width: 740px; }
+  .brief em { font-style: normal; color: var(--bone); }
+
+  .rows { margin-top: 50px; display: flex; flex-direction: column; gap: 28px; }
+  .row {
+    display: grid; grid-template-columns: 300px 1fr; gap: 48px; align-items: center;
+    padding: 32px 38px; background: var(--panel); border: 1px solid var(--line); border-radius: 26px;
+  }
+  .row .label .num { font-size: 12.5px; font-weight: 500; letter-spacing: 0.2em; color: var(--faint); }
+  .row .label h2 { margin-top: 6px; font-size: 24px; font-weight: 530; color: var(--bone-bright); }
+  .row .label p { margin-top: 10px; font-size: 14px; line-height: 1.55; font-weight: 380; }
+  .row .label p b { color: var(--bone); font-weight: 500; }
+
+  .cells { display: flex; gap: 34px; }
+  .cell { text-align: center; }
+  .tile {
+    width: 148px; height: 148px; border-radius: 37px;
+    background: var(--tile); color: var(--bone);
+    display: grid; place-items: center;
+    box-shadow: 0 0 0 1px #222226;
+  }
+  .tile svg { width: 64%; height: 64%; }
+  .cell .cap { margin-top: 10px; font-size: 12.5px; color: var(--faint); font-weight: 430; }
+  .cell .cap b { color: var(--bone); font-weight: 520; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="eyebrow">mOS &nbsp;·&nbsp; calibration &nbsp;·&nbsp; the .م icon — everywhere, for everyone</div>
+  <h1>point at what feels right.</h1>
+  <p class="brief">
+    New ruling: <em>.م is the icon, full stop</em> — no public/owner split. The word stays
+    <em>mos.</em> — the meem is the mark, the word is the name. Four dials before I master it.
+    My pick is marked on each row; overrule me freely. If what you wanted tweaked isn't here, say it.
+  </p>
+
+  <div class="rows">
+
+    <!-- ===== 1 · dot size ===== -->
+    <div class="row">
+      <div class="label">
+        <div class="num">DIAL 1</div>
+        <h2>dot size</h2>
+        <p>How loud is the period? <b>My pick: b</b> — present without shouting; it still
+           reads as the red signal at 64&nbsp;px.</p>
+      </div>
+      <div class="cells">
+        <div class="cell">
+          <div class="tile"><svg viewBox="0 0 240 240">
+            <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round">
+              <circle cx="162" cy="86" r="40"/>
+              <path d="M122 86 V150 C122 178 111 190 87 193"/>
+            </g><circle cx="43" cy="192" r="14" fill="var(--red)"/>
+          </svg></div>
+          <div class="cap">a — quiet (r14)</div>
+        </div>
+        <div class="cell">
+          <div class="tile"><svg viewBox="0 0 240 240">
+            <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round">
+              <circle cx="162" cy="86" r="40"/>
+              <path d="M122 86 V150 C122 178 111 190 87 193"/>
+            </g><circle cx="41" cy="190" r="16" fill="var(--red)"/>
+          </svg></div>
+          <div class="cap"><b>b — current (r16)</b></div>
+        </div>
+        <div class="cell">
+          <div class="tile"><svg viewBox="0 0 240 240">
+            <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round">
+              <circle cx="162" cy="86" r="40"/>
+              <path d="M122 86 V150 C122 178 111 190 87 193"/>
+            </g><circle cx="40" cy="187" r="19" fill="var(--red)"/>
+          </svg></div>
+          <div class="cap">c — confident (r19)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 2 · stroke weight ===== -->
+    <div class="row">
+      <div class="label">
+        <div class="num">DIAL 2</div>
+        <h2>stroke weight</h2>
+        <p>The pen itself. Lighter is more elegant large; heavier is warmer and survives
+           small better. The dot tracks the pen. <b>My pick: b</b> — with a heavier cut
+           auto-generated for ≤32&nbsp;px favicons.</p>
+      </div>
+      <div class="cells">
+        <div class="cell">
+          <div class="tile"><svg viewBox="0 0 240 240">
+            <g fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round">
+              <circle cx="162" cy="86" r="40"/>
+              <path d="M122 86 V150 C122 178 111 190 87 193"/>
+            </g><circle cx="44" cy="190" r="15" fill="var(--red)"/>
+          </svg></div>
+          <div class="cap">a — lighter (24)</div>
+        </div>
+        <div class="cell">
+          <div class="tile"><svg viewBox="0 0 240 240">
+            <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round">
+              <circle cx="162" cy="86" r="40"/>
+              <path d="M122 86 V150 C122 178 111 190 87 193"/>
+            </g><circle cx="41" cy="190" r="16" fill="var(--red)"/>
+          </svg></div>
+          <div class="cap"><b>b — current (26)</b></div>
+        </div>
+        <div class="cell">
+          <div class="tile"><svg viewBox="0 0 240 240">
+            <g fill="none" stroke="currentColor" stroke-width="30" stroke-linecap="round">
+              <circle cx="162" cy="86" r="40"/>
+              <path d="M122 86 V150 C122 178 111 190 87 193"/>
+            </g><circle cx="38" cy="190" r="18" fill="var(--red)"/>
+          </svg></div>
+          <div class="cap">c — warmer (30)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 3 · head vs tail ===== -->
+    <div class="row">
+      <div class="label">
+        <div class="num">DIAL 3</div>
+        <h2>head vs tail</h2>
+        <p>The letter's balance. As-is, a smaller head with a longer sweep, or the same
+           head with a further flick. <b>My pick: b</b> — the longer tail has more of the
+           pen in it, and the head stays open at small sizes.</p>
+      </div>
+      <div class="cells">
+        <div class="cell">
+          <div class="tile"><svg viewBox="0 0 240 240">
+            <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round">
+              <circle cx="162" cy="86" r="40"/>
+              <path d="M122 86 V150 C122 178 111 190 87 193"/>
+            </g><circle cx="41" cy="190" r="16" fill="var(--red)"/>
+          </svg></div>
+          <div class="cap">a — current</div>
+        </div>
+        <div class="cell">
+          <div class="tile"><svg viewBox="0 0 240 240">
+            <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round">
+              <circle cx="165" cy="83" r="37"/>
+              <path d="M128 83 V148 C128 180 114 192 86 195"/>
+            </g><circle cx="38" cy="192" r="16" fill="var(--red)"/>
+          </svg></div>
+          <div class="cap"><b>b — smaller head, longer tail</b></div>
+        </div>
+        <div class="cell">
+          <div class="tile"><svg viewBox="0 0 240 240">
+            <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round">
+              <circle cx="162" cy="86" r="40"/>
+              <path d="M122 86 V150 C122 180 108 192 78 194"/>
+            </g><circle cx="34" cy="191" r="16" fill="var(--red)"/>
+          </svg></div>
+          <div class="cap">c — further flick</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 4 · presence in the tile ===== -->
+    <div class="row">
+      <div class="label">
+        <div class="num">DIAL 4</div>
+        <h2>presence</h2>
+        <p>How much of the squircle the mark takes — airy, balanced, or filling.
+           Home screens reward presence; restraint rewards the brand.
+           <b>My pick: b.</b></p>
+      </div>
+      <div class="cells">
+        <div class="cell">
+          <div class="tile"><svg viewBox="0 0 240 240" style="width:56%;height:56%">
+            <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round">
+              <circle cx="162" cy="86" r="40"/>
+              <path d="M122 86 V150 C122 178 111 190 87 193"/>
+            </g><circle cx="41" cy="190" r="16" fill="var(--red)"/>
+          </svg></div>
+          <div class="cap">a — airy (56%)</div>
+        </div>
+        <div class="cell">
+          <div class="tile"><svg viewBox="0 0 240 240" style="width:64%;height:64%">
+            <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round">
+              <circle cx="162" cy="86" r="40"/>
+              <path d="M122 86 V150 C122 178 111 190 87 193"/>
+            </g><circle cx="41" cy="190" r="16" fill="var(--red)"/>
+          </svg></div>
+          <div class="cap"><b>b — balanced (64%)</b></div>
+        </div>
+        <div class="cell">
+          <div class="tile"><svg viewBox="0 0 240 240" style="width:73%;height:73%">
+            <g fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round">
+              <circle cx="162" cy="86" r="40"/>
+              <path d="M122 86 V150 C122 178 111 190 87 193"/>
+            </g><circle cx="41" cy="190" r="16" fill="var(--red)"/>
+          </svg></div>
+          <div class="cap">c — filling (73%)</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

@@ -152,12 +152,31 @@ function App() {
       .catch(() => setIsOwner(false));
   }, []);
 
-  // First-run onboarding: shown once per device until dismissed.
+  // First-run onboarding: shown once per ACCOUNT. The flag lives in Supabase
+  // user_metadata with localStorage as a fast-path cache — device-only
+  // persistence kept re-showing the dialog on new devices and after iOS PWA
+  // storage eviction. The two flags backfill each other so accounts that
+  // dismissed it before the metadata flag existed stay quiet.
   useEffect(() => {
     if (isLoading) return;
-    try {
-      if (!localStorage.getItem('mos-welcomed')) setShowWelcome(true);
-    } catch { /* storage unavailable — skip onboarding */ }
+    let cancelled = false;
+    (async () => {
+      try {
+        const local = localStorage.getItem('mos-welcomed');
+        const { data } = await supabase.auth.getUser();
+        if (data.user?.user_metadata?.mos_welcomed) {
+          if (!local) localStorage.setItem('mos-welcomed', '1');
+          return;
+        }
+        if (local) {
+          supabase.auth.updateUser({ data: { mos_welcomed: true } })
+            .catch(() => { /* best effort — retried on next launch */ });
+          return;
+        }
+        if (!cancelled) setShowWelcome(true);
+      } catch { /* auth/storage unavailable — skip onboarding */ }
+    })();
+    return () => { cancelled = true; };
   }, [isLoading]);
 
   // Window focus state for pausing background work
@@ -821,6 +840,8 @@ function App() {
         onClose={() => {
           setShowWelcome(false);
           try { localStorage.setItem('mos-welcomed', '1'); } catch { /* best effort */ }
+          supabase.auth.updateUser({ data: { mos_welcomed: true } })
+            .catch(() => { /* best effort — the local flag covers this device */ });
         }}
       />
 
