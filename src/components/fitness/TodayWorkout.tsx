@@ -1,10 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useStore } from '../../store';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ChevronDown, ChevronUp, SkipForward, MessageSquare, Minus, Plus } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, SkipForward, MessageSquare, Minus, Plus, Timer, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { showConfirm } from '../ui/confirm-dialog';
 import type { ExerciseLog, ProgramExercise, ExerciseSet } from '../../types';
 
 function parseIntSafe(val: string): number | null {
@@ -22,16 +23,90 @@ function parsePrescribedSets(prescribed: string): number {
     return isNaN(n) ? 3 : n;
 }
 
+// ── Rest timer ─────────────────────────────────────────────────
+// Wall-clock anchored (endsAt), so background throttling on phones can't
+// stall it. Starts when an exercise is logged; beep + vibrate are best-effort
+// (iOS may block audio without a fresh gesture — the visual is the contract).
+const REST_DEFAULT_SECONDS = 150;
+
+function RestTimer({ endsAt, onDismiss, onExtend }: { endsAt: number; onDismiss: () => void; onExtend: () => void }) {
+    const [remaining, setRemaining] = useState(() => Math.max(0, Math.ceil((endsAt - Date.now()) / 1000)));
+    const firedRef = useRef(false);
+
+    useEffect(() => {
+        firedRef.current = false;
+        const tick = () => {
+            const left = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+            setRemaining(left);
+            if (left <= 0 && !firedRef.current) {
+                firedRef.current = true;
+                try { navigator.vibrate?.(200); } catch { /* unsupported */ }
+                try {
+                    const ctx = new AudioContext();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.frequency.value = 880; osc.type = 'sine';
+                    gain.gain.value = 0.12;
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+                    osc.start(); osc.stop(ctx.currentTime + 0.8);
+                    osc.onended = () => ctx.close();
+                } catch { /* audio blocked without a gesture — fine */ }
+            }
+        };
+        tick();
+        const interval = setInterval(tick, 500);
+        return () => clearInterval(interval);
+    }, [endsAt]);
+
+    const done = remaining <= 0;
+    const mm = Math.floor(remaining / 60);
+    const ss = remaining % 60;
+
+    return (
+        <div className={cn(
+            "flex items-center gap-2 rounded-full border px-3 py-1.5 transition-colors",
+            done ? "border-green-500/40 bg-green-500/10" : "border-primary/30 bg-primary/5"
+        )}>
+            <Timer className={cn("h-3.5 w-3.5 shrink-0", done ? "text-green-600 dark:text-green-400" : "text-primary")} />
+            <span className={cn("text-sm font-mono font-semibold tabular-nums", done ? "text-green-600 dark:text-green-400" : "text-primary")}>
+                {done ? 'Rest done' : `${mm}:${String(ss).padStart(2, '0')}`}
+            </span>
+            {!done && (
+                <button
+                    type="button"
+                    onClick={onExtend}
+                    className="text-[10px] font-medium text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded-full hover:bg-muted transition-colors"
+                    aria-label="Add 30 seconds of rest"
+                >
+                    +30s
+                </button>
+            )}
+            <button
+                type="button"
+                onClick={onDismiss}
+                className="text-muted-foreground hover:text-foreground p-0.5 rounded-full hover:bg-muted transition-colors"
+                aria-label="Dismiss rest timer"
+            >
+                <X className="h-3 w-3" />
+            </button>
+        </div>
+    );
+}
+
 interface ExerciseRowProps {
     exercise: ProgramExercise;
     log: ExerciseLog | undefined;
     previousLog: ExerciseLog | undefined;
     sessionId: string;
+    weightUnit: 'lb' | 'kg';
     onSave: (log: Omit<ExerciseLog, 'id' | 'created_at' | 'program_exercise' | 'exercise_sets'> & { id?: string }) => Promise<ExerciseLog>;
     onSaveSets: (logId: string, sets: Omit<ExerciseSet, 'id' | 'exercise_log_id'>[]) => Promise<void>;
+    /** Fires after a successful loggable save — used to start the rest timer. */
+    onLogged?: () => void;
 }
 
-function ExerciseRow({ exercise, log, previousLog, sessionId, onSave, onSaveSets }: ExerciseRowProps) {
+function ExerciseRow({ exercise, log, previousLog, sessionId, weightUnit, onSave, onSaveSets, onLogged }: ExerciseRowProps) {
     const [expanded, setExpanded] = useState(false);
     const [showPerSet, setShowPerSet] = useState(false);
     const [weight, setWeight] = useState(log?.working_weight?.toString() || '');
@@ -79,7 +154,7 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, onSave, onSaveSets
                 exercise_id: exercise.exercise_id,
                 substituted: false,
                 working_weight: parseFloatSafe(weight),
-                weight_unit: 'lb',
+                weight_unit: weightUnit,
                 reps_hit: parseIntSafe(reps),
                 sets_completed: parseIntSafe(setsCount),
                 rir: parseIntSafe(rir),
@@ -97,12 +172,14 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, onSave, onSaveSets
                     rir: parseIntSafe(s.rir),
                 })));
             }
+            onLogged?.();
         } catch (err) {
+            // The store already toasts the failure — this is just for the console.
             console.error('Failed to save exercise log:', err);
         } finally {
             setSaving(false);
         }
-    }, [weight, reps, setsCount, rir, sets, showPerSet, log?.id, saving]);
+    }, [weight, reps, setsCount, rir, sets, showPerSet, log?.id, saving, weightUnit, onLogged]);
 
     // Non-loggable exercises (warmups, finishers, mobility)
     if (!exercise.is_loggable) {
@@ -118,6 +195,7 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, onSave, onSaveSets
                             ? "bg-green-500 border-green-500 dark:bg-green-600 dark:border-green-600"
                             : "border-muted-foreground/30 hover:border-primary active:border-primary"
                     )}
+                    aria-label={`${exercise.display_name} — ${completed ? 'done, tap to unmark' : 'tap to mark done'}`}
                     onClick={async () => {
                         setCompleted(!completed);
                         await onSave({
@@ -127,7 +205,7 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, onSave, onSaveSets
                             exercise_id: exercise.exercise_id,
                             substituted: false,
                             working_weight: null,
-                            weight_unit: 'lb',
+                            weight_unit: weightUnit,
                             reps_hit: null,
                             sets_completed: null,
                             rir: null,
@@ -174,7 +252,7 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, onSave, onSaveSets
                 </div>
                 {completed && weight && (
                     <span className="text-xs font-mono text-green-600 dark:text-green-400 shrink-0">
-                        {weight}lb &times; {reps}
+                        {weight}{weightUnit} &times; {reps}
                     </span>
                 )}
                 {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
@@ -238,10 +316,11 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, onSave, onSaveSets
                                 </div>
                             </div>
 
-                            {/* Ghost text hint */}
-                            {ghostWeight && !weight && (
+                            {/* Last-session hint — placeholders above carry the same numbers */}
+                            {ghostWeight != null && (
                                 <p className="text-[10px] text-muted-foreground/60 -mt-1">
-                                    Last: {ghostWeight}lb &times; {ghostReps}
+                                    Last session: {ghostWeight}{weightUnit}{ghostReps ? <> &times; {ghostReps}</> : null}
+                                    {previousLog?.rir != null && <> @ RIR {previousLog.rir}</>}
                                 </p>
                             )}
 
@@ -257,14 +336,15 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, onSave, onSaveSets
 
                             {showPerSet && (
                                 <div className="space-y-2">
-                                    <div className="grid grid-cols-[2rem_1fr_1fr] sm:grid-cols-[2rem_1fr_1fr_1fr] gap-2 text-[10px] text-muted-foreground font-medium">
+                                    {/* RIR stays visible on phones — that's the device sets are logged on */}
+                                    <div className="grid grid-cols-[2rem_1fr_1fr_1fr] gap-2 text-[10px] text-muted-foreground font-medium">
                                         <span></span>
                                         <span>Weight</span>
                                         <span>Reps</span>
-                                        <span className="hidden sm:block">RIR</span>
+                                        <span>RIR</span>
                                     </div>
                                     {sets.map((s, i) => (
-                                        <div key={i} className="grid grid-cols-[2rem_1fr_1fr] sm:grid-cols-[2rem_1fr_1fr_1fr] gap-2 items-center">
+                                        <div key={i} className="grid grid-cols-[2rem_1fr_1fr_1fr] gap-2 items-center">
                                             <span className="text-xs text-muted-foreground text-center">{i + 1}</span>
                                             <Input
                                                 type="number"
@@ -297,7 +377,7 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, onSave, onSaveSets
                                                     updated[i] = { ...updated[i], rir: e.target.value };
                                                     setSets(updated);
                                                 }}
-                                                className="h-9 text-center text-sm font-mono hidden sm:block"
+                                                className="h-9 text-center text-sm font-mono"
                                             />
                                         </div>
                                     ))}
@@ -344,6 +424,8 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, onSave, onSaveSets
 export function TodayWorkout() {
     const sessions = useStore(s => s.workoutSessions);
     const exerciseLogs = useStore(s => s.exerciseLogs);
+    const allExerciseLogs = useStore(s => s.allExerciseLogs);
+    const fetchAllExerciseLogs = useStore(s => s.fetchAllExerciseLogs);
     const selectedSessionId = useStore(s => s.selectedSessionId);
     const currentSession = useStore(s => s.currentSession);
     const programDays = useStore(s => s.programDays);
@@ -356,10 +438,12 @@ export function TodayWorkout() {
     const saveExerciseSets = useStore(s => s.saveExerciseSets);
     const updateSessionStatus = useStore(s => s.updateSessionStatus);
     const setFitnessTab = useStore(s => s.setFitnessTab);
+    const weightUnit = useStore(s => s.weightUnit);
 
     const [notes, setNotes] = useState('');
     const [effort, setEffort] = useState<number>(0);
     const [showNotes, setShowNotes] = useState(false);
+    const [restEndsAt, setRestEndsAt] = useState<number | null>(null);
 
     const currentWeek = getCurrentWeek();
     const currentPhase = getPhaseForWeek(currentWeek);
@@ -391,10 +475,48 @@ export function TodayWorkout() {
     const dayExercises = session?.program_day_id ? getExercisesForDay(session.program_day_id) : [];
     const programDay = session?.program_day || programDays.find(d => d.id === session?.program_day_id);
 
-    // Previous session with same program_day_id is used for ghost text (future enhancement)
+    // Ghost text: latest completed log per exercise from any EARLIER session,
+    // so the placeholders show what you lifted last time.
+    useEffect(() => {
+        if (allExerciseLogs.length === 0) fetchAllExerciseLogs();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const previousLogs = useMemo(() => {
+        const map = new Map<string, ExerciseLog>();
+        if (!session?.scheduled_date) return map;
+        for (const log of allExerciseLogs) {
+            if (!log.is_completed || log.session_id === session.id) continue;
+            const logDate = (log as any).workout_session?.scheduled_date as string | undefined;
+            if (!logDate || logDate >= session.scheduled_date) continue;
+            if (log.working_weight == null && log.reps_hit == null) continue;
+            const existing = map.get(log.program_exercise_id);
+            const existingDate = existing ? ((existing as any).workout_session?.scheduled_date as string) : '';
+            if (!existing || logDate > existingDate) map.set(log.program_exercise_id, log);
+        }
+        return map;
+    }, [allExerciseLogs, session?.id, session?.scheduled_date]);
+
+    const handleExerciseLogged = useCallback(() => {
+        setRestEndsAt(Date.now() + REST_DEFAULT_SECONDS * 1000);
+    }, []);
+
+    const loggableExercises = dayExercises.filter(e => e.is_loggable);
+    const unloggedCount = loggableExercises.filter(
+        e => !exerciseLogs.some(l => l.program_exercise_id === e.id && l.is_completed)
+    ).length;
 
     const handleComplete = async () => {
         if (!session) return;
+        if (unloggedCount > 0) {
+            const ok = await showConfirm({
+                title: 'Complete with unlogged exercises?',
+                message: `${unloggedCount} of ${loggableExercises.length} exercises ${unloggedCount === 1 ? 'is' : 'are'} not logged. Complete the session anyway?`,
+                confirmLabel: 'Complete anyway',
+            });
+            if (!ok) return;
+        }
+        setRestEndsAt(null);
         await updateSessionStatus(session.id, 'completed', {
             effort: effort || undefined,
             notes: notes || undefined,
@@ -419,9 +541,6 @@ export function TodayWorkout() {
 
     const isCompleted = session.status === 'completed';
     const isSkipped = session.status === 'skipped';
-    const allLogged = dayExercises
-        .filter(e => e.is_loggable)
-        .every(e => exerciseLogs.some(l => l.program_exercise_id === e.id && l.is_completed));
 
     return (
         <div className="max-w-lg mx-auto pb-4">
@@ -457,10 +576,12 @@ export function TodayWorkout() {
                             key={exercise.id}
                             exercise={exercise}
                             log={log}
-                            previousLog={undefined}
+                            previousLog={previousLogs.get(exercise.id)}
                             sessionId={session.id}
+                            weightUnit={weightUnit}
                             onSave={saveExerciseLog}
                             onSaveSets={saveExerciseSets}
+                            onLogged={exercise.is_loggable ? handleExerciseLogged : undefined}
                         />
                     );
                 })}
@@ -519,23 +640,38 @@ export function TodayWorkout() {
                 <div className="sticky bottom-0 left-0 right-0 p-3 bg-background/95 backdrop-blur-lg border-t border-border/50 z-10"
                     style={{ paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 12px)' }}
                 >
-                    <div className="max-w-lg mx-auto flex gap-2">
-                        <Button
-                            variant="outline"
-                            className="h-12 px-4"
-                            onClick={handleSkip}
-                        >
-                            <SkipForward className="h-4 w-4 mr-1" />
-                            Skip
-                        </Button>
-                        <Button
-                            className="flex-1 h-12 text-base font-semibold"
-                            onClick={handleComplete}
-                            disabled={!allLogged}
-                        >
-                            <Check className="h-5 w-5 mr-2" />
-                            Complete Session
-                        </Button>
+                    <div className="max-w-lg mx-auto space-y-2">
+                        {restEndsAt !== null && (
+                            <div className="flex justify-center">
+                                <RestTimer
+                                    endsAt={restEndsAt}
+                                    onDismiss={() => setRestEndsAt(null)}
+                                    onExtend={() => setRestEndsAt(prev => (prev ?? Date.now()) + 30_000)}
+                                />
+                            </div>
+                        )}
+                        {unloggedCount > 0 && (
+                            <p className="text-center text-[10px] text-muted-foreground">
+                                {unloggedCount} exercise{unloggedCount === 1 ? '' : 's'} left to log
+                            </p>
+                        )}
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                className="h-12 px-4"
+                                onClick={handleSkip}
+                            >
+                                <SkipForward className="h-4 w-4 mr-1" />
+                                Skip
+                            </Button>
+                            <Button
+                                className="flex-1 h-12 text-base font-semibold"
+                                onClick={handleComplete}
+                            >
+                                <Check className="h-5 w-5 mr-2" />
+                                Complete Session
+                            </Button>
+                        </div>
                     </div>
                 </div>
             )}

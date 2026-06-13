@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const COLORS = [
     '#ef4444', // Red
@@ -84,7 +85,7 @@ export const NotesList = ({
                     </div>
                     <Popover>
                         <PopoverTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-6 w-6"><MoreVertical className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" aria-label="Book options" title="Book options"><MoreVertical className="h-4 w-4" /></Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-48 p-1 z-[100]">
                             <Button variant="ghost" size="sm" className="w-full justify-start" onClick={() => setIsEditing(true)}>
@@ -111,11 +112,22 @@ export const NotesList = ({
 
                 <div className="flex-1 overflow-y-auto pl-6 pr-2 py-0 custom-scrollbar">
                     {filteredNotes.map(note => (
+                        // div+role rather than <button>: the row contains the
+                        // delete button, and buttons can't nest.
                         <div
                             key={note.id}
+                            role="button"
+                            tabIndex={0}
                             onClick={() => {
                                 savePendingChanges();
                                 onSelectNote(note.id || null);
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    savePendingChanges();
+                                    onSelectNote(note.id || null);
+                                }
                             }}
                             className={cn(
                                 "mb-2 p-3 rounded-lg cursor-pointer transition-colors border border-transparent group hover:border-border",
@@ -129,8 +141,10 @@ export const NotesList = ({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity -mt-1 -mr-1 text-muted-foreground hover:text-red-400"
+                                    className="h-6 w-6 md:h-5 md:w-5 opacity-60 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity -mt-1 -mr-1 text-muted-foreground hover:text-red-400"
                                     onClick={(e) => onDeleteNote(e, note.id!)}
+                                    aria-label={`Delete note ${note.title || 'Untitled'}`}
+                                    title="Delete note"
                                 >
                                     <Trash2 className="h-3 w-3" />
                                 </Button>
@@ -161,14 +175,16 @@ export const NotesList = ({
                 </div>
             </div>
 
-            {/* Edit Subject Overlay */}
-            {isEditing && (
-                <div className="absolute inset-0 z-50 bg-background/80 flex items-center justify-center p-8 no-drag">
-                    <div className="bg-card border border-border p-8 rounded-2xl w-full max-w-md shadow-2xl space-y-6 animate-in zoom-in-95 duration-150">
-                        <h3 className="text-xl font-bold flex items-center gap-2">
+            {/* Edit Subject — Radix Dialog (focus trap, Escape, aria), replacing
+                the hand-rolled absolute overlay */}
+            <Dialog open={isEditing} onOpenChange={(v) => { if (!v) setIsEditing(false); }}>
+                <DialogContent className="max-w-md no-drag">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
                             <Edit2 className="h-5 w-5 text-primary" /> Edit Book Details
-                        </h3>
-
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-6">
                         <div className="space-y-2">
                             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Book Title</label>
                             <Input
@@ -211,13 +227,13 @@ export const NotesList = ({
 
                         <div className="flex justify-end gap-3 pt-4 border-t border-border/50">
                             <Button variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>
-                            <Button onClick={handleSaveChanges} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                            <Button onClick={handleSaveChanges} disabled={!editTitle.trim()} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                                 <Check className="h-4 w-4 mr-2" /> Save Changes
                             </Button>
                         </div>
                     </div>
-                </div>
-            )}
+                </DialogContent>
+            </Dialog>
         </>
     );
 };

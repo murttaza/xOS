@@ -37,8 +37,19 @@ export function FocusOverlay() {
     const activeTask = useMemo(() => tasks.find(t => t.id === activeTaskId), [tasks, activeTaskId]);
     const currentSessionDuration = activeTaskId ? activeTimers[activeTaskId] : 0;
 
-    // Memoize available tasks to avoid recalculating on every render
-    const availableTasks = useMemo(() => tasks.filter(t => !t.isComplete), [tasks]);
+    // Available tasks, today's first (then soonest due, then unscheduled) —
+    // the overlay exists for "start working NOW", so order by urgency.
+    const availableTasks = useMemo(() => {
+        const today = format(new Date(), 'yyyy-MM-dd');
+        return tasks
+            .filter(t => !t.isComplete)
+            .sort((a, b) => {
+                const rank = (t: typeof a) => t.dueDate === today ? 0 : t.dueDate ? 1 : 2;
+                const r = rank(a) - rank(b);
+                if (r !== 0) return r;
+                return (a.dueDate || '9999').localeCompare(b.dueDate || '9999');
+            });
+    }, [tasks]);
 
     useEffect(() => {
         if (!window.ipcRenderer) return;

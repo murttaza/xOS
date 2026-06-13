@@ -147,6 +147,7 @@ export function StreaksWidget() {
     const streaks = useStore(s => s.streaks);
     const repeatingTasks = useStore(s => s.repeatingTasks);
     const fetchStreaks = useStore(s => s.fetchStreaks);
+    const toggleYearMode = useStore(s => s.toggleYearMode);
     const [now, setNow] = useState(new Date());
 
     useEffect(() => {
@@ -181,7 +182,19 @@ export function StreaksWidget() {
         return () => clearInterval(timer);
     }, [items]);
 
-    if (items.length === 0) return null;
+    // Returning null left an empty glass panel on the home grid — show what
+    // this space is for and where to start instead.
+    if (items.length === 0) {
+        return (
+            <button
+                onClick={toggleYearMode}
+                className="lg:flex-1 w-full flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-border/50 p-4 gap-1.5 text-muted-foreground hover:text-foreground hover:border-border transition-colors"
+            >
+                <span className="text-sm font-medium">No streaks yet</span>
+                <span className="text-[11px] text-muted-foreground/70">Track "days since" habits in Year mode — tap to start one.</span>
+            </button>
+        );
+    }
 
     const count = items.length;
 

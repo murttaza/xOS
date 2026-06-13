@@ -72,7 +72,9 @@ export function TaskDialog({ open, onOpenChange, onSubmit, initialTask, defaultD
             setTitle("");
             setDescription("");
             setDifficulty(1);
-            setStatTarget(["Fitness"]);
+            // Default to the user's first stat — a hardcoded name points at a
+            // ghost the moment that stat is renamed or deleted.
+            setStatTarget(stats[0] ? [stats[0].statName] : []);
             setSubtasks([]);
             // Pre-fill date if defaultDueDate provided (e.g. from "today" section add button)
             if (defaultDueDate) {
@@ -92,16 +94,18 @@ export function TaskDialog({ open, onOpenChange, onSubmit, initialTask, defaultD
             setTime("");
         }
         setCalendarOpen(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialTask, open, defaultDueDate]);
 
     const handleSubmit = () => {
+        if (!title.trim()) return;
         // Construct labels: keep existing ones but filter out "untimed", then add it back if isUntimed is true
         const otherLabels = existingLabels.filter(l => l !== "untimed");
         const finalLabels = isUntimed ? [...otherLabels, "untimed"] : otherLabels;
 
         onSubmit({
             ...(initialTask ? { id: initialTask.id, isComplete: initialTask.isComplete } : { isComplete: 0 }),
-            title,
+            title: title.trim(),
             description,
             difficulty,
             statTarget,
@@ -109,7 +113,8 @@ export function TaskDialog({ open, onOpenChange, onSubmit, initialTask, defaultD
             labels: finalLabels,
             subtasks,
             noteId,
-            time
+            // A time without a date is invisible everywhere — don't keep one.
+            time: date ? time : ""
         } as Task);
         onOpenChange(false);
     };
@@ -375,7 +380,7 @@ export function TaskDialog({ open, onOpenChange, onSubmit, initialTask, defaultD
 
                 </div>
                 <DialogFooter className="max-sm:px-4 max-sm:pb-4 shrink-0">
-                    <Button onClick={handleSubmit} className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto h-11 sm:h-9 text-base sm:text-sm">
+                    <Button onClick={handleSubmit} disabled={!title.trim()} className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto h-11 sm:h-9 text-base sm:text-sm">
                         Save Task
                     </Button>
                 </DialogFooter>

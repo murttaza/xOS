@@ -14,6 +14,7 @@ import { RepeatingTaskDialog } from "./RepeatingTaskDialog";
 import { getLocalDateString, cn } from "@/lib/utils";
 import { endOfWeek } from "date-fns";
 import { api } from "@/api";
+import { showConfirm } from "@/components/ui/confirm-dialog";
 
 import { TaskSection } from "./tasks/TaskSection";
 import { RepeatingTasksPage } from "./tasks/RepeatingTasksPage";
@@ -68,13 +69,31 @@ export function TaskBoard() {
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+                // Only when the task board is actually the active surface —
+                // otherwise this opened a dialog underneath Notes/Budget/etc.
+                // and stole Ctrl+N from text editing.
+                const s = useStore.getState();
+                if (s.isNotesMode || s.isYearMode || s.isBudgetMode || s.isFitnessMode || s.isPasswordsMode || s.isFocusMode) return;
+                const target = e.target as HTMLElement | null;
+                if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
                 e.preventDefault();
                 handleAddClick();
             }
         };
 
+        // The welcome dialog's "add your first task" CTA fires this.
+        const handleNewTaskEvent = () => {
+            setEditingTask(null);
+            setDefaultNewTaskDate(undefined);
+            setIsDialogOpen(true);
+        };
+
         window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        window.addEventListener('mos:new-task', handleNewTaskEvent);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('mos:new-task', handleNewTaskEvent);
+        };
     }, [handleAddClick]);
 
     const handleSubmit = useCallback(async (task: Task | Omit<Task, "id">) => {
@@ -167,6 +186,30 @@ export function TaskBoard() {
         setIsDialogOpen(true);
     }, []);
 
+    // Deletes are one mis-click away on hover icons — always confirm.
+    const handleDeleteTask = useCallback(async (id: number) => {
+        const task = tasks.find(t => t.id === id);
+        const ok = await showConfirm({
+            title: 'Delete task',
+            message: `Delete "${task?.title ?? 'this task'}"? Its logged sessions stay, but the task can't be restored.`,
+            confirmLabel: 'Delete',
+            destructive: true,
+        });
+        if (ok) await deleteTask(id);
+    }, [tasks, deleteTask]);
+
+    const handleDeleteRepeating = useCallback(async (id: number) => {
+        const rt = repeatingTasks.find(t => t.id === id);
+        const streakNote = rt?.streak ? ` Its ${rt.streak}-day streak will be lost.` : '';
+        const ok = await showConfirm({
+            title: 'Delete repeating task',
+            message: `Delete "${rt?.title ?? 'this repeating task'}"?${streakNote} This can't be undone.`,
+            confirmLabel: 'Delete',
+            destructive: true,
+        });
+        if (ok) await deleteRepeatingTask(id);
+    }, [repeatingTasks, deleteRepeatingTask]);
+
     const handleUncomplete = useCallback((task: Task) => {
         updateTask({ ...task, isComplete: 0 });
     }, [updateTask]);
@@ -249,7 +292,7 @@ export function TaskBoard() {
                     </div>
                     <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                         {!showRepeating && (
-                            <Button variant="ghost" size="icon" onClick={() => setIsAllTasksOpen(true)} className="h-8 w-8 text-muted-foreground/70 hover:text-foreground hover:bg-muted transition-colors">
+                            <Button variant="ghost" size="icon" onClick={() => setIsAllTasksOpen(true)} aria-label="View all tasks" title="View all tasks" className="h-8 w-8 text-muted-foreground/70 hover:text-foreground hover:bg-muted transition-colors">
                                 <Eye className="h-4 w-4" />
                             </Button>
                         )}
@@ -258,7 +301,7 @@ export function TaskBoard() {
                             onClick={handleAddClick}
                             className="group relative overflow-hidden bg-muted/50 text-foreground border border-border hover:border-primary/50 shadow-none transition-all duration-150 hover:scale-105 active:scale-95 px-3 sm:px-4 h-8 sm:h-9 text-xs sm:text-sm"
                         >
-                            <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-blue-600/80 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-150 ease-in-out" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-primary/80 to-primary/60 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-150 ease-in-out" />
                             <span className="relative z-10 flex items-center font-medium">
                                 <Plus className="h-4 w-4 mr-1 sm:mr-2 group-hover:rotate-90 transition-transform duration-150" />
                                 Add {showRepeating ? "Repeat" : "Task"}
@@ -302,7 +345,7 @@ export function TaskBoard() {
                                             emptyMessage="No overdue tasks."
                                             onToggleTimer={handleToggleTimer}
                                             onEdit={handleEditClick}
-                                            onDelete={deleteTask}
+                                            onDelete={handleDeleteTask}
                                             onComplete={handleComplete}
                                             className="border-l-2 border-l-red-500/50"
                                         />
@@ -316,7 +359,7 @@ export function TaskBoard() {
                                         emptyMessage="Nothing due today."
                                         onToggleTimer={handleToggleTimer}
                                         onEdit={handleEditClick}
-                                        onDelete={deleteTask}
+                                        onDelete={handleDeleteTask}
                                         onComplete={handleComplete}
                                         onAdd={() => handleAddTaskWithDate(getLocalDateString(new Date()))}
                                         addLabel="Add task for today"
@@ -330,7 +373,7 @@ export function TaskBoard() {
                                         emptyMessage="Nothing else this week."
                                         onToggleTimer={handleToggleTimer}
                                         onEdit={handleEditClick}
-                                        onDelete={deleteTask}
+                                        onDelete={handleDeleteTask}
                                         onComplete={handleComplete}
                                     />
 
@@ -343,27 +386,27 @@ export function TaskBoard() {
                                             emptyMessage="No upcoming tasks."
                                             onToggleTimer={handleToggleTimer}
                                             onEdit={handleEditClick}
-                                            onDelete={deleteTask}
+                                            onDelete={handleDeleteTask}
                                             onComplete={handleComplete}
                                         />
                                     )}
 
                                     <TaskSection
                                         value="loose"
-                                        label="Loose Tasks"
+                                        label="Unscheduled"
                                         tasks={looseTasks}
                                         activeTimerIds={activeTimerIds}
-                                        emptyMessage="No loose tasks."
+                                        emptyMessage="No unscheduled tasks."
                                         onToggleTimer={handleToggleTimer}
                                         onEdit={handleEditClick}
-                                        onDelete={deleteTask}
+                                        onDelete={handleDeleteTask}
                                         onComplete={handleComplete}
                                     />
 
                                     <CompletedTasks
                                         completedTasks={completedTasks}
                                         onEdit={handleEditClick}
-                                        onDelete={deleteTask}
+                                        onDelete={handleDeleteTask}
                                         onUncomplete={handleUncomplete}
                                     />
                                 </Accordion>
@@ -376,7 +419,7 @@ export function TaskBoard() {
                         <RepeatingTasksPage
                             repeatingTasks={repeatingTasks}
                             onEdit={handleRepeatingEdit}
-                            onDelete={deleteRepeatingTask}
+                            onDelete={handleDeleteRepeating}
                             onToggleActive={handleRepeatingToggleActive}
                         />
                     )}
@@ -410,7 +453,7 @@ export function TaskBoard() {
                                 <h3 className="text-sm font-medium text-red-400 uppercase tracking-wider mb-4 border-b border-border pb-2">Overdue</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {overdueTasks.map(task => (
-                                        <TaskItem key={task.id} task={task} isActive={false} isTimerRunning={false} onToggleTimer={() => { }} onEdit={handleEditClick} onDelete={deleteTask} onComplete={handleComplete} />
+                                        <TaskItem key={task.id} task={task} isActive={!!task.id && activeTimerIds.has(task.id)} onToggleTimer={handleToggleTimer} onEdit={handleEditClick} onDelete={handleDeleteTask} onComplete={handleComplete} />
                                     ))}
                                 </div>
                             </div>
@@ -420,7 +463,7 @@ export function TaskBoard() {
                             <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">Today</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {todayTasks.map(task => (
-                                    <TaskItem key={task.id} task={task} isActive={false} isTimerRunning={false} onToggleTimer={() => { }} onEdit={handleEditClick} onDelete={deleteTask} onComplete={handleComplete} />
+                                    <TaskItem key={task.id} task={task} isActive={!!task.id && activeTimerIds.has(task.id)} onToggleTimer={handleToggleTimer} onEdit={handleEditClick} onDelete={handleDeleteTask} onComplete={handleComplete} />
                                 ))}
                                 {todayTasks.length === 0 && <p className="text-muted-foreground/40 italic text-sm">Nothing due today</p>}
                             </div>
@@ -430,7 +473,7 @@ export function TaskBoard() {
                             <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">This Week</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {thisWeekTasks.map(task => (
-                                    <TaskItem key={task.id} task={task} isActive={false} isTimerRunning={false} onToggleTimer={() => { }} onEdit={handleEditClick} onDelete={deleteTask} onComplete={handleComplete} />
+                                    <TaskItem key={task.id} task={task} isActive={!!task.id && activeTimerIds.has(task.id)} onToggleTimer={handleToggleTimer} onEdit={handleEditClick} onDelete={handleDeleteTask} onComplete={handleComplete} />
                                 ))}
                                 {thisWeekTasks.length === 0 && <p className="text-muted-foreground/40 italic text-sm">Nothing else this week</p>}
                             </div>
@@ -441,7 +484,7 @@ export function TaskBoard() {
                                 <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">Later</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {laterTasks.map(task => (
-                                        <TaskItem key={task.id} task={task} isActive={false} isTimerRunning={false} onToggleTimer={() => { }} onEdit={handleEditClick} onDelete={deleteTask} onComplete={handleComplete} />
+                                        <TaskItem key={task.id} task={task} isActive={!!task.id && activeTimerIds.has(task.id)} onToggleTimer={handleToggleTimer} onEdit={handleEditClick} onDelete={handleDeleteTask} onComplete={handleComplete} />
                                     ))}
                                 </div>
                             </div>
@@ -449,12 +492,12 @@ export function TaskBoard() {
 
                         {/* Loose */}
                         <div>
-                            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">Loose Tasks</h3>
+                            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">Unscheduled</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {looseTasks.map(task => (
-                                    <TaskItem key={task.id} task={task} isActive={false} isTimerRunning={false} onToggleTimer={() => { }} onEdit={handleEditClick} onDelete={deleteTask} onComplete={handleComplete} />
+                                    <TaskItem key={task.id} task={task} isActive={!!task.id && activeTimerIds.has(task.id)} onToggleTimer={handleToggleTimer} onEdit={handleEditClick} onDelete={handleDeleteTask} onComplete={handleComplete} />
                                 ))}
-                                {looseTasks.length === 0 && <p className="text-muted-foreground/40 italic text-sm">No loose tasks</p>}
+                                {looseTasks.length === 0 && <p className="text-muted-foreground/40 italic text-sm">No unscheduled tasks</p>}
                             </div>
                         </div>
 
@@ -463,7 +506,7 @@ export function TaskBoard() {
                             <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4 border-b border-border pb-2">Completed Tasks</h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-70">
                                 {completedTasks.map(task => (
-                                    <TaskItem key={task.id} task={task} isActive={false} isTimerRunning={false} onToggleTimer={() => { }} onEdit={handleEditClick} onDelete={deleteTask} onComplete={() => updateTask({ ...task, isComplete: 0 })} />
+                                    <TaskItem key={task.id} task={task} isActive={!!task.id && activeTimerIds.has(task.id)} onToggleTimer={handleToggleTimer} onEdit={handleEditClick} onDelete={handleDeleteTask} onComplete={() => updateTask({ ...task, isComplete: 0 })} />
                                 ))}
                                 {completedTasks.length === 0 && <p className="text-muted-foreground/40 italic text-sm">No completed tasks</p>}
                             </div>

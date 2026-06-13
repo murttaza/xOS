@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { anchorStreakDays } from '../lib/streaks'
 
 const ipc = (window as any).ipcRenderer
 
@@ -49,9 +50,11 @@ export function WidgetApp() {
       const { data: stats } = await supabase.from('stats').select('currentXP')
       const totalXP = stats?.reduce((sum, s) => sum + (s.currentXP || 0), 0) || 0
 
-      // Fetch streaks
-      const { data: streaks } = await supabase.from('streaks').select('currentStreak')
-      const maxStreak = streaks?.reduce((max, s) => Math.max(max, s.currentStreak || 0), 0) || 0
+      // Fetch streaks — compute live anchored days like the main app, not the
+      // stale currentStreak counter (it only updates when a streak is edited).
+      const { data: streaks } = await supabase.from('streaks').select('title, currentStreak, createdAt, lastUpdated, isPaused')
+      const now = new Date()
+      const maxStreak = (streaks || []).reduce((max, s) => Math.max(max, anchorStreakDays(s, now)), 0)
 
       setState({ taskTitle, timerSeconds, totalXP, maxStreak, hasTimer })
     } catch (err) {
@@ -170,7 +173,7 @@ const styles: Record<string, React.CSSProperties> = {
   timer: {
     fontSize: 24,
     fontWeight: 700,
-    color: '#4ade80',
+    color: '#ef4444', // brand red — the widget previously went off-palette green
     fontVariantNumeric: 'tabular-nums',
     letterSpacing: '0.02em',
   },

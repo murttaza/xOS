@@ -4,6 +4,8 @@ import { Note } from '../../types'
 import { X, Plus, Trash2, Copy, Check } from 'lucide-react'
 import { Button } from '../ui/button'
 import { cn } from '../../lib/utils'
+import { writeClipboard } from '../../lib/clipboard'
+import { showErrorToast } from '../ui/toast'
 import { format, isToday, isYesterday } from 'date-fns'
 
 function formatNoteDate(dateStr: string) {
@@ -84,23 +86,13 @@ export function QuickNotesView({ subjectId, onClose }: { subjectId: number; onCl
   }
 
   const handleCopy = async (note: Note) => {
-    try {
-      // Electron context — navigator.clipboard may not work, fallback to textarea hack
-      const textarea = document.createElement('textarea')
-      textarea.value = note.content
-      textarea.style.position = 'fixed'
-      textarea.style.opacity = '0'
-      document.body.appendChild(textarea)
-      textarea.select()
-      document.execCommand('copy')
-      document.body.removeChild(textarea)
+    // Shared helper: Electron IPC clipboard first, browser APIs as fallback.
+    const ok = await writeClipboard(note.content)
+    if (ok) {
       setCopiedId(note.id!)
       setTimeout(() => setCopiedId(null), 1500)
-    } catch {
-      // Last resort
-      await navigator.clipboard.writeText(note.content)
-      setCopiedId(note.id!)
-      setTimeout(() => setCopiedId(null), 1500)
+    } else {
+      showErrorToast("Couldn't copy to clipboard.")
     }
   }
 
@@ -116,7 +108,7 @@ export function QuickNotesView({ subjectId, onClose }: { subjectId: number; onCl
           <h2 className="text-lg font-semibold text-foreground">Quick Notes</h2>
           <span className="text-xs text-muted-foreground">{notes.length} notes</span>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 no-drag">
+        <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 no-drag" aria-label="Close quick notes" title="Close">
           <X className="h-4 w-4" />
         </Button>
       </div>
@@ -130,7 +122,7 @@ export function QuickNotesView({ subjectId, onClose }: { subjectId: number; onCl
             onChange={e => setNewText(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Jot something down..."
-            rows={1}
+            rows={Math.min(6, Math.max(1, newText.split('\n').length))}
             className="flex-1 bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:border-primary/50 transition-colors"
           />
           <Button

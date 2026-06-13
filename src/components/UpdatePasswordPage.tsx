@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { KeyRound } from 'lucide-react';
+import { KeyRound, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Wordmark } from './Wordmark';
 import { evaluateAccountPassword, MIN_ACCOUNT_PASSWORD_LENGTH } from '../lib/passwordPolicy';
@@ -9,6 +9,7 @@ const METER_COLORS = ['bg-red-500', 'bg-red-500', 'bg-yellow-500', 'bg-emerald-5
 
 export function UpdatePasswordPage({ onDone }: { onDone: () => void }) {
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [confirm, setConfirm] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -61,17 +62,28 @@ export function UpdatePasswordPage({ onDone }: { onDone: () => void }) {
                 )}
 
                 <div>
-                    <input
-                        type="password"
-                        placeholder="New password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-4 py-3 h-12 rounded-lg border border-border bg-card text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                        autoComplete="new-password"
-                        required
-                        minLength={MIN_ACCOUNT_PASSWORD_LENGTH}
-                        autoFocus
-                    />
+                    <div className="relative">
+                        <input
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="New password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full pl-4 pr-11 py-3 h-12 rounded-lg border border-border bg-card text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                            autoComplete="new-password"
+                            required
+                            minLength={MIN_ACCOUNT_PASSWORD_LENGTH}
+                            autoFocus
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(p => !p)}
+                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            title={showPassword ? 'Hide password' : 'Show password'}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground"
+                        >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                    </div>
                     <div className="mt-2 space-y-1.5">
                         {password && (
                             <div className="flex items-center gap-2">
@@ -93,7 +105,7 @@ export function UpdatePasswordPage({ onDone }: { onDone: () => void }) {
                 </div>
 
                 <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     placeholder="Confirm password"
                     value={confirm}
                     onChange={(e) => setConfirm(e.target.value)}

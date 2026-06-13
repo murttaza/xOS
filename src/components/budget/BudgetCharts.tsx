@@ -1,23 +1,29 @@
 import { useMemo } from 'react';
 import { Transaction } from '@/types';
 import { toCents, centsToAmount } from '@/lib/money';
+import { useStore } from '@/store';
 
 interface BudgetChartsProps {
     transactions: Transaction[];
+    /** When provided, tapping a donut slice (or legend row) filters the
+     *  transaction list to that category. */
+    onSelectCategory?: (categoryId: number) => void;
 }
 
-export function BudgetCharts({ transactions }: BudgetChartsProps) {
+export function BudgetCharts({ transactions, onSelectCategory }: BudgetChartsProps) {
+    const currency = useStore(s => s.currencySymbol);
     // Donut chart data: spending by category (expenses only).
     // Aggregate in integer cents to avoid IEEE-754 drift (0.1 + 0.2 !== 0.3),
     // then convert back to display dollars at the boundary.
     const { segments, total } = useMemo(() => {
-        const catCents: Record<string, { name: string; color: string; cents: number }> = {};
+        const catCents: Record<string, { categoryId: number; name: string; color: string; cents: number }> = {};
 
         for (const tx of transactions) {
             if (tx.isIncome) continue;
             const key = String(tx.categoryId);
             if (!catCents[key]) {
                 catCents[key] = {
+                    categoryId: tx.categoryId,
                     name: tx.categoryName || 'Other',
                     color: tx.categoryColor || '#6b7280',
                     cents: 0,
@@ -27,7 +33,7 @@ export function BudgetCharts({ transactions }: BudgetChartsProps) {
         }
 
         const sorted = Object.values(catCents)
-            .map(s => ({ name: s.name, color: s.color, amount: s.cents / 100 }))
+            .map(s => ({ categoryId: s.categoryId, name: s.name, color: s.color, amount: s.cents / 100 }))
             .sort((a, b) => b.amount - a.amount);
         const total = sorted.reduce((sum, s) => sum + s.amount, 0);
 
@@ -37,7 +43,7 @@ export function BudgetCharts({ transactions }: BudgetChartsProps) {
     // Build SVG donut paths
     const donutPaths = useMemo(() => {
         if (total === 0) return [];
-        const paths: { d: string; color: string; name: string; percentage: number }[] = [];
+        const paths: { d: string; color: string; name: string; percentage: number; categoryId: number }[] = [];
         let startAngle = -90; // Start from top
 
         const cx = 60, cy = 60, r = 50;
@@ -59,7 +65,7 @@ export function BudgetCharts({ transactions }: BudgetChartsProps) {
 
             const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
 
-            paths.push({ d, color: seg.color, name: seg.name, percentage: percentage * 100 });
+            paths.push({ d, color: seg.color, name: seg.name, percentage: percentage * 100, categoryId: seg.categoryId });
             startAngle = endAngle;
         }
 
@@ -83,12 +89,21 @@ export function BudgetCharts({ transactions }: BudgetChartsProps) {
                     <div className="flex items-center gap-4">
                         <svg viewBox="0 0 120 120" className="w-24 h-24 shrink-0">
                             {donutPaths.map((path, i) => (
-                                <path key={i} d={path.d} fill={path.color} opacity={0.85} />
+                                <path
+                                    key={i}
+                                    d={path.d}
+                                    fill={path.color}
+                                    opacity={0.85}
+                                    className={onSelectCategory ? 'cursor-pointer hover:opacity-100 transition-opacity' : undefined}
+                                    onClick={onSelectCategory ? () => onSelectCategory(path.categoryId) : undefined}
+                                >
+                                    <title>{`${path.name} — ${Math.round(path.percentage)}%`}</title>
+                                </path>
                             ))}
                             {/* Center hole */}
                             <circle cx="60" cy="60" r="30" className="fill-background" />
                             <text x="60" y="57" textAnchor="middle" className="fill-foreground text-[8px] font-bold">
-                                ${total.toFixed(0)}
+                                {currency}{total.toFixed(0)}
                             </text>
                             <text x="60" y="68" textAnchor="middle" className="fill-muted-foreground text-[5px]">
                                 total
@@ -97,11 +112,18 @@ export function BudgetCharts({ transactions }: BudgetChartsProps) {
 
                         <div className="space-y-1 flex-1 min-w-0">
                             {segments.slice(0, 5).map((seg, i) => (
-                                <div key={i} className="flex items-center gap-2 text-xs">
+                                <button
+                                    key={i}
+                                    type="button"
+                                    className="w-full flex items-center gap-2 text-xs rounded px-1 -mx-1 hover:bg-muted/40 transition-colors disabled:hover:bg-transparent text-left"
+                                    onClick={onSelectCategory ? () => onSelectCategory(seg.categoryId) : undefined}
+                                    disabled={!onSelectCategory}
+                                    aria-label={`Filter transactions to ${seg.name}`}
+                                >
                                     <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
                                     <span className="truncate text-muted-foreground">{seg.name}</span>
                                     <span className="ml-auto font-medium tabular-nums shrink-0">{((seg.amount / total) * 100).toFixed(0)}%</span>
-                                </div>
+                                </button>
                             ))}
                             {segments.length > 5 && (
                                 <span className="text-[10px] text-muted-foreground/60">+{segments.length - 5} more</span>
@@ -112,12 +134,12 @@ export function BudgetCharts({ transactions }: BudgetChartsProps) {
             )}
 
             {/* Daily Spending Bar Chart */}
-            <DailySpendingChart transactions={transactions} />
+            <DailySpendingChart transactions={transactions} currency={currency} />
         </div>
     );
 }
 
-function DailySpendingChart({ transactions }: { transactions: Transaction[] }) {
+function DailySpendingChart({ transactions, currency }: { transactions: Transaction[]; currency: string }) {
     const dailyData = useMemo(() => {
         // Aggregate in integer cents (see src/lib/money.ts)
         const map = new Map<string, { incomeCents: number; expenseCents: number }>();
@@ -144,7 +166,9 @@ function DailySpendingChart({ transactions }: { transactions: Transaction[] }) {
 
     if (dailyData.length === 0) return null;
 
-    const maxAmount = Math.max(...dailyData.map(d => Math.max(d.income, d.expense)), 1);
+    // Scale against the largest combined day so a day with both income and
+    // expense can never stack past the chart's height.
+    const maxAmount = Math.max(...dailyData.map(d => d.income + d.expense), 1);
 
     return (
         <div className="space-y-2">
@@ -156,14 +180,14 @@ function DailySpendingChart({ transactions }: { transactions: Transaction[] }) {
                             <div
                                 className="w-full bg-green-500/60 rounded-t-sm min-h-[2px]"
                                 style={{ height: `${(d.income / maxAmount) * 100}%` }}
-                                title={`Income: $${d.income.toFixed(2)}`}
+                                title={`Income: ${currency}${d.income.toFixed(2)}`}
                             />
                         )}
                         {d.expense > 0 && (
                             <div
                                 className="w-full bg-red-500/60 rounded-t-sm min-h-[2px]"
                                 style={{ height: `${(d.expense / maxAmount) * 100}%` }}
-                                title={`Expense: $${d.expense.toFixed(2)}`}
+                                title={`Expense: ${currency}${d.expense.toFixed(2)}`}
                             />
                         )}
                     </div>

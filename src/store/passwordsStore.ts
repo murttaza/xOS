@@ -148,8 +148,13 @@ export const createPasswordsSlice: StateCreator<AppState, [], [], PasswordsSlice
     touchPassword: async (id) => {
         const r = requireIpc();
         await r.invoke(IpcChannels.TouchPassword, id);
-        const rows = (await r.invoke(IpcChannels.GetPasswords)) as PasswordEntry[];
-        set({ passwords: rows ?? [] });
+        // Update lastUsed in place — refetching the whole list after every copy
+        // re-sorted the rows under the user's cursor.
+        set((state) => ({
+            passwords: state.passwords.map(p =>
+                p.id === id ? { ...p, lastUsed: new Date().toISOString() } : p
+            ),
+        }));
     },
 
     togglePinPassword: async (id, isPinned) => {

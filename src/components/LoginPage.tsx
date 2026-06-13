@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { LogIn, UserPlus, KeyRound, MailCheck } from 'lucide-react';
+import { LogIn, UserPlus, KeyRound, MailCheck, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wordmark } from './Wordmark';
 import { evaluateAccountPassword, authRedirectTo, MIN_ACCOUNT_PASSWORD_LENGTH } from '../lib/passwordPolicy';
@@ -9,9 +9,21 @@ type Mode = 'signin' | 'signup' | 'reset' | 'confirm-email';
 
 const METER_COLORS = ['bg-red-500', 'bg-red-500', 'bg-yellow-500', 'bg-emerald-500', 'bg-emerald-400'];
 
+/** Map raw Supabase auth errors to plain language; pass unknowns through. */
+function friendlyAuthError(message: string): string {
+    const m = message.toLowerCase();
+    if (m.includes('invalid login credentials')) return 'Wrong email or password.';
+    if (m.includes('email not confirmed')) return 'Confirm your email first — check your inbox for the link.';
+    if (m.includes('user already registered')) return 'An account with this email already exists — sign in instead.';
+    if (m.includes('rate limit') || m.includes('too many')) return 'Too many attempts — wait a minute and try again.';
+    if (m.includes('network') || m.includes('fetch')) return "Couldn't reach the server — check your connection.";
+    return message;
+}
+
 export function LoginPage({ onLogin }: { onLogin: () => void }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
@@ -42,7 +54,7 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
                 ...(redirectTo ? { redirectTo } : {}),
             });
             if (error) {
-                setError(error.message);
+                setError(friendlyAuthError(error.message));
             } else {
                 setSuccess('Password reset link sent! Check your email.');
             }
@@ -58,7 +70,7 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
                 options: { ...(redirectTo ? { emailRedirectTo: redirectTo } : {}) },
             });
             if (error) {
-                setError(error.message);
+                setError(friendlyAuthError(error.message));
                 setLoading(false);
             } else if (data.session) {
                 // Email confirmation disabled on the project — signed in directly.
@@ -72,7 +84,7 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
         } else {
             const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) {
-                setError(error.message);
+                setError(friendlyAuthError(error.message));
                 setLoading(false);
             } else {
                 onLogin();
@@ -165,16 +177,27 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
 
                     {mode !== 'reset' && (
                         <div>
-                            <input
-                                type="password"
-                                placeholder="Password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-3 h-12 rounded-lg border border-border bg-card text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-                                required
-                                minLength={mode === 'signup' ? MIN_ACCOUNT_PASSWORD_LENGTH : undefined}
-                            />
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    placeholder="Password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full pl-4 pr-11 py-3 h-12 rounded-lg border border-border bg-card text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                    autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                                    required
+                                    minLength={mode === 'signup' ? MIN_ACCOUNT_PASSWORD_LENGTH : undefined}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(p => !p)}
+                                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                    title={showPassword ? 'Hide password' : 'Show password'}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground"
+                                >
+                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                            </div>
                             {mode === 'signup' && (
                                 <div className="mt-2 space-y-1.5">
                                     {password && (

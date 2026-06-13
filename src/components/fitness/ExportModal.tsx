@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { api } from '../../api';
 import { useStore } from '../../store';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { Copy, Download, Check } from 'lucide-react';
+import { writeClipboard } from '../../lib/clipboard';
+import { showErrorToast } from '../ui/toast';
 
 function generateWeekMarkdown(
     weekNumber: number,
@@ -11,6 +14,8 @@ function generateWeekMarkdown(
     programName: string,
     phaseName: string,
     weekStartDate: string,
+    weightUnit: string,
+    logsBySession: Record<string, any[]>,
 ) {
     const weekEnd = new Date(weekStartDate + 'T00:00:00');
     weekEnd.setDate(weekEnd.getDate() + 6);
@@ -21,7 +26,7 @@ function generateWeekMarkdown(
     // Body metrics
     if (bodyMetric) {
         md += `## Body Metrics\n`;
-        if (bodyMetric.body_weight) md += `- Bodyweight: ${bodyMetric.body_weight} lb\n`;
+        if (bodyMetric.body_weight) md += `- Bodyweight: ${bodyMetric.body_weight} ${weightUnit}\n`;
         if (bodyMetric.rhr) md += `- RHR: ${bodyMetric.rhr}\n`;
         if (bodyMetric.rope_minutes) md += `- Rope: ${bodyMetric.rope_minutes} min${bodyMetric.rope_pace ? ` @ ${bodyMetric.rope_pace}/min` : ''}\n`;
         md += `\n`;
@@ -44,7 +49,19 @@ function generateWeekMarkdown(
             continue;
         }
 
-        // We don't have per-session logs loaded here, so just note completion
+        // The actual lifts — the part of a week summary worth exporting.
+        const logs = logsBySession[session.id] || [];
+        for (const log of logs) {
+            if (!log.is_completed) continue;
+            const name = log.program_exercise?.display_name || log.program_exercises?.display_name || 'Exercise';
+            if (log.working_weight != null) {
+                const sets = log.sets_completed ? `${log.sets_completed} × ` : '';
+                const rir = log.rir != null ? ` @ RIR ${log.rir}` : '';
+                md += `- ${name}: ${sets}${log.working_weight} ${weightUnit} × ${log.reps_hit ?? '?'}${rir}\n`;
+            } else {
+                md += `- ${name}: done\n`;
+            }
+        }
         if (session.perceived_effort) {
             md += `- RPE: ${session.perceived_effort}\n`;
         }
@@ -65,16 +82,35 @@ export function ExportModal({ open, onOpenChange }: { open: boolean; onOpenChang
     const getPhaseForWeek = useStore(s => s.getPhaseForWeek);
     const getWeekStartDate = useStore(s => s.getWeekStartDate);
     const bodyMetrics = useStore(s => s.bodyMetrics);
+    const weightUnit = useStore(s => s.weightUnit);
 
     const currentWeek = getCurrentWeek();
     const [selectedWeek, setSelectedWeek] = useState(currentWeek);
     const [copied, setCopied] = useState(false);
+    const [logsBySession, setLogsBySession] = useState<Record<string, any[]>>({});
 
     const program = programs.find(p => p.id === activeProgram?.program_id);
     const phase = getPhaseForWeek(selectedWeek);
     const weekSessions = getSessionsForWeek(selectedWeek);
     const weekStart = getWeekStartDate(selectedWeek);
     const weekMetric = bodyMetrics.find(m => m.week_number === selectedWeek);
+
+    // Pull the week's exercise logs so the export contains the lifts, not just
+    // statuses. Virtual sessions have no logs to fetch.
+    useEffect(() => {
+        if (!open) return;
+        let cancelled = false;
+        const real = getSessionsForWeek(selectedWeek).filter(s => !s.id.startsWith('virtual:'));
+        Promise.all(real.map(s =>
+            api.getExerciseLogs(s.id)
+                .then(logs => [s.id, logs] as const)
+                .catch(() => [s.id, []] as const)
+        )).then(entries => {
+            if (!cancelled) setLogsBySession(Object.fromEntries(entries));
+        });
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, selectedWeek]);
 
     const markdown = generateWeekMarkdown(
         selectedWeek,
@@ -83,12 +119,18 @@ export function ExportModal({ open, onOpenChange }: { open: boolean; onOpenChang
         program?.name || 'Program',
         phase?.name || 'Phase',
         weekStart,
+        weightUnit,
+        logsBySession,
     );
 
     const handleCopy = async () => {
-        await navigator.clipboard.writeText(markdown);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        const ok = await writeClipboard(markdown);
+        if (ok) {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } else {
+            showErrorToast("Couldn't copy to clipboard.");
+        }
     };
 
     const handleDownload = () => {

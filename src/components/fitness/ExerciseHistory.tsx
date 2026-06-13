@@ -5,10 +5,12 @@ import { Search, ChevronRight, ArrowLeft } from 'lucide-react';
 import { api } from '../../api';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { getStatColor } from '../../lib/utils';
+import { epley } from '../../hooks/useFitnessStats';
 import type { Exercise, ExerciseLog } from '../../types';
 
 export function ExerciseHistory() {
     const exercises = useStore(s => s.exercises);
+    const weightUnit = useStore(s => s.weightUnit);
     const [query, setQuery] = useState('');
     const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
     const [history, setHistory] = useState<ExerciseLog[]>([]);
@@ -51,9 +53,9 @@ export function ExerciseHistory() {
             reps: l.reps_hit || 0,
         }));
 
-    // Estimated 1RM (Brzycki formula)
-    const est1RM = (weight: number, reps: number) =>
-        reps <= 0 || reps > 30 ? weight : Math.round(weight * (36 / (37 - reps)));
+    // Estimated 1RM — same Epley formula as StatsView, so the two tabs can
+    // never disagree about the same lift.
+    const est1RM = (weight: number, reps: number) => Math.round(epley(weight, reps) ?? weight);
 
     // Detail view
     if (selectedExercise) {
@@ -124,7 +126,7 @@ export function ExerciseHistory() {
                                                     className="text-xs font-mono font-semibold px-2 py-0.5 rounded-md"
                                                     style={{ backgroundColor: `rgba(${catColor.rgb}, 0.12)`, color: `rgb(${catColor.rgb})` }}
                                                 >
-                                                    {w} lb &times; {r}
+                                                    {w} {weightUnit} &times; {r}
                                                 </span>
                                             )}
                                             {!w && r > 0 && (

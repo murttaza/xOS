@@ -260,6 +260,16 @@ export const supabaseBackend: ApiBackend = {
         );
     },
 
+    savePrayers: async (date, prayersJson) => {
+        // Partial upsert: only touches prayersCompleted, so it can never
+        // clobber a journalEntry already on the row (or being saved alongside).
+        const payload = { date, prayersCompleted: prayersJson };
+        if (enqueueIfOffline({ kind: 'upsert', table: 'daily_logs', payload, onConflict: 'date,user_id' })) return;
+        return withRetry(async () => throwOnError(
+            await supabase.from('daily_logs').upsert(payload, { onConflict: 'date,user_id' })
+        ));
+    },
+
     saveJournalEntry: async (date, entry) => {
         // Upsert: update journal entry, create row with empty prayers if missing
         const { data: existing } = await supabase.from('daily_logs').select('date').eq('date', date).maybeSingle();

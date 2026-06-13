@@ -6,6 +6,14 @@ export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs))
 }
 
+/** True while any Radix dialog/alert-dialog is open. Mode-level Escape
+ *  handlers must yield to it — one Escape press closes one layer, never the
+ *  dialog AND the whole mode underneath it. */
+export function isDialogOpen(): boolean {
+    return typeof document !== 'undefined' &&
+        !!document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]');
+}
+
 export function safeJSONParse<T>(value: string | T | null | undefined, fallback: T): T {
     if (value == null) return fallback;
     if (typeof value !== 'string') return value;

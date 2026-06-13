@@ -59,3 +59,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EP_DRAFT: false
         run: npx electron-builder --publish always
+
+      # electron-builder left v5.15.0 as a draft despite EP_DRAFT=false —
+      # force-publish so auto-update actually sees the new version.
+      - name: Un-draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "v${{ steps.version.outputs.VERSION }}" --draft=false --latest

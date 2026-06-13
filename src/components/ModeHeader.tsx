@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, X, type LucideIcon } from 'lucide-react';
 import { useStore } from '../store';
 import { cn } from '../lib/utils';
+import { useIsOwner } from '../hooks/useIsOwner';
 import { Button } from './ui/button';
 import { ModeToggle } from './ModeToggle';
 import { WindowControls } from './WindowControls';
@@ -29,6 +30,9 @@ export function ModeHeader({
     onMobileBack,
 }: ModeHeaderProps) {
     const isMurtazaMode = useStore(s => s.isMurtazaMode);
+    // Same gate as App.tsx — the signature is a personal flourish, never shown
+    // to non-owner accounts even in overlay mode.
+    const isOwner = useIsOwner();
 
     return (
         <div
@@ -58,13 +62,14 @@ export function ModeHeader({
                         whileTap={{ scale: 0.98 }}
                         onClick={onGoHome}
                     >
-                        <Wordmark height={20} />
-                        {isMurtazaMode && (
+                        <Wordmark height={22} />
+                        {isMurtazaMode && isOwner && (
                             <>
                                 <span className="h-3 w-px bg-muted-foreground/20" aria-hidden="true" />
                                 <span
                                     className="text-[11px] text-muted-foreground/30 group-hover:text-muted-foreground/70 transition-colors duration-300 whitespace-nowrap"
                                     dir="rtl"
+                                    lang="ar"
                                 >
                                     مُرتضیٰ
                                 </span>

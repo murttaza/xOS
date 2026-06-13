@@ -31,6 +31,7 @@ import { DevelopmentButton } from './components/DevelopmentButton';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Wordmark } from './components/Wordmark';
 import { Popover, PopoverContent, PopoverTrigger } from './components/ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './components/ui/dialog';
 import { Button } from './components/ui/button';
 import { Switch } from './components/ui/switch';
 import { Label } from './components/ui/label';
@@ -39,7 +40,9 @@ import { showConfirm } from './components/ui/confirm-dialog';
 import { api } from './api';
 import { hasPendingOfflineWrites } from './adapters/supabase';
 import { supabase } from './lib/supabase';
-import { APP_NAME, isOwnerAccount } from './lib/brand';
+import { APP_NAME, RELEASES_URL } from './lib/brand';
+import { useIsOwner } from './hooks/useIsOwner';
+import { anchorStreakDays } from './lib/streaks';
 import { showErrorToast } from './components/ui/toast';
 import { WelcomeDialog } from './components/WelcomeDialog';
 
@@ -101,10 +104,102 @@ function DesktopSettings() {
   );
 }
 
+// The full-screen mode overlays + the transition splash, mounted once —
+// previously duplicated between the overlay-mode branch and the main branch,
+// and the two copies had already diverged (PasswordsMode gating).
+function ModeLayers() {
+  return (
+    <>
+      <Suspense><NotesMode /></Suspense>
+      <Suspense><YearMode /></Suspense>
+      <Suspense><BudgetMode /></Suspense>
+      <Suspense><FitnessMode /></Suspense>
+      {isElectron && <Suspense><PasswordsMode /></Suspense>}
+    </>
+  );
+}
+
+function TransitionSplash({ isTransitioning, isOwner }: { isTransitioning: boolean; isOwner: boolean }) {
+  return (
+    <AnimatePresence>
+      {isTransitioning && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          className="fixed inset-0 z-[9999] bg-black flex items-center justify-center no-drag pointer-events-none"
+        >
+          <motion.div
+            animate={{ opacity: [0.4, 1, 0.4], scale: [0.95, 1.05, 0.95] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            className="text-7xl text-primary drop-shadow-[0_0_15px_hsl(var(--primary)/0.6)]"
+          >
+            {isOwner ? <span lang="ar">م</span> : <Wordmark height={40} />}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+const CURRENCY_OPTIONS = ['$', '€', '£', '₨', 'AED', '₹'];
+
+function PreferenceSettings() {
+  const currencySymbol = useStore(s => s.currencySymbol);
+  const setCurrencySymbol = useStore(s => s.setCurrencySymbol);
+  const weightUnit = useStore(s => s.weightUnit);
+  const setWeightUnit = useStore(s => s.setWeightUnit);
+
+  return (
+    <div className="border-t border-border pt-3 space-y-2.5">
+      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Preferences</p>
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium">Currency</Label>
+        <div className="flex flex-wrap gap-1">
+          {CURRENCY_OPTIONS.map(c => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setCurrencySymbol(c)}
+              className={`h-7 min-w-7 px-1.5 rounded-md text-xs font-medium border transition-colors ${
+                currencySymbol === c
+                  ? 'bg-primary text-primary-foreground border-transparent'
+                  : 'bg-muted/50 text-muted-foreground border-border hover:text-foreground'
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-xs font-medium">Weight unit</Label>
+        <div className="flex gap-1">
+          {(['lb', 'kg'] as const).map(u => (
+            <button
+              key={u}
+              type="button"
+              onClick={() => setWeightUnit(u)}
+              className={`h-7 px-2.5 rounded-md text-xs font-medium border transition-colors ${
+                weightUnit === u
+                  ? 'bg-primary text-primary-foreground border-transparent'
+                  : 'bg-muted/50 text-muted-foreground border-border hover:text-foreground'
+              }`}
+            >
+              {u}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   // Grouped selectors to minimize subscription count
   const {
-    fetchTasks, fetchStats, fetchDailyLog, fetchDevItems,
+    fetchTasks, fetchStats, fetchTodayLog, fetchDevItems,
     fetchRepeatingTasks, fetchStreaks, checkMissedTasks, syncTimers,
     isMurtazaMode, setIsMurtazaMode,
     isHardcoreMode, setIsHardcoreMode,
@@ -113,7 +208,7 @@ function App() {
   } = useStore(useShallow(state => ({
     fetchTasks: state.fetchTasks,
     fetchStats: state.fetchStats,
-    fetchDailyLog: state.fetchDailyLog,
+    fetchTodayLog: state.fetchTodayLog,
     fetchDevItems: state.fetchDevItems,
     fetchRepeatingTasks: state.fetchRepeatingTasks,
     fetchStreaks: state.fetchStreaks,
@@ -132,7 +227,7 @@ function App() {
   })));
 
   const isFocusMode = useStore(state => state.isFocusMode);
-  const dailyLog = useStore(state => state.dailyLog);
+  const todayLog = useStore(state => state.todayLog);
   const isTransitioning = useStore(state => state.isTransitioning);
 
   const [_windowSize, setWindowSize] = useState<number>(0);
@@ -140,17 +235,11 @@ function App() {
   const [idlePrompt, setIdlePrompt] = useState<number | null>(null);
   const [mobileStatsOpen, setMobileStatsOpen] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
-  const [isOwner, setIsOwner] = useState(false);
-
-  const APP_VERSION = (__APP_VERSION__ || '5.0.0').split('.')[0];
-
   // Personal flourishes (Arabic signature/meem) only render for the owner's
   // account — strangers get the neutral mOS brand.
-  useEffect(() => {
-    supabase.auth.getUser()
-      .then(({ data }) => setIsOwner(isOwnerAccount(data.user?.email)))
-      .catch(() => setIsOwner(false));
-  }, []);
+  const isOwner = useIsOwner();
+
+  const APP_VERSION = (__APP_VERSION__ || '5.0.0').split('.')[0];
 
   // First-run onboarding: shown once per ACCOUNT. The flag lives in Supabase
   // user_metadata with localStorage as a fast-path cache — device-only
@@ -191,7 +280,7 @@ function App() {
     Promise.all([
       fetchTasks(),
       fetchStats(),
-      fetchDailyLog(getLocalDateString()),
+      fetchTodayLog(),
       fetchDevItems(),
       fetchRepeatingTasks(),
       fetchStreaks(),
@@ -246,8 +335,8 @@ function App() {
     syncTimers();
     fetchTasks();
     fetchStats();
-    fetchDailyLog(getLocalDateString());
-  }, [isWindowFocused, syncTimers, fetchTasks, fetchStats, fetchDailyLog]);
+    fetchTodayLog();
+  }, [isWindowFocused, syncTimers, fetchTasks, fetchStats, fetchTodayLog]);
 
   // Periodic timer sync while window is focused (cross-device, 30s interval)
   useEffect(() => {
@@ -262,15 +351,15 @@ function App() {
 
     const interval = setInterval(() => {
       const currentDate = getLocalDateString();
-      if (currentDate !== dailyLog?.date) {
-        fetchDailyLog(currentDate);
+      if (currentDate !== todayLog?.date) {
+        fetchTodayLog();
         fetchStats();
         checkMissedTasks();
       }
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [dailyLog, fetchDailyLog, fetchStats, checkMissedTasks, isWindowFocused]);
+  }, [todayLog, fetchTodayLog, fetchStats, checkMissedTasks, isWindowFocused]);
 
   // Handle Overlay Mode Transition (Electron only)
   useEffect(() => {
@@ -325,7 +414,8 @@ function App() {
       const today = getLocalDateString();
       const tasksDueToday = state.tasks.filter(t => t.dueDate === today && !t.isComplete).length;
       const totalXP = state.stats.reduce((sum, s) => sum + (s.currentXP || 0), 0);
-      const maxStreak = state.streaks.reduce((max, s) => Math.max(max, s.currentStreak || 0), 0);
+      // Live anchored days, not the stale DB counter (which only updates on edit).
+      const maxStreak = state.streaks.reduce((max, s) => Math.max(max, anchorStreakDays(s, new Date())), 0);
       const hasActiveTimer = Object.keys(state.timerStartTimes).length > 0;
       const streakAtRisk = state.streaks.some(s =>
         s.isPaused === 0 && s.currentStreak > 0 && s.lastUpdated < today
@@ -341,7 +431,7 @@ function App() {
       fetchTasks();
       fetchStats();
       syncTimers();
-      fetchDailyLog(getLocalDateString());
+      fetchTodayLog();
     });
 
     // Tray "toggle timer" — toggle the most recent task's timer
@@ -377,7 +467,7 @@ function App() {
       removeIdlePaused();
       removeIdleReturn();
     };
-  }, [fetchTasks, fetchStats, syncTimers, fetchDailyLog]);
+  }, [fetchTasks, fetchStats, syncTimers, fetchTodayLog]);
 
   useEffect(() => {
     if (!isElectron) return;
@@ -441,31 +531,8 @@ function App() {
     return (
       <ThemeProvider defaultTheme="dark" storageKey="mos-theme">
         <FocusOverlay />
-        <Suspense><NotesMode /></Suspense>
-        <Suspense><YearMode /></Suspense>
-        <Suspense><BudgetMode /></Suspense>
-        <Suspense><FitnessMode /></Suspense>
-        <Suspense><PasswordsMode /></Suspense>
-
-        <AnimatePresence>
-          {isTransitioning && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="fixed inset-0 z-[9999] bg-black flex items-center justify-center no-drag pointer-events-none"
-            >
-              <motion.div
-                animate={{ opacity: [0.4, 1, 0.4], scale: [0.95, 1.05, 0.95] }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                className="text-7xl text-primary drop-shadow-[0_0_15px_hsl(var(--primary)/0.6)]"
-              >
-                {isOwner ? <span lang="ar">م</span> : <Wordmark height={40} />}
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <ModeLayers />
+        <TransitionSplash isTransitioning={isTransitioning} isOwner={isOwner} />
       </ThemeProvider>
     )
   }
@@ -558,6 +625,8 @@ function App() {
                         />
                       </div>
 
+                      <PreferenceSettings />
+
                       {isElectron && <DesktopSettings />}
 
                       <div className="border-t border-border pt-3 space-y-2">
@@ -591,6 +660,9 @@ function App() {
                           Delete Account…
                         </Button>
                       </div>
+                      <p className="text-[10px] font-mono text-muted-foreground/50 text-center pt-1">
+                        {APP_NAME} v{__APP_VERSION__ || '5.0.0'}
+                      </p>
                     </PopoverContent>
                   </Popover>
                 )}
@@ -623,21 +695,31 @@ function App() {
                       <div>
                         <h4 className="text-sm font-semibold text-foreground mb-2">Keyboard Shortcuts</h4>
                         <div className="space-y-2">
+                          {/* Mode shortcuts are Electron globalShortcuts — the web
+                              build has no handlers for them, so don't advertise. */}
+                          {isElectron && (
+                            <>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground">Notes Mode</span>
+                                <kbd className="px-2 py-0.5 text-[10px] font-mono bg-muted rounded border border-border text-muted-foreground">Ctrl + `</kbd>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground">Year Mode</span>
+                                <kbd className="px-2 py-0.5 text-[10px] font-mono bg-muted rounded border border-border text-muted-foreground">Ctrl + Num1</kbd>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground">Budget Mode</span>
+                                <kbd className="px-2 py-0.5 text-[10px] font-mono bg-muted rounded border border-border text-muted-foreground">Ctrl + Num2</kbd>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-muted-foreground">Fitness Mode</span>
+                                <kbd className="px-2 py-0.5 text-[10px] font-mono bg-muted rounded border border-border text-muted-foreground">Ctrl + Num3</kbd>
+                              </div>
+                            </>
+                          )}
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">Notes Mode</span>
-                            <kbd className="px-2 py-0.5 text-[10px] font-mono bg-muted rounded border border-border text-muted-foreground">Ctrl + `</kbd>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">Year Mode</span>
-                            <kbd className="px-2 py-0.5 text-[10px] font-mono bg-muted rounded border border-border text-muted-foreground">Ctrl + Num1</kbd>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">Budget Mode</span>
-                            <kbd className="px-2 py-0.5 text-[10px] font-mono bg-muted rounded border border-border text-muted-foreground">Ctrl + Num2</kbd>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">Fitness Mode</span>
-                            <kbd className="px-2 py-0.5 text-[10px] font-mono bg-muted rounded border border-border text-muted-foreground">Ctrl + Num3</kbd>
+                            <span className="text-xs text-muted-foreground">New Task</span>
+                            <kbd className="px-2 py-0.5 text-[10px] font-mono bg-muted rounded border border-border text-muted-foreground">Ctrl + N</kbd>
                           </div>
                           {isElectron && (
                             <div className="flex items-center justify-between">
@@ -675,7 +757,7 @@ function App() {
                       {!isElectron && (
                         <div className="border-t border-border pt-3 hidden sm:block">
                           <a
-                            href="https://github.com/murttaza/xOS/releases/latest"
+                            href={RELEASES_URL}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -738,6 +820,12 @@ function App() {
               </div>
             </motion.header>
 
+            {/* Mobile prayers — the header pills are desktop-only, and prayers
+                are toggled from a phone more than anywhere else */}
+            <div className="lg:hidden flex justify-center no-drag -mt-1">
+              <HeaderPrayers compact />
+            </div>
+
             {/* Main Grid */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -751,6 +839,8 @@ function App() {
                 <div className={`lg:hidden ${isMurtazaMode ? 'bg-background/80 border border-border rounded-2xl' : 'glass-card rounded-2xl'} transition-all duration-150 no-drag overflow-hidden`}>
                   <button
                     onClick={() => setMobileStatsOpen(prev => !prev)}
+                    aria-expanded={mobileStatsOpen}
+                    aria-label="Stats and streaks"
                     className="w-full flex items-center justify-between px-4 py-3"
                   >
                     <div className="flex items-center gap-2">
@@ -808,31 +898,8 @@ function App() {
           </div>
         </div>
       )}
-      <Suspense><NotesMode /></Suspense>
-      <Suspense><YearMode /></Suspense>
-      <Suspense><BudgetMode /></Suspense>
-      <Suspense><FitnessMode /></Suspense>
-      {isElectron && <Suspense><PasswordsMode /></Suspense>}
-
-      <AnimatePresence>
-        {isTransitioning && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-[9999] bg-black flex items-center justify-center no-drag pointer-events-none"
-          >
-            <motion.div
-              animate={{ opacity: [0.4, 1, 0.4], scale: [0.95, 1.05, 0.95] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-              className="text-7xl text-primary drop-shadow-[0_0_15px_hsl(var(--primary)/0.6)]"
-            >
-              {isOwner ? <span lang="ar">م</span> : <Wordmark height={40} />}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <ModeLayers />
+      <TransitionSplash isTransitioning={isTransitioning} isOwner={isOwner} />
 
       {/* First-run onboarding */}
       <WelcomeDialog
@@ -843,59 +910,58 @@ function App() {
           supabase.auth.updateUser({ data: { mos_welcomed: true } })
             .catch(() => { /* best effort — the local flag covers this device */ });
         }}
+        onStartTask={() => {
+          // Deliver on the CTA's promise: open the new-task dialog.
+          window.dispatchEvent(new CustomEvent('mos:new-task'));
+        }}
       />
 
-      {/* Idle Return Prompt */}
-      <AnimatePresence>
-        {idlePrompt !== null && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm flex items-center justify-center no-drag"
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-card border border-border rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl"
+      {/* Idle Return Prompt — Radix Dialog (focus trap, Escape = keep time) */}
+      <Dialog open={idlePrompt !== null} onOpenChange={(v) => {
+        if (!v) {
+          setIdlePrompt(null);
+          if (isElectron) window.ipcRenderer.send('idle:return-response', 'keep');
+        }
+      }}>
+        <DialogContent className="max-w-sm z-[10000]">
+          <DialogHeader>
+            <DialogTitle>Welcome back!</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            You were away for {idlePrompt} minute{idlePrompt !== 1 ? 's' : ''}.
+            Your timer kept running. Keep the idle time, or trim it off and stop?
+          </p>
+          <div className="flex gap-3 pt-1">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => {
+                // Keep — timer continues, idle minutes included
+                setIdlePrompt(null);
+                if (isElectron) window.ipcRenderer.send('idle:return-response', 'keep');
+              }}
             >
-              <h3 className="text-lg font-semibold text-foreground mb-2">Welcome back!</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                You were away for {idlePrompt} minute{idlePrompt !== 1 ? 's' : ''}.
-                Your timer was still running. What would you like to do?
-              </p>
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => {
-                    // Keep — timer continues, do nothing special
-                    setIdlePrompt(null);
-                    if (isElectron) window.ipcRenderer.send('idle:return-response', 'keep');
-                  }}
-                >
-                  Keep Time
-                </Button>
-                <Button
-                  className="flex-1"
-                  onClick={() => {
-                    // Discard — stop all timers without saving the idle period
-                    const state = useStore.getState();
-                    Object.keys(state.timerStartTimes).forEach(id => {
-                      state.stopTaskTimer(Number(id));
-                    });
-                    setIdlePrompt(null);
-                    if (isElectron) window.ipcRenderer.send('idle:return-response', 'discard');
-                  }}
-                >
-                  Discard Idle Time
-                </Button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              Keep Time
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={() => {
+                // Stop every timer, trimming the idle stretch off the end so
+                // the recorded session covers only the time before idling.
+                const idleSeconds = (idlePrompt ?? 0) * 60;
+                const state = useStore.getState();
+                Object.keys(state.timerStartTimes).forEach(id => {
+                  state.stopTaskTimer(Number(id), { discardSeconds: idleSeconds });
+                });
+                setIdlePrompt(null);
+                if (isElectron) window.ipcRenderer.send('idle:return-response', 'discard');
+              }}
+            >
+              Discard Idle Time
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </ThemeProvider >
   );
 }

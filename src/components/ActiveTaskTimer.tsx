@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Pause, Square, Maximize2, ChevronDown, ChevronUp } from "lucide-react";
+import { Square, Maximize2, ChevronDown, ChevronUp } from "lucide-react";
 import { useStore } from "@/store";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -18,7 +18,6 @@ export function ActiveTaskTimer() {
     const currentSubjectId = useStore(state => state.currentSubjectId);
     const setIsFocusMode = useStore(state => state.setIsFocusMode);
     const stopTaskTimer = useStore(state => state.stopTaskTimer);
-    const toggleTaskTimer = useStore(state => state.toggleTaskTimer);
     const [isMinimized, setIsMinimized] = useState(false);
 
     // Memoize task map for O(1) lookups
@@ -109,6 +108,9 @@ export function ActiveTaskTimer() {
                                         {formatTime(duration)}
                                     </div>
 
+                                    {/* No pause control: the store has no pause —
+                                        the old pause button stopped AND recorded
+                                        the session, identical to Stop. */}
                                     <div className="flex gap-1 sm:gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                                         <Button
                                             variant="ghost"
@@ -116,30 +118,27 @@ export function ActiveTaskTimer() {
                                             className="h-11 w-11 sm:h-12 sm:w-12 rounded-full hover:bg-muted transition-all hover:scale-[1.08] active:scale-[0.92]"
                                             onClick={() => setIsMinimized(true)}
                                             title="Minimize timer"
+                                            aria-label="Minimize timer"
                                         >
                                             <ChevronDown className="h-4 w-4 sm:h-4 sm:w-4" />
                                         </Button>
                                         <Button
                                             variant="outline"
                                             size="icon"
-                                            className="h-11 w-11 sm:h-12 sm:w-12 rounded-full border-2 border-primary/30 bg-primary/5 hover:bg-primary/15 hover:text-primary hover:border-primary/50 transition-all shadow-[0_0_12px_-3px_hsl(var(--primary)/0.3)] hover:scale-[1.08] active:scale-[0.92]"
-                                            onClick={() => toggleTaskTimer(taskId)}
-                                        >
-                                            <Pause className="h-4 w-4 sm:h-5 sm:w-5" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-11 w-11 sm:h-12 sm:w-12 rounded-full hover:bg-destructive/20 dark:hover:bg-destructive/15 hover:text-destructive transition-all hover:scale-[1.08] active:scale-[0.92]"
+                                            className="h-11 w-11 sm:h-12 sm:w-12 rounded-full border-2 border-primary/30 bg-primary/5 hover:bg-destructive/15 hover:text-destructive hover:border-destructive/40 transition-all shadow-[0_0_12px_-3px_hsl(var(--primary)/0.3)] hover:scale-[1.08] active:scale-[0.92]"
                                             onClick={() => stopTaskTimer(taskId)}
+                                            title="Stop & save session"
+                                            aria-label="Stop timer and save session"
                                         >
-                                            <Square className="h-4 w-4 sm:h-4 sm:w-4" />
+                                            <Square className="h-4 w-4 sm:h-5 sm:w-5" />
                                         </Button>
                                         <Button
                                             variant="ghost"
                                             size="icon"
                                             className="h-11 w-11 sm:h-12 sm:w-12 rounded-full hover:bg-muted transition-all hover:scale-[1.08] active:scale-[0.92] hidden sm:flex"
                                             onClick={() => setIsFocusMode(true)}
+                                            title="Enter Focus Mode"
+                                            aria-label="Enter Focus Mode"
                                         >
                                             <Maximize2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                         </Button>

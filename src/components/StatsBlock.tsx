@@ -89,7 +89,9 @@ export function StatsBlock() {
 
                 <div className="flex items-center gap-1.5 shrink-0">
                     {isManaging && (
-                        <div className="flex items-center gap-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                        // Always visible while managing — hover-reveal made these
+                        // unreachable on touch.
+                        <div className="flex items-center gap-0">
                             <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={() => openEditDialog(stat)} aria-label={`Rename ${stat.statName}`} title="Rename">
                                 <Edit2 className="h-3 w-3" />
                             </Button>
@@ -108,13 +110,14 @@ export function StatsBlock() {
 
     return (
         <>
-            {/* Desktop: controls bar */}
-            <div className="hidden lg:flex items-center justify-end gap-0.5 mb-1.5">
-                <Button variant="ghost" size="icon" onClick={() => setIsManaging(prev => !prev)} aria-label="Manage stats" title="Manage stats" className={cn("h-6 w-6 rounded-full transition-opacity", isManaging ? "opacity-80 text-primary" : "opacity-0 group-hover/stats:opacity-40 hover:!opacity-80")}>
-                    <Settings2 className="h-3 w-3" />
+            {/* Controls bar — visible at rest on touch (no hover to reveal them),
+                hover-revealed on desktop where the quieter look works */}
+            <div className="flex items-center justify-end gap-0.5 mb-1.5">
+                <Button variant="ghost" size="icon" onClick={() => setIsManaging(prev => !prev)} aria-label="Manage stats" title="Manage stats" className={cn("h-7 w-7 lg:h-6 lg:w-6 rounded-full transition-opacity", isManaging ? "opacity-80 text-primary" : "opacity-40 lg:opacity-0 lg:group-hover/stats:opacity-40 hover:!opacity-80")}>
+                    <Settings2 className="h-3.5 w-3.5 lg:h-3 lg:w-3" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={openAddDialog} aria-label="Add stat" title="Add stat" className="h-6 w-6 rounded-full opacity-0 group-hover/stats:opacity-40 hover:!opacity-80 transition-opacity">
-                    <Plus className="h-3 w-3" />
+                <Button variant="ghost" size="icon" onClick={openAddDialog} aria-label="Add stat" title="Add stat" className="h-7 w-7 lg:h-6 lg:w-6 rounded-full opacity-40 lg:opacity-0 lg:group-hover/stats:opacity-40 hover:!opacity-80 transition-opacity">
+                    <Plus className="h-3.5 w-3.5 lg:h-3 lg:w-3" />
                 </Button>
             </div>
 
@@ -139,7 +142,7 @@ export function StatsBlock() {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                        <Button onClick={handleSave} className="bg-primary text-primary-foreground hover:bg-primary/90">Save</Button>
+                        <Button onClick={handleSave} disabled={!newStatName.trim()} className="bg-primary text-primary-foreground hover:bg-primary/90">Save</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

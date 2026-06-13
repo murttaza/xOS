@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Link2, Plus, X, CheckCircle2, Circle, Search, ListTodo } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { showErrorToast } from '@/components/ui/toast';
 
 interface LinkedTasksProps {
     note: Note;
@@ -45,6 +46,7 @@ export function LinkedTasks({ note }: LinkedTasksProps) {
             await updateTask({ ...task, noteId: note.id ?? null });
         } catch (e) {
             console.error('Failed to link task to note', e);
+            showErrorToast("Couldn't link the task.");
         }
         setIsPickerOpen(false);
         setSearch('');
@@ -55,6 +57,7 @@ export function LinkedTasks({ note }: LinkedTasksProps) {
             await updateTask({ ...task, noteId: null });
         } catch (e) {
             console.error('Failed to unlink task from note', e);
+            showErrorToast("Couldn't unlink the task.");
         }
     };
 
@@ -67,7 +70,9 @@ export function LinkedTasks({ note }: LinkedTasksProps) {
                 dueDate: '',
                 difficulty: 1,
                 isComplete: 0,
-                statTarget: ['Social'],
+                // No stat — a hardcoded one silently farmed Social XP from
+                // every note-spawned task.
+                statTarget: [],
                 labels: [],
                 subtasks: [],
                 noteId: note.id,
@@ -75,6 +80,7 @@ export function LinkedTasks({ note }: LinkedTasksProps) {
             });
         } catch (e) {
             console.error('Failed to create linked task', e);
+            showErrorToast("Couldn't create the task.");
         }
     };
 

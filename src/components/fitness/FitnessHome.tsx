@@ -5,7 +5,9 @@ import { motion } from 'framer-motion';
 import { Play, Check, Minus, ChevronRight, Calendar, TrendingUp, Dumbbell, FileText, ArrowRightLeft } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+// Full week — programs can schedule weekend days (day_of_week goes to 7), and
+// the old Mon–Fri strip silently hid those sessions.
+const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DAY_NAMES_SHORT: Record<number, string> = { 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun' };
 
 export function FitnessHome() {
@@ -25,6 +27,7 @@ export function FitnessHome() {
     const setFitnessTab = useStore(s => s.setFitnessTab);
     const fetchSessionDetail = useStore(s => s.fetchSessionDetail);
     const setShowProgramPicker = useStore(s => s.setShowProgramPicker);
+    const weightUnit = useStore(s => s.weightUnit);
 
     const schedulingMode = getSchedulingMode();
     const isSequential = schedulingMode === 'sequential';
@@ -50,7 +53,11 @@ export function FitnessHome() {
 
     const latestWeight = bodyMetrics.find(m => m.body_weight);
     const completedThisWeek = weekSessions.filter(s => s.status === 'completed').length;
-    const recentSessions = sessions.filter(s => s.status === 'completed').slice(-3);
+    // Most recent first, regardless of how the store happens to be ordered.
+    const recentSessions = sessions
+        .filter(s => s.status === 'completed')
+        .sort((a, b) => b.scheduled_date.localeCompare(a.scheduled_date))
+        .slice(0, 3);
 
     const handleTodayClick = async () => {
         if (todaySession) {
@@ -180,11 +187,13 @@ export function FitnessHome() {
                         })}
                     </div>
                 ) : (
-                    <div className="grid grid-cols-5 gap-2">
+                    <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
                         {DAY_LABELS.map((label, i) => {
                             const session = weekSessions.find(s => {
                                 const d = new Date(s.scheduled_date + 'T00:00:00');
-                                return d.getDay() === (i === 0 ? 1 : i + 1); // Mon=1
+                                // Mon..Sun strip → JS getDay() (Sun=0): Mon=1 … Sat=6, Sun=0
+                                const jsDay = i === 6 ? 0 : i + 1;
+                                return d.getDay() === jsDay;
                             });
                             const isToday = session?.scheduled_date === todayStr;
                             const status = session?.status || 'rest';
@@ -279,7 +288,7 @@ export function FitnessHome() {
             >
                 <div className="border border-border rounded-xl p-3 text-center space-y-1">
                     <TrendingUp className="h-4 w-4 mx-auto text-muted-foreground" />
-                    <p className="text-lg font-bold">{completedThisWeek}/5</p>
+                    <p className="text-lg font-bold">{completedThisWeek}/{weekSessions.length || 0}</p>
                     <p className="text-[10px] text-muted-foreground">This week</p>
                 </div>
                 <div className="border border-border rounded-xl p-3 text-center space-y-1">
@@ -290,7 +299,7 @@ export function FitnessHome() {
                 <div className="border border-border rounded-xl p-3 text-center space-y-1">
                     <TrendingUp className="h-4 w-4 mx-auto text-muted-foreground" />
                     <p className="text-lg font-bold">{latestWeight?.body_weight ? `${latestWeight.body_weight}` : '—'}</p>
-                    <p className="text-[10px] text-muted-foreground">{latestWeight?.body_weight ? 'lb' : 'No weight'}</p>
+                    <p className="text-[10px] text-muted-foreground">{latestWeight?.body_weight ? weightUnit : 'No weight'}</p>
                 </div>
             </motion.div>
 

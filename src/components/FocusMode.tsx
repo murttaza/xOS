@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Square, Minimize2, RotateCcw } from "lucide-react";
+// (Pause here is the POMODORO pause — the session timer itself has no pause;
+// see the store: stopping is the only way a session ends.)
 import { useStore } from "@/store";
 import { motion } from "framer-motion";
 import { WindowControls } from "@/components/WindowControls";
@@ -13,8 +15,10 @@ import { cn } from "@/lib/utils";
 import { isElectron } from "@/lib/platform";
 
 const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
+    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
 
@@ -23,12 +27,11 @@ export function FocusMode() {
     const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
     const {
-        stopTaskTimer, setIsFocusMode, toggleTaskTimer,
+        stopTaskTimer, setIsFocusMode,
         setPomodoroTime, setIsPomodoroRunning,
     } = useStore(useShallow(state => ({
         stopTaskTimer: state.stopTaskTimer,
         setIsFocusMode: state.setIsFocusMode,
-        toggleTaskTimer: state.toggleTaskTimer,
         setPomodoroTime: state.setPomodoroTime,
         setIsPomodoroRunning: state.setIsPomodoroRunning,
     })));
@@ -51,6 +54,16 @@ export function FocusMode() {
 
     // Pomodoro presets in minutes
     const POMODORO_PRESETS = [15, 25, 50];
+
+    // Ask for notification permission on entry, not at the moment the pomodoro
+    // completes — asking then means that first completion is always missed.
+    useEffect(() => {
+        try {
+            if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        } catch { /* notifications unavailable (e.g. iOS PWA without permission) */ }
+    }, []);
 
     // Pomodoro timer — wall-clock anchored (syncPomodoro recomputes remaining
     // from the persisted end timestamp), so background throttling can't make
@@ -175,24 +188,21 @@ export function FocusMode() {
                         <p className="text-sm sm:text-xl text-muted-foreground font-light">{Array.isArray(activeTask.statTarget) ? activeTask.statTarget.join(", ") : activeTask.statTarget} • Difficulty: {activeTask.difficulty}</p>
                     </div>
 
-                    <div className={`text-[5rem] sm:text-[8rem] lg:text-[15rem] font-bold leading-none tracking-tighter tabular-nums text-primary drop-shadow-[0_0_30px_rgba(var(--primary),0.4)] ${isMurtazaMode && isElectron ? 'border border-border rounded-3xl px-8 sm:px-12 py-3 sm:py-4 bg-background/20 backdrop-blur-sm' : ''}`}>
+                    <div className={`text-[5rem] sm:text-[8rem] lg:text-[15rem] font-bold leading-none tracking-tighter tabular-nums text-primary drop-shadow-[0_0_30px_hsl(var(--primary)/0.4)] ${isMurtazaMode && isElectron ? 'border border-border rounded-3xl px-8 sm:px-12 py-3 sm:py-4 bg-background/20 backdrop-blur-sm' : ''}`}>
                         {formatTime(textDuration)}
                     </div>
 
+                    {/* One honest control: stop & save. The old pause button here
+                        recorded the session and stranded the user on a dead
+                        "No Active Task" screen. */}
                     <div className="flex gap-4 sm:gap-8 justify-center no-drag">
                         <Button
                             variant="outline"
                             size="lg"
-                            className="h-16 w-16 sm:h-24 sm:w-24 lg:h-32 lg:w-32 rounded-full border-2 border-primary/20 hover:bg-primary/10 hover:border-primary/50 transition-all duration-150"
-                            onClick={() => toggleTaskTimer(activeTaskId!)}
-                        >
-                            <Pause className="h-6 w-6 sm:h-10 sm:w-10 lg:h-12 lg:w-12" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="lg"
-                            className="h-16 w-16 sm:h-24 sm:w-24 lg:h-32 lg:w-32 rounded-full hover:bg-destructive/20 hover:text-destructive transition-all duration-150"
+                            className="h-16 w-16 sm:h-24 sm:w-24 lg:h-32 lg:w-32 rounded-full border-2 border-primary/20 hover:bg-destructive/15 hover:text-destructive hover:border-destructive/40 transition-all duration-150"
                             onClick={handleStop}
+                            title="Stop & save session"
+                            aria-label="Stop timer, save session, and exit Focus Mode"
                         >
                             <Square className="h-6 w-6 sm:h-10 sm:w-10 lg:h-12 lg:w-12" />
                         </Button>

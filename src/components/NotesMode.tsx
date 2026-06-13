@@ -8,7 +8,8 @@ import { Input } from './ui/input';
 import { showConfirm } from './ui/confirm-dialog';
 import { showErrorToast } from './ui/toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
-import { cn } from '../lib/utils';
+import { cn, isDialogOpen } from '../lib/utils';
+import { libraryOffset, libraryIndexOf, isInLibrary } from '../lib/library';
 import { ModeHeader } from './ModeHeader';
 
 import { BookShelf } from './notes/BookShelf';
@@ -26,7 +27,10 @@ const COLORS = [
 
 const getRandomColor = () => COLORS[Math.floor(Math.random() * COLORS.length)];
 
-const TOTAL_SPINES = 300;
+// Remembers which subject is the Quick Notes book, so renaming it can't break
+// the Zap button (which previously matched the literal title and would have
+// silently created a duplicate).
+const QUICK_NOTES_KEY = 'mos-quick-notes-subject-id';
 
 // --- BookView (internal composite) ---
 
@@ -156,6 +160,13 @@ const BookView = ({ subject, onClose }: { subject: Subject; onClose: () => void 
                 try {
                     await updateNote(noteToSave);
                     draftsRef.current.delete(noteId);
+                    // If nothing changed while the save was in flight, clear the
+                    // draft so the editor's "Saved" indicator can show again.
+                    const live = activeStateRef.current.editingNote;
+                    if ((live.title ?? noteToSave.title) === noteToSave.title &&
+                        (live.content ?? noteToSave.content) === noteToSave.content) {
+                        setEditingNote({});
+                    }
                 } catch {
                     // Store already toasted; the draft stays for recovery.
                 }
@@ -323,15 +334,25 @@ export const NotesMode = () => {
         return () => clearTimeout(timeout);
     }, [globalSearch, searchNotes]);
 
+    // Escape closes ONE layer per press: dialog (Radix handles it) → quick
+    // notes → open book → the mode itself.
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && isNotesMode) {
-                toggleNotesMode();
+            if (e.key !== 'Escape' || !isNotesMode || e.defaultPrevented) return;
+            if (isDialogOpen()) return;
+            if (quickNotesSubjectId) {
+                setQuickNotesSubjectId(null);
+                return;
             }
+            if (currentSubjectId) {
+                closeSubject();
+                return;
+            }
+            toggleNotesMode();
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isNotesMode, toggleNotesMode]);
+    }, [isNotesMode, toggleNotesMode, quickNotesSubjectId, currentSubjectId, closeSubject]);
 
 
     const currentSubject = useMemo(() => subjects.find(s => s.id === currentSubjectId), [subjects, currentSubjectId]);
@@ -340,28 +361,28 @@ export const NotesMode = () => {
         e.preventDefault();
         if (!newSubjectTitle.trim()) return;
 
-        const libraryOffset = currentLibraryIndex * TOTAL_SPINES;
-
         await createSubject({
             title: newSubjectTitle,
             color: getRandomColor(),
-            orderIndex: libraryOffset + creatingSubjectIndex
+            orderIndex: libraryOffset(currentLibraryIndex) + creatingSubjectIndex
         });
         setNewSubjectTitle('');
         setIsCreatingSubject(false);
     };
 
     const handleDeleteLibrary = async () => {
+        const count = subjects.filter(s => isInLibrary(s.orderIndex, currentLibraryIndex)).length;
         const ok = await showConfirm({
             title: 'Delete library',
-            message: 'Are you sure you want to delete this entire library? All books and notes within it will be lost.',
+            message: count > 0
+                ? `Delete this entire library? Its ${count} book${count === 1 ? '' : 's'} and all their notes will be lost.`
+                : 'Delete this empty library?',
             confirmLabel: 'Delete library',
             destructive: true,
         });
         if (ok) {
-            const libraryOffset = currentLibraryIndex * TOTAL_SPINES;
             // Identify subjects in this library
-            const subjectsToDelete = subjects.filter(s => s.orderIndex >= libraryOffset && s.orderIndex < libraryOffset + TOTAL_SPINES);
+            const subjectsToDelete = subjects.filter(s => isInLibrary(s.orderIndex, currentLibraryIndex));
 
             // Delete them all
             for (const sub of subjectsToDelete) {
@@ -381,14 +402,18 @@ export const NotesMode = () => {
     };
 
     const handleOpenQuickNotes = async () => {
-        let quickNotes = subjects.find(s => s.title === 'Quick Notes');
+        // Resolve by pinned id first, title as fallback, create as last resort.
+        const pinnedId = Number(localStorage.getItem(QUICK_NOTES_KEY)) || null;
+        let quickNotes = (pinnedId && subjects.find(s => s.id === pinnedId))
+            || subjects.find(s => s.title.trim().toLowerCase() === 'quick notes');
         if (!quickNotes) {
             await createSubject({ title: 'Quick Notes', color: '#ef4444', orderIndex: 0 });
             await fetchSubjects();
             const updated = useStore.getState().subjects;
-            quickNotes = updated.find(s => s.title === 'Quick Notes');
+            quickNotes = updated.find(s => s.title.trim().toLowerCase() === 'quick notes');
         }
         if (quickNotes?.id) {
+            try { localStorage.setItem(QUICK_NOTES_KEY, String(quickNotes.id)); } catch { /* best effort */ }
             setQuickNotesSubjectId(quickNotes.id);
         }
     };
@@ -396,7 +421,7 @@ export const NotesMode = () => {
     // Only show library tabs for libraries that actually contain subjects (plus current)
     const libraryIndicesWithSubjects = useMemo(() => {
         const libs = new Set<number>();
-        subjects.forEach(s => libs.add(Math.floor(s.orderIndex / TOTAL_SPINES)));
+        subjects.forEach(s => libs.add(libraryIndexOf(s.orderIndex)));
         // Always include library 0 so there's at least one tab
         libs.add(0);
         // Include the currently viewed library
@@ -479,7 +504,7 @@ export const NotesMode = () => {
                                     />
                                     <div className="flex justify-end gap-2">
                                         <Button type="button" variant="ghost" onClick={() => setIsCreatingSubject(false)}>Cancel</Button>
-                                        <Button type="submit" variant="destructive">Create Book</Button>
+                                        <Button type="submit">Create Book</Button>
                                     </div>
                                 </form>
                             </DialogContent>

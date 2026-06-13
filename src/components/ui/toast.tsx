@@ -1,27 +1,35 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, X } from 'lucide-react';
+
+type ToastKind = 'error' | 'success';
 
 interface Toast {
     id: number;
     message: string;
+    kind: ToastKind;
 }
 
-let _addToast: ((message: string) => void) | null = null;
+let _addToast: ((message: string, kind: ToastKind) => void) | null = null;
 let _nextId = 0;
 
 /** Show an error toast from anywhere (no hook required) */
 export function showErrorToast(message: string) {
-    _addToast?.(message);
+    _addToast?.(message, 'error');
+}
+
+/** Show a success toast from anywhere (no hook required) */
+export function showSuccessToast(message: string) {
+    _addToast?.(message, 'success');
 }
 
 export function ToastContainer() {
     const [toasts, setToasts] = useState<Toast[]>([]);
 
-    const addToast = useCallback((message: string) => {
+    const addToast = useCallback((message: string, kind: ToastKind) => {
         const id = _nextId++;
-        setToasts(prev => [...prev.slice(-4), { id, message }]); // keep max 5
-        setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 5000);
+        setToasts(prev => [...prev.slice(-4), { id, message, kind }]); // keep max 5
+        setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), kind === 'success' ? 3000 : 5000);
     }, []);
 
     useEffect(() => {
@@ -38,9 +46,13 @@ export function ToastContainer() {
                         initial={{ opacity: 0, y: 20, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                        className="flex items-start gap-2 bg-destructive/90 text-destructive-foreground text-sm rounded-lg px-3 py-2.5 shadow-lg backdrop-blur-sm"
+                        className={t.kind === 'success'
+                            ? "flex items-start gap-2 bg-secondary/95 text-foreground border border-border/60 text-sm rounded-lg px-3 py-2.5 shadow-lg backdrop-blur-sm"
+                            : "flex items-start gap-2 bg-destructive/90 text-destructive-foreground text-sm rounded-lg px-3 py-2.5 shadow-lg backdrop-blur-sm"}
                     >
-                        <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                        {t.kind === 'success'
+                            ? <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-emerald-400" />
+                            : <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />}
                         <span className="flex-1">{t.message}</span>
                         <button
                             onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))}

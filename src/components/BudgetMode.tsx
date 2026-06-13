@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { Transaction } from '../types';
-import { cn } from '../lib/utils';
+import { cn, isDialogOpen } from '../lib/utils';
 import { Wallet, Plus } from 'lucide-react';
 import { Button } from './ui/button';
+import { showConfirm } from './ui/confirm-dialog';
+import { formatAmount } from '../lib/money';
 import { ModeHeader } from './ModeHeader';
 import { ModeLoading } from './ui/mode-loading';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
@@ -64,9 +66,9 @@ export function BudgetMode() {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && isBudgetMode) {
-                toggleBudgetMode();
-            }
+            if (e.key !== 'Escape' || !isBudgetMode || e.defaultPrevented) return;
+            if (isDialogOpen()) return; // a dialog owns this Escape press
+            toggleBudgetMode();
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
@@ -89,6 +91,22 @@ export function BudgetMode() {
     const handleNewTx = () => {
         setEditingTx(null);
         setTxDialogOpen(true);
+    };
+
+    // Financial records get a confirm — the delete sits on a hover icon.
+    const handleDeleteTx = async (id: number) => {
+        const tx = transactions.find(t => t.id === id);
+        const currency = useStore.getState().currencySymbol;
+        const label = tx
+            ? `this ${tx.isIncome ? 'income' : 'expense'} of ${currency}${formatAmount(Number(tx.amount))}${tx.categoryName ? ` (${tx.categoryName})` : ''}`
+            : 'this transaction';
+        const ok = await showConfirm({
+            title: 'Delete transaction',
+            message: `Delete ${label}? This can't be undone.`,
+            confirmLabel: 'Delete',
+            destructive: true,
+        });
+        if (ok) deleteTransaction(id);
     };
 
     return (
@@ -152,14 +170,17 @@ export function BudgetMode() {
                                     filter={budgetFilter}
                                     onFilterChange={setBudgetFilter}
                                     onEdit={handleEditTx}
-                                    onDelete={deleteTransaction}
+                                    onDelete={handleDeleteTx}
                                     onAdd={handleNewTx}
                                 />
                             </div>
 
                             {/* Right: Charts */}
                             <div className="col-span-3 overflow-y-auto no-scrollbar">
-                                <BudgetCharts transactions={transactions} />
+                                <BudgetCharts
+                                    transactions={transactions}
+                                    onSelectCategory={(categoryId) => setBudgetFilter({ type: 'expense', categoryId })}
+                                />
                             </div>
                         </div>
 
@@ -177,7 +198,10 @@ export function BudgetMode() {
                                         transactions={transactions}
                                         budgetTargets={budgetTargets}
                                     />
-                                    <BudgetCharts transactions={transactions} />
+                                    <BudgetCharts
+                                        transactions={transactions}
+                                        onSelectCategory={(categoryId) => setBudgetFilter({ type: 'expense', categoryId })}
+                                    />
                                 </TabsContent>
 
                                 <TabsContent value="transactions" className="flex-1 overflow-hidden p-4 mobile-safe-bottom">
@@ -187,7 +211,7 @@ export function BudgetMode() {
                                         filter={budgetFilter}
                                         onFilterChange={setBudgetFilter}
                                         onEdit={handleEditTx}
-                                        onDelete={deleteTransaction}
+                                        onDelete={handleDeleteTx}
                                         onAdd={handleNewTx}
                                     />
                                 </TabsContent>

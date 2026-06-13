@@ -5,11 +5,12 @@ import { useStore } from '../store';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
-import { getLocalDateString } from '../lib/utils';
+import { getLocalDateString, isDialogOpen } from '../lib/utils';
 import { anchorStreakDays } from '../lib/streaks';
 import { CalendarDays, Pause, Play, Trash2, RotateCcw, Plus, Edit } from 'lucide-react';
 import { Streak } from '../types';
 import { ModeHeader } from './ModeHeader';
+import { showConfirm } from './ui/confirm-dialog';
 
 const StreakItem = memo(function StreakItem({ streak, now, updateStreak, deleteStreak }: {
     streak: Streak;
@@ -85,8 +86,17 @@ const StreakItem = memo(function StreakItem({ streak, now, updateStreak, deleteS
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => updateStreak({ ...streak, currentStreak: 0, lastUpdated: new Date().toISOString(), createdAt: new Date().toISOString() })}
+                                onClick={async () => {
+                                    const ok = await showConfirm({
+                                        title: 'Reset streak',
+                                        message: `Reset "${streak.title}" to zero? The current ${effectiveDaysPassed}-day count can't be recovered.`,
+                                        confirmLabel: 'Reset',
+                                        destructive: true,
+                                    });
+                                    if (ok) updateStreak({ ...streak, currentStreak: 0, lastUpdated: new Date().toISOString(), createdAt: new Date().toISOString() });
+                                }}
                                 title="Reset Streak"
+                                aria-label={`Reset streak ${streak.title}`}
                                 className="h-10 w-10 sm:h-8 sm:w-8 rounded-full hover:bg-muted"
                             >
                                 <RotateCcw className="h-4 w-4" />
@@ -121,8 +131,18 @@ const StreakItem = memo(function StreakItem({ streak, now, updateStreak, deleteS
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => typeof streak.id === 'number' && deleteStreak(streak.id)}
+                                onClick={async () => {
+                                    if (typeof streak.id !== 'number') return;
+                                    const ok = await showConfirm({
+                                        title: 'Delete streak',
+                                        message: `Delete "${streak.title}" (${effectiveDaysPassed} days)? This can't be undone.`,
+                                        confirmLabel: 'Delete',
+                                        destructive: true,
+                                    });
+                                    if (ok) deleteStreak(streak.id);
+                                }}
                                 title="Delete Streak"
+                                aria-label={`Delete streak ${streak.title}`}
                                 className="h-10 w-10 sm:h-8 sm:w-8 rounded-full hover:bg-red-500/20 hover:text-red-400 text-muted-foreground"
                             >
                                 <Trash2 className="h-4 w-4" />
@@ -158,11 +178,13 @@ export function YearMode() {
     const [newStreakTitle, setNewStreakTitle] = useState('');
     const [now, setNow] = useState(new Date());
 
-    // Single timer for all streaks — only runs when YearMode is visible and at least one streak is active
+    // Single timer for all streaks — only runs when YearMode is visible and at
+    // least one streak is active. 60s granularity: the UI shows days + hours,
+    // so a 1s tick was re-rendering every card for nothing.
     const hasActiveStreaks = streaks?.some(s => !s.isPaused) ?? false;
     useEffect(() => {
         if (!isYearMode || !hasActiveStreaks) return;
-        const interval = setInterval(() => setNow(new Date()), 1000);
+        const interval = setInterval(() => setNow(new Date()), 60000);
         return () => clearInterval(interval);
     }, [isYearMode, hasActiveStreaks]);
 
@@ -174,9 +196,9 @@ export function YearMode() {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && isYearMode) {
-                toggleYearMode();
-            }
+            if (e.key !== 'Escape' || !isYearMode || e.defaultPrevented) return;
+            if (isDialogOpen()) return; // a dialog owns this Escape press
+            toggleYearMode();
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
@@ -306,9 +328,10 @@ export function YearMode() {
 
                             <div className="w-full max-w-2xl flex flex-col lg:max-h-full min-h-0 relative z-10">
                                 <div className="flex justify-end mb-4 sm:mb-8 w-full shrink-0">
-                                    <form onSubmit={handleAddStreak} className="group flex items-center w-full sm:w-auto">
-                                        {/* Mobile: always visible input */}
-                                        <div className="flex-1 sm:w-0 sm:opacity-0 sm:group-hover:w-[400px] sm:focus-within:w-[400px] sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-all duration-150 ease-out overflow-hidden pr-2">
+                                    <form onSubmit={handleAddStreak} className="flex items-center w-full sm:w-auto">
+                                        {/* Always visible — the old hover-reveal input was an
+                                            undiscoverable affordance */}
+                                        <div className="flex-1 sm:w-[360px] pr-2">
                                             <Input
                                                 placeholder="What habit do you want to track?"
                                                 value={newStreakTitle}
@@ -316,7 +339,7 @@ export function YearMode() {
                                                 className="bg-muted/50 border-border text-base sm:text-lg py-3 sm:py-6 focus-visible:ring-1 focus-visible:ring-ring/30 rounded-xl w-full sm:min-w-[300px]"
                                             />
                                         </div>
-                                        <Button type="submit" variant="ghost" size="icon" className="h-10 w-10 sm:h-[52px] sm:w-[52px] shrink-0 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors duration-150">
+                                        <Button type="submit" variant="ghost" size="icon" aria-label="Add streak" title="Add streak" className="h-10 w-10 sm:h-[52px] sm:w-[52px] shrink-0 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors duration-150">
                                             <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
                                         </Button>
                                     </form>

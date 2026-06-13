@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useStore } from '../../store';
 import { motion } from 'framer-motion';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Flame, TrendingUp, TrendingDown, Heart, Skull, Trophy, Activity } from 'lucide-react';
+import { Flame, TrendingUp, TrendingDown, Heart, Skull, Trophy, Activity, ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Sparkline } from './Sparkline';
 import {
@@ -22,10 +22,16 @@ const PR_LIFTS = [
     { key: 'Conventional Deadlift', color: '#ef4444' },
 ];
 
+// Chart series colors — brand red leads; literals because recharts writes
+// colors into SVG attributes, where CSS var() doesn't resolve.
+const CHART_PRIMARY = '#ef4444';
+const CHART_SECONDARY = '#a1a1aa';
+
 export function StatsView() {
     const allExerciseLogs = useStore(s => s.allExerciseLogs);
     const exercises = useStore(s => s.exercises);
     const bodyMetrics = useStore(s => s.bodyMetrics);
+    const weightUnit = useStore(s => s.weightUnit);
 
     const loggedExercises = useLoggedExercises();
     const mostImproved = useMostImprovedLift();
@@ -109,7 +115,7 @@ export function StatsView() {
                             <div className="min-w-0 flex-1">
                                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80 font-semibold">Most Improved</p>
                                 <p className="text-sm font-bold truncate">{mostImproved.name}</p>
-                                <p className="text-xs text-muted-foreground">{mostImproved.firstAvg} → {mostImproved.lastAvg} lb avg</p>
+                                <p className="text-xs text-muted-foreground">{mostImproved.firstAvg} → {mostImproved.lastAvg} {weightUnit} avg</p>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                                 <span className={cn(
@@ -153,22 +159,28 @@ export function StatsView() {
                     <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0 flex-1">
                             <p className="text-[10px] uppercase tracking-wider text-muted-foreground/80 font-semibold">Exercise Trend</p>
-                            <select
-                                value={effectiveSelectedKey || ''}
-                                onChange={e => setSelectedExerciseKey(e.target.value)}
-                                className="text-sm font-bold bg-transparent border-0 outline-none cursor-pointer truncate w-full -ml-1 [&>option]:bg-popover [&>option]:text-popover-foreground"
-                            >
-                                {loggedExercises.map(le => (
-                                    <option key={le.exerciseId || le.programExerciseId} value={(le.exerciseId || le.programExerciseId) as string}>
-                                        {le.name}
-                                    </option>
-                                ))}
-                            </select>
+                            {/* Chevron makes the heading legible as a picker — it used
+                                to look like static text until clicked */}
+                            <div className="relative inline-flex items-center max-w-full">
+                                <select
+                                    aria-label="Choose exercise to chart"
+                                    value={effectiveSelectedKey || ''}
+                                    onChange={e => setSelectedExerciseKey(e.target.value)}
+                                    className="text-sm font-bold bg-transparent border-0 outline-none cursor-pointer truncate w-full -ml-1 pr-5 appearance-none [&>option]:bg-popover [&>option]:text-popover-foreground"
+                                >
+                                    {loggedExercises.map(le => (
+                                        <option key={le.exerciseId || le.programExerciseId} value={(le.exerciseId || le.programExerciseId) as string}>
+                                            {le.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground absolute right-0 pointer-events-none" />
+                            </div>
                         </div>
                         {oneRM && (
                             <div className="text-right shrink-0">
                                 <p className="text-[10px] text-muted-foreground">e1RM</p>
-                                <p className="text-lg font-bold font-mono">{oneRM} <span className="text-xs text-muted-foreground">lb</span></p>
+                                <p className="text-lg font-bold font-mono">{oneRM} <span className="text-xs text-muted-foreground">{weightUnit}</span></p>
                             </div>
                         )}
                     </div>
@@ -196,10 +208,10 @@ export function StatsView() {
                                 <Tooltip
                                     contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--popover))', color: 'hsl(var(--popover-foreground))' }}
                                     labelFormatter={v => new Date(v + 'T00:00:00').toLocaleDateString()}
-                                    formatter={(val, name) => [`${val} lb`, String(name) === 'weight' ? 'Working set' : 'e1RM']}
+                                    formatter={(val, name) => [`${val} ${weightUnit}`, String(name) === 'weight' ? 'Working set' : 'e1RM']}
                                 />
-                                <Line type="monotone" dataKey="weight" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3, fill: '#3b82f6' }} activeDot={{ r: 5 }} />
-                                <Line type="monotone" dataKey="e1rm" stroke="#a855f7" strokeWidth={1.5} strokeDasharray="4 3" dot={false} activeDot={{ r: 4 }} />
+                                <Line type="monotone" dataKey="weight" stroke={CHART_PRIMARY} strokeWidth={2} dot={{ r: 3, fill: CHART_PRIMARY }} activeDot={{ r: 5 }} />
+                                <Line type="monotone" dataKey="e1rm" stroke={CHART_SECONDARY} strokeWidth={1.5} strokeDasharray="4 3" dot={false} activeDot={{ r: 4 }} />
                             </LineChart>
                         </ResponsiveContainer>
                     ) : (
@@ -236,9 +248,9 @@ export function StatsView() {
                             <Tooltip
                                 contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--popover))', color: 'hsl(var(--popover-foreground))' }}
                                 labelFormatter={v => `Week of ${new Date(v + 'T00:00:00').toLocaleDateString()}`}
-                                formatter={(val: any) => [`${Math.round(Number(val)).toLocaleString()} lb`, 'Volume']}
+                                formatter={(val: any) => [`${Math.round(Number(val)).toLocaleString()} ${weightUnit}`, 'Volume']}
                             />
-                            <Bar dataKey="volume" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="volume" fill={CHART_PRIMARY} radius={[4, 4, 0, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
@@ -256,7 +268,7 @@ export function StatsView() {
                                 contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid hsl(var(--border))', backgroundColor: 'hsl(var(--popover))' }}
                                 labelFormatter={v => new Date(v + 'T00:00:00').toLocaleDateString()}
                             />
-                            <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={1.5} dot={{ r: 2 }} />
+                            <Line type="monotone" dataKey="value" stroke={CHART_PRIMARY} strokeWidth={1.5} dot={{ r: 2 }} />
                         </LineChart>
                     </ResponsiveContainer>
                 </div>
@@ -284,6 +296,7 @@ export function StatsView() {
 }
 
 function PRCard({ name, color, exerciseId }: { name: string; color: string; exerciseId: string }) {
+    const weightUnit = useStore(s => s.weightUnit);
     const oneRM = useEstimatedOneRM(exerciseId);
     const history = useExerciseHistory(exerciseId, 'all');
     // Trend: compare e1RM 4 weeks ago vs latest.
@@ -305,7 +318,7 @@ function PRCard({ name, color, exerciseId }: { name: string; color: string; exer
             {oneRM ? (
                 <>
                     <p className="text-2xl font-bold font-mono" style={{ color }}>
-                        {oneRM} <span className="text-sm text-muted-foreground font-sans">lb</span>
+                        {oneRM} <span className="text-sm text-muted-foreground font-sans">{weightUnit}</span>
                     </p>
                     <p className="text-[10px] text-muted-foreground">e1RM (Epley)</p>
                     {trend !== null && (
@@ -314,7 +327,7 @@ function PRCard({ name, color, exerciseId }: { name: string; color: string; exer
                             trend > 0 ? "text-green-500 dark:text-green-400" : trend < 0 ? "text-red-500 dark:text-red-400" : "text-muted-foreground"
                         )}>
                             {trend > 0 ? <TrendingUp className="h-3 w-3" /> : trend < 0 ? <TrendingDown className="h-3 w-3" /> : null}
-                            <span>{trend > 0 ? '+' : ''}{trend} lb · 4w</span>
+                            <span>{trend > 0 ? '+' : ''}{trend} {weightUnit} · 4w</span>
                         </div>
                     )}
                 </>

@@ -10,7 +10,9 @@ type LoggedExerciseSummary = {
     lastDate: string;
 };
 
-function epley(weight: number | null, reps: number | null): number | null {
+/** Epley e1RM — the ONE formula used everywhere (ExerciseHistory previously
+ *  inlined Brzycki, so the same lift showed different 1RMs on different tabs). */
+export function epley(weight: number | null, reps: number | null): number | null {
     if (!weight || !reps || reps <= 0) return null;
     return Math.round(weight * (1 + reps / 30) * 10) / 10;
 }

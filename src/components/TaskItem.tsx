@@ -3,7 +3,7 @@ import { Task, Session, Subtask } from "@/types";
 import { api } from "@/api";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Play, Pause, Edit, Trash, CheckCircle2, Clock, Trophy, TimerOff, BookOpen, AlertCircle } from "lucide-react";
+import { Play, Square, Edit, Trash, CheckCircle2, Clock, Trophy, TimerOff, BookOpen, AlertCircle } from "lucide-react";
 import { cn, calculateSessionXP, getLocalDateString, getStatColor, getDifficultyPulse } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,14 +12,13 @@ import { useStore } from "@/store";
 interface TaskItemProps {
     task: Task;
     isActive: boolean;
-    isTimerRunning: boolean;
     onToggleTimer: (id: number) => void;
     onEdit: (task: Task) => void;
     onDelete: (id: number) => void;
     onComplete: (task: Task) => void;
 }
 
-export const TaskItem = memo(function TaskItem({ task, isActive, isTimerRunning, onToggleTimer, onEdit, onDelete, onComplete }: TaskItemProps) {
+export const TaskItem = memo(function TaskItem({ task, isActive, onToggleTimer, onEdit, onDelete, onComplete }: TaskItemProps) {
     const [sessions, setSessions] = useState<Session[]>([]);
 
     const updateTask = useStore(state => state.updateTask);
@@ -153,19 +152,19 @@ export const TaskItem = memo(function TaskItem({ task, isActive, isTimerRunning,
 
                     <div className="flex items-center gap-0.5 sm:gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-150 lg:translate-x-2 lg:group-hover:translate-x-0 relative z-10 lg:bg-muted/50 px-0.5 sm:px-1 py-1 rounded-lg lg:backdrop-blur-md shrink-0">
                         {task.noteId && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-7 lg:w-7 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300" onClick={handleOpenNote} title="Open Linked Note">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-7 lg:w-7 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300" onClick={handleOpenNote} title="Open Linked Note" aria-label="Open linked note">
                                 <BookOpen className="h-3.5 w-3.5 lg:h-3.5 lg:w-3.5" />
                             </Button>
                         )}
-                        <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-7 lg:w-7 text-muted-foreground/70 hover:bg-red-500/20 hover:text-red-400 transition-colors" onClick={(e) => { e.stopPropagation(); onDelete(task.id!); }}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-7 lg:w-7 text-muted-foreground/70 hover:bg-red-500/20 hover:text-red-400 transition-colors" onClick={(e) => { e.stopPropagation(); onDelete(task.id!); }} title="Delete task" aria-label={`Delete ${task.title}`}>
                             <Trash className="h-3.5 w-3.5 lg:h-3.5 lg:w-3.5" />
                         </Button>
                         {!task.isComplete && (
-                            <Button variant="ghost" size="icon" className={cn("h-8 w-8 lg:h-7 lg:w-7 transition-colors", isActive && isTimerRunning ? "text-amber-400 hover:bg-amber-400/20 hover:text-amber-300" : "text-muted-foreground/70 hover:bg-primary/20 hover:text-primary")} onClick={(e) => { e.stopPropagation(); onToggleTimer(task.id!); }}>
-                                {isActive && isTimerRunning ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 ml-0.5" />}
+                            <Button variant="ghost" size="icon" className={cn("h-8 w-8 lg:h-7 lg:w-7 transition-colors", isActive ? "text-amber-400 hover:bg-destructive/20 hover:text-destructive" : "text-muted-foreground/70 hover:bg-primary/20 hover:text-primary")} onClick={(e) => { e.stopPropagation(); onToggleTimer(task.id!); }} title={isActive ? "Stop & save session" : "Start timer"} aria-label={isActive ? "Stop timer and save session" : "Start timer"}>
+                                {isActive ? <Square className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 ml-0.5" />}
                             </Button>
                         )}
-                        <Button variant="ghost" size="icon" className={cn("h-8 w-8 lg:h-7 lg:w-7 transition-colors", task.isComplete ? "text-green-500 hover:bg-green-500/20" : "text-muted-foreground/70 hover:bg-green-500/20 hover:text-green-400")} onClick={(e) => { e.stopPropagation(); onComplete(task); }}>
+                        <Button variant="ghost" size="icon" className={cn("h-8 w-8 lg:h-7 lg:w-7 transition-colors", task.isComplete ? "text-green-500 hover:bg-green-500/20" : "text-muted-foreground/70 hover:bg-green-500/20 hover:text-green-400")} onClick={(e) => { e.stopPropagation(); onComplete(task); }} title={task.isComplete ? "Mark incomplete" : "Complete task"} aria-label={task.isComplete ? `Mark ${task.title} incomplete` : `Complete ${task.title}`}>
                             <CheckCircle2 className="h-3.5 w-3.5" />
                         </Button>
                     </div>
@@ -191,7 +190,9 @@ export const TaskItem = memo(function TaskItem({ task, isActive, isTimerRunning,
                         <div className="grid grid-cols-2 gap-3 sm:gap-4">
                             <div className="bg-muted/50 rounded-lg p-3 sm:p-4 border border-border/50 space-y-1">
                                 <div className="flex items-center gap-2 text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground/60 mb-2">
-                                    <Trophy className="w-3 h-3 text-amber-500" /> XP Gained
+                                    {/* Recomputed from current difficulty, without streak/first-of-day
+                                        bonuses — an estimate, and labeled as one. */}
+                                    <Trophy className="w-3 h-3 text-amber-500" /> XP Gained (est.)
                                 </div>
                                 <div className="space-y-1">
                                     {(task.statTarget || []).map((stat) => (
@@ -243,7 +244,12 @@ export const TaskItem = memo(function TaskItem({ task, isActive, isTimerRunning,
 
                         {/* History */}
                         <div className="space-y-3">
-                            <h4 className="text-xs uppercase tracking-wider text-muted-foreground/60 font-medium">Session History</h4>
+                            <h4 className="text-xs uppercase tracking-wider text-muted-foreground/60 font-medium flex items-center justify-between">
+                                <span>Session History</span>
+                                {sessions.length > 5 && (
+                                    <span className="text-muted-foreground/40 font-mono normal-case tracking-normal">latest 5 of {sessions.length}</span>
+                                )}
+                            </h4>
                             {sessions.length === 0 ? (
                                 <p className="text-sm text-muted-foreground/30 italic bg-muted/50 p-4 rounded-lg text-center border border-border/50">No sessions recorded yet.</p>
                             ) : (
@@ -274,8 +280,8 @@ export const TaskItem = memo(function TaskItem({ task, isActive, isTimerRunning,
                                     <TimerOff className="w-4 h-4 mr-2" /> Manual
                                 </Button>
                             ) : (
-                                <Button size="sm" onClick={() => onToggleTimer(task.id!)} className={cn("min-w-[100px] shadow-lg ml-auto transition-all h-10 sm:h-8", isActive && isTimerRunning ? "bg-amber-500 hover:bg-amber-600 text-black shadow-amber-500/20" : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/10")}>
-                                    {isActive && isTimerRunning ? <><Pause className="w-4 h-4 mr-2" /> Pause</> : <><Play className="w-4 h-4 mr-2" /> Start Focus</>}
+                                <Button size="sm" onClick={() => onToggleTimer(task.id!)} className={cn("min-w-[100px] shadow-lg ml-auto transition-all h-10 sm:h-8", isActive ? "bg-amber-500 hover:bg-amber-600 text-black shadow-amber-500/20" : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-primary/10")}>
+                                    {isActive ? <><Square className="w-4 h-4 mr-2" /> Stop &amp; Save</> : <><Play className="w-4 h-4 mr-2" /> Start Focus</>}
                                 </Button>
                             )}
                         </>

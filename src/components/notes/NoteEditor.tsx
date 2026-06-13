@@ -177,6 +177,28 @@ export const NoteEditor = ({
     const [showToolbar, setShowToolbar] = useState(true);
     const lastHydratedNoteId = useRef<number | null>(null);
 
+    // Reflect the caret's formatting into the toolbar — without this the Bold
+    // button never lights up inside bold text and the toolbar reads as a toy.
+    const [activeFormats, setActiveFormats] = useState<Record<string, boolean>>({});
+    useEffect(() => {
+        const update = () => {
+            const ed = editorRef.current;
+            const anchor = window.getSelection()?.anchorNode ?? null;
+            if (!ed || !anchor || !ed.contains(anchor)) return;
+            try {
+                setActiveFormats({
+                    bold: document.queryCommandState('bold'),
+                    italic: document.queryCommandState('italic'),
+                    strikethrough: document.queryCommandState('strikeThrough'),
+                    bullet: document.queryCommandState('insertUnorderedList'),
+                    numbered: document.queryCommandState('insertOrderedList'),
+                });
+            } catch { /* queryCommandState unsupported — toolbar stays neutral */ }
+        };
+        document.addEventListener('selectionchange', update);
+        return () => document.removeEventListener('selectionchange', update);
+    }, []);
+
     // Hydrate contenteditable with initial HTML when switching notes.
     useEffect(() => {
         if (!activeNote || !editorRef.current) return;
@@ -326,6 +348,8 @@ export const NoteEditor = ({
                 size="icon"
                 className="absolute top-4 right-4 z-10 text-muted-foreground hover:text-foreground"
                 onClick={onClose}
+                aria-label="Close book"
+                title="Close book"
             >
                 <X className="h-6 w-6" />
             </Button>
@@ -354,16 +378,21 @@ export const NoteEditor = ({
                                     return <div key={btn.key} className="w-px h-5 bg-border/40 mx-1" />;
                                 }
                                 const Icon = btn.icon;
+                                const isFormatActive = !!activeFormats[btn.key];
                                 return (
                                     <button
                                         key={btn.key}
                                         type="button"
                                         title={btn.tooltip}
+                                        aria-label={btn.tooltip}
+                                        aria-pressed={isFormatActive}
                                         onMouseDown={(e) => {
                                             e.preventDefault();
                                             btn.action();
                                         }}
-                                        className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+                                        className={`p-1.5 rounded-md transition-colors ${isFormatActive
+                                            ? 'bg-primary/15 text-primary'
+                                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'}`}
                                     >
                                         <Icon className="h-4 w-4" />
                                     </button>

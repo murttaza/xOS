@@ -78,6 +78,12 @@ export function PaletteApp() {
     }
   }
 
+  // Keep the highlighted suggestion visible while arrowing through the list.
+  const listRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    listRef.current?.children[selectedIdx]?.scrollIntoView({ block: 'nearest' })
+  }, [selectedIdx])
+
 
   const showCommands = !result && input === ''
   const showSuggestions = !result && suggestions.length > 0
@@ -106,9 +112,10 @@ export function PaletteApp() {
       {/* Result */}
       {result && (
         <div style={{ ...t.card, marginTop: 6 }}>
+          {/* Green = success, red = failure — they were two near-identical reds. */}
           <div style={{
             ...t.resultDot,
-            background: result.success ? 'hsl(0, 84%, 60%)' : 'hsl(0, 70%, 50%)',
+            background: result.success ? 'hsl(142, 71%, 45%)' : 'hsl(0, 84%, 60%)',
           }} />
           <span style={t.resultText}>{result.message}</span>
         </div>
@@ -134,7 +141,7 @@ export function PaletteApp() {
 
       {/* Context suggestions (tasks for timer, etc.) */}
       {showSuggestions && (
-        <div style={{ ...t.card, marginTop: 6, padding: '4px 0', maxHeight: 220, overflowY: 'auto' }}>
+        <div ref={listRef} style={{ ...t.card, marginTop: 6, padding: '4px 0', maxHeight: 220, overflowY: 'auto' }}>
           {suggestions.map((s, i) => (
             <div
               key={i}

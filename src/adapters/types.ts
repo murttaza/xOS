@@ -25,6 +25,7 @@ export interface ApiBackend {
     getDailyLog: (date: string) => Promise<DailyLog | undefined>;
     saveDailyLog: (log: DailyLog) => Promise<unknown>;
     saveJournalEntry: (date: string, entry: string) => Promise<unknown>;
+    savePrayers: (date: string, prayersJson: string) => Promise<unknown>;
 
     // Dev Items
     getDevItems: () => Promise<DevItem[]>;

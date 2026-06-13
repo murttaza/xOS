@@ -4,6 +4,10 @@
 // agree with this — update them together if the brand ever changes.
 export const APP_NAME = 'mOS';
 
+/** Public releases page — the web build's "Download Desktop App" link.
+ *  (Yes, the GitHub handle really is spelled "murttaza".) */
+export const RELEASES_URL = 'https://github.com/murttaza/xOS/releases/latest';
+
 /**
  * Personal flourishes (the Arabic signature/meem) only render for the
  * project owner's account — strangers get the neutral brand. Set

@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { RepeatingTask, Subtask } from "@/types";
@@ -47,7 +46,8 @@ export function RepeatingTaskDialog({ open, onOpenChange, onSubmit, initialTask 
             setTitle("");
             setDescription("");
             setDifficulty(1);
-            setStatTarget(["Fitness"]);
+            // First existing stat, not a hardcoded name (see TaskDialog).
+            setStatTarget(stats[0] ? [stats[0].statName] : []);
             setRepeatType('daily');
             setRepeatDays([]);
             setSubtasks([]);
@@ -56,7 +56,11 @@ export function RepeatingTaskDialog({ open, onOpenChange, onSubmit, initialTask 
         }
     }, [initialTask, open]);
 
+    // A weekly task with no days never repeats — block that and empty titles.
+    const isValid = !!title.trim() && (repeatType === 'daily' || repeatDays.length > 0);
+
     const handleSubmit = () => {
+        if (!isValid) return;
         // Construct labels
         const otherLabels = existingLabels.filter(l => l !== "untimed");
         const finalLabels = isUntimed ? [...otherLabels, "untimed"] : otherLabels;
@@ -87,13 +91,14 @@ export function RepeatingTaskDialog({ open, onOpenChange, onSubmit, initialTask 
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px] bg-popover/95 backdrop-blur-xl border-border text-foreground shadow-2xl">
-                <DialogHeader>
+            {/* Same mobile full-screen treatment as TaskDialog */}
+            <DialogContent className="sm:max-w-[500px] max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:w-full max-sm:rounded-none max-sm:border-0 max-sm:p-0 bg-popover/95 backdrop-blur-xl border-border text-foreground shadow-2xl flex flex-col">
+                <DialogHeader className="max-sm:px-4 max-sm:pt-4 max-sm:pb-2 shrink-0">
                     <DialogTitle className="text-xl font-light tracking-wide text-foreground/90">
                         {initialTask ? "Edit Repeating Task" : "New Repeating Task"}
                     </DialogTitle>
                 </DialogHeader>
-                <div className="grid gap-6 py-4">
+                <div className="grid gap-6 py-4 overflow-y-auto flex-1 max-sm:px-4 max-sm:pb-4">
                     {/* Title */}
                     <div className="grid gap-2">
                         <Label htmlFor="title" className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -176,19 +181,28 @@ export function RepeatingTaskDialog({ open, onOpenChange, onSubmit, initialTask 
                     </div>
 
                     <div className="grid gap-6">
-                        {/* Difficulty */}
+                        {/* Difficulty — same segmented buttons as TaskDialog */}
                         <div className="grid gap-3">
                             <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                                 Difficulty: <span className="text-foreground">{difficulty}</span>
                             </Label>
-                            <Slider
-                                min={1}
-                                max={5}
-                                step={1}
-                                value={[difficulty]}
-                                onValueChange={(vals) => setDifficulty(vals[0])}
-                                className="py-2"
-                            />
+                            <div className="flex gap-2">
+                                {[1, 2, 3, 4, 5].map((val) => (
+                                    <button
+                                        key={val}
+                                        type="button"
+                                        onClick={() => setDifficulty(val)}
+                                        className={cn(
+                                            "flex-1 h-10 sm:h-8 rounded-md text-sm font-medium transition-all border",
+                                            difficulty === val
+                                                ? "bg-primary text-primary-foreground border-transparent"
+                                                : "bg-muted/50 text-muted-foreground border-border hover:bg-muted hover:text-foreground"
+                                        )}
+                                    >
+                                        {val}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         {/* Repeat Settings */}
@@ -216,23 +230,29 @@ export function RepeatingTaskDialog({ open, onOpenChange, onSubmit, initialTask 
                             </div>
 
                             {repeatType === 'weekly' && (
-                                <div className="flex justify-between gap-1 mt-2">
-                                    {days.map((day, index) => (
-                                        <Button
-                                            key={index}
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => toggleDay(index)}
-                                            className={cn(
-                                                "h-8 w-8 p-0 rounded-full border-border bg-transparent hover:bg-muted hover:text-foreground transition-all",
-                                                repeatDays.includes(index) && "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
-                                            )}
-                                        >
-                                            {day}
-                                        </Button>
-                                    ))}
-                                </div>
+                                <>
+                                    <div className="flex justify-between gap-1 mt-2">
+                                        {days.map((day, index) => (
+                                            <Button
+                                                key={index}
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => toggleDay(index)}
+                                                aria-pressed={repeatDays.includes(index)}
+                                                className={cn(
+                                                    "h-9 w-9 sm:h-8 sm:w-8 p-0 rounded-full border-border bg-transparent hover:bg-muted hover:text-foreground transition-all",
+                                                    repeatDays.includes(index) && "bg-primary text-primary-foreground border-primary hover:bg-primary/90"
+                                                )}
+                                            >
+                                                {day}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                    {repeatDays.length === 0 && (
+                                        <p className="text-[10px] text-muted-foreground/70 mt-1">Pick at least one day — a weekly task with no days never repeats.</p>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>
@@ -282,8 +302,8 @@ export function RepeatingTaskDialog({ open, onOpenChange, onSubmit, initialTask 
                     </div>
 
                 </div>
-                <DialogFooter>
-                    <Button onClick={handleSubmit} className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto">
+                <DialogFooter className="max-sm:px-4 max-sm:pb-4 shrink-0">
+                    <Button onClick={handleSubmit} disabled={!isValid} className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto h-11 sm:h-9">
                         Save Repeating Task
                     </Button>
                 </DialogFooter>

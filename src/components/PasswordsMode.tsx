@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
+import { isVaultLockedError } from '../store/passwordsStore';
 import { PasswordEntry } from '../types';
-import { cn } from '../lib/utils';
+import { cn, isDialogOpen } from '../lib/utils';
 import { isElectron } from '../lib/platform';
-import { writeClipboard, clearClipboardIfMatch } from '../lib/clipboard';
+import { writeClipboard, scheduleClipboardClear } from '../lib/clipboard';
+import { showErrorToast, showSuccessToast } from './ui/toast';
 import { showConfirm } from './ui/confirm-dialog';
 import {
     Shield, Search, Plus, Pin, PinOff, Copy, Eye, EyeOff, Trash2,
@@ -57,13 +59,8 @@ function strength(pw: string): { label: string; score: number; color: string } {
     return { label: 'Excellent', score, color: 'bg-emerald-400' };
 }
 
-// Returns null so the initials-avatar fallback renders. Previously this called
-// https://www.google.com/s2/favicons which leaked every vault domain to Google.
-// A future on-device cache can return a file:// URL from app.getPath('userData').
-function faviconUrl(): string | null {
-    return null;
-}
-
+// No favicons by design: fetching https://www.google.com/s2/favicons leaked
+// every vault domain to Google, so entries render initials avatars instead.
 function initials(name: string) {
     return name
         .split(/\s+/)
@@ -93,49 +90,19 @@ export function PasswordsMode() {
     const [vaultSettingsOpen, setVaultSettingsOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [selectedId, setSelectedId] = useState<number | null>(null);
+    // Below lg there is no side detail pane — selection opens a dialog instead,
+    // otherwise reveal/edit/delete were unreachable on narrow windows.
+    const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
     const [editorOpen, setEditorOpen] = useState(false);
     const [editingEntry, setEditingEntry] = useState<PasswordEntry | null>(null);
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [revealed, setRevealed] = useState<Record<number, string>>({});
 
-    // Tracks the pending auto-clear so we can cancel it when the user copies
-    // another password or unmounts (avoids stale clears wiping fresh clipboard).
-    const clearTimerRef = useRef<{ handle: ReturnType<typeof setTimeout>; text: string } | null>(null);
-
-    const scheduleClipboardClear = useCallback((plaintext: string) => {
-        if (clearTimerRef.current) {
-            clearTimeout(clearTimerRef.current.handle);
-        }
-        const handle = setTimeout(() => {
-            clearClipboardIfMatch(plaintext).catch(() => {});
-            clearTimerRef.current = null;
-        }, 30000);
-        clearTimerRef.current = { handle, text: plaintext };
-    }, []);
-
-    // Clear immediately on window blur — reduces the exposure window when the
-    // user alt-tabs to another app.
-    useEffect(() => {
-        if (!isPasswordsMode) return;
-        const onBlur = () => {
-            const pending = clearTimerRef.current;
-            if (pending) {
-                clearTimeout(pending.handle);
-                clearClipboardIfMatch(pending.text).catch(() => {});
-                clearTimerRef.current = null;
-            }
-        };
-        window.addEventListener('blur', onBlur);
-        return () => {
-            window.removeEventListener('blur', onBlur);
-            const pending = clearTimerRef.current;
-            if (pending) {
-                clearTimeout(pending.handle);
-                clearClipboardIfMatch(pending.text).catch(() => {});
-                clearTimerRef.current = null;
-            }
-        };
-    }, [isPasswordsMode]);
+    // NOTE: no clear-on-blur here. The window ALWAYS blurs between copying a
+    // password and pasting it into another app, so wiping on blur made copy
+    // useless — the clipboard was empty by the time the user could paste.
+    // The 30s clear-if-match schedule (lib/clipboard) is the safety net; it
+    // survives unmount and never wipes anything copied after it.
 
     useEffect(() => {
         if (!isPasswordsMode) return;
@@ -160,18 +127,17 @@ export function PasswordsMode() {
         if (isLocked) setRevealed({});
     }, [isLocked]);
 
-    // Esc closes mode
+    // Esc closes mode — but any open dialog (editor, setup, settings, confirm)
+    // owns the press first.
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            if (!isPasswordsMode) return;
-            if (e.key === 'Escape') {
-                // Don't close if dialog is open; dialog handles it
-                if (!editorOpen) togglePasswordsMode();
-            }
+            if (!isPasswordsMode || e.key !== 'Escape' || e.defaultPrevented) return;
+            if (isDialogOpen()) return;
+            togglePasswordsMode();
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [isPasswordsMode, togglePasswordsMode, editorOpen]);
+    }, [isPasswordsMode, togglePasswordsMode]);
 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -209,25 +175,44 @@ export function PasswordsMode() {
         setTimeout(() => setCopiedId(k => (k === key ? null : k)), 1200);
     };
 
-    const copyText = async (text: string, flashKey: string) => {
+    const copyText = async (text: string, flashKey: string): Promise<boolean> => {
         const ok = await writeClipboard(text);
         if (ok) flash(flashKey);
+        else showErrorToast("Couldn't copy to clipboard.");
+        return ok;
     };
 
+    // Copy never requires revealing on screen — the plaintext goes straight
+    // from the vault to the clipboard.
     const handleCopyPassword = async (p: PasswordEntry) => {
         if (!p.id) return;
-        const pt = await revealPassword(p.id);
-        if (pt) {
-            await copyText(pt, `pw-${p.id}`);
+        let pt: string;
+        try {
+            pt = await revealPassword(p.id);
+        } catch (err) {
+            showErrorToast(isVaultLockedError(err)
+                ? 'Vault is locked — unlock it to copy.'
+                : "Couldn't read this password from the vault.");
+            return;
+        }
+        if (!pt) {
+            showErrorToast('This entry has no password saved.');
+            return;
+        }
+        if (await copyText(pt, `pw-${p.id}`)) {
             touchPassword(p.id);
-            // Auto-clear clipboard after 30s — cancelable, cleared eagerly on blur/unmount.
             scheduleClipboardClear(pt);
+            showSuccessToast('Password copied — clipboard clears in 30s.');
         }
     };
 
     const handleCopyUsername = async (p: PasswordEntry) => {
         if (!p.id) return;
-        await copyText(p.username || '', `un-${p.id}`);
+        if (!p.username) {
+            showErrorToast('This entry has no username saved.');
+            return;
+        }
+        await copyText(p.username, `un-${p.id}`);
     };
 
     const handleTogglePin = async (p: PasswordEntry) => {
@@ -249,8 +234,12 @@ export function PasswordsMode() {
             });
             return;
         }
-        const pt = await revealPassword(pid);
-        setRevealed(r => ({ ...r, [pid]: pt }));
+        try {
+            const pt = await revealPassword(pid);
+            setRevealed(r => ({ ...r, [pid]: pt }));
+        } catch {
+            showErrorToast("Couldn't read this password from the vault.");
+        }
     };
 
     const openCreate = () => {
@@ -419,7 +408,10 @@ export function PasswordsMode() {
                                                         key={p.id}
                                                         entry={p}
                                                         active={p.id === selectedId}
-                                                        onSelect={() => setSelectedId(p.id ?? null)}
+                                                        onSelect={() => {
+                                                            setSelectedId(p.id ?? null);
+                                                            if (!window.matchMedia('(min-width: 1024px)').matches) setMobileDetailOpen(true);
+                                                        }}
                                                         onCopyPassword={() => handleCopyPassword(p)}
                                                         onCopyUsername={() => handleCopyUsername(p)}
                                                         onTogglePin={() => handleTogglePin(p)}
@@ -436,7 +428,10 @@ export function PasswordsMode() {
                                                         key={p.id}
                                                         entry={p}
                                                         active={p.id === selectedId}
-                                                        onSelect={() => setSelectedId(p.id ?? null)}
+                                                        onSelect={() => {
+                                                            setSelectedId(p.id ?? null);
+                                                            if (!window.matchMedia('(min-width: 1024px)').matches) setMobileDetailOpen(true);
+                                                        }}
                                                         onCopyPassword={() => handleCopyPassword(p)}
                                                         onCopyUsername={() => handleCopyUsername(p)}
                                                         onTogglePin={() => handleTogglePin(p)}
@@ -485,6 +480,31 @@ export function PasswordsMode() {
                     </div>
                 </div>
 
+                {/* Narrow-window detail — same EntryDetail, inside a dialog */}
+                <Dialog open={mobileDetailOpen && !!selected} onOpenChange={(v) => { if (!v) setMobileDetailOpen(false); }}>
+                    <DialogContent className="lg:hidden max-w-lg max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:w-full max-sm:rounded-none max-sm:border-0 p-0 overflow-hidden flex flex-col">
+                        <DialogHeader className="sr-only">
+                            <DialogTitle>{selected?.name || 'Account details'}</DialogTitle>
+                        </DialogHeader>
+                        {selected && (
+                            <EntryDetail
+                                key={selected.id}
+                                entry={selected}
+                                revealed={selected.id ? revealed[selected.id] : undefined}
+                                onReveal={() => handleReveal(selected)}
+                                onCopyPassword={() => handleCopyPassword(selected)}
+                                onCopyUsername={() => handleCopyUsername(selected)}
+                                onCopyField={(text, key) => copyText(text, key)}
+                                onTogglePin={() => handleTogglePin(selected)}
+                                onEdit={() => { setMobileDetailOpen(false); openEdit(selected); }}
+                                onDelete={() => { setMobileDetailOpen(false); handleDelete(selected); }}
+                                onOpenUrl={() => openUrl(selected.url)}
+                                copiedId={copiedId}
+                            />
+                        )}
+                    </DialogContent>
+                </Dialog>
+
                 <PasswordEditor
                     open={editorOpen}
                     entry={editingEntry}
@@ -521,6 +541,7 @@ export function PasswordsMode() {
 function VaultUnlockScreen() {
     const unlockVault = useStore(s => s.unlockVault);
     const [passphrase, setPassphrase] = useState('');
+    const [showPassphrase, setShowPassphrase] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
 
@@ -558,15 +579,26 @@ function VaultUnlockScreen() {
                     className="space-y-3"
                     onSubmit={(e) => { e.preventDefault(); handleUnlock(); }}
                 >
-                    <Input
-                        autoFocus
-                        type="password"
-                        value={passphrase}
-                        onChange={(e) => setPassphrase(e.target.value)}
-                        placeholder="Master passphrase"
-                        className="h-10 text-center"
-                        aria-label="Master passphrase"
-                    />
+                    <div className="relative">
+                        <Input
+                            autoFocus
+                            type={showPassphrase ? 'text' : 'password'}
+                            value={passphrase}
+                            onChange={(e) => setPassphrase(e.target.value)}
+                            placeholder="Master passphrase"
+                            className="h-10 text-center px-10"
+                            aria-label="Master passphrase"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassphrase(p => !p)}
+                            aria-label={showPassphrase ? 'Hide passphrase' : 'Show passphrase'}
+                            title={showPassphrase ? 'Hide passphrase' : 'Show passphrase'}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground"
+                        >
+                            {showPassphrase ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                    </div>
                     {error && <p className="text-xs text-destructive">{error}</p>}
                     <Button type="submit" className="w-full gap-1.5" disabled={!passphrase || busy}>
                         <Unlock className="h-3.5 w-3.5" />
@@ -825,18 +857,6 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
 }
 
 function Avatar({ entry }: { entry: PasswordEntry }) {
-    const fav = faviconUrl();
-    const [broken, setBroken] = useState(false);
-    if (fav && !broken) {
-        return (
-            <img
-                src={fav}
-                alt=""
-                onError={() => setBroken(true)}
-                className="h-9 w-9 rounded-lg object-cover bg-muted shrink-0"
-            />
-        );
-    }
     return (
         <div className="h-9 w-9 rounded-lg bg-primary/15 text-primary flex items-center justify-center text-xs font-semibold shrink-0">
             {initials(entry.name)}
@@ -857,11 +877,21 @@ function EntryRow({
 }) {
     const pwCopied = copiedId === `pw-${entry.id}`;
     const unCopied = copiedId === `un-${entry.id}`;
+    // div+role rather than <button>: the row contains the copy/pin buttons,
+    // and interactive elements can't nest inside a real button.
     return (
-        <button
+        <div
+            role="button"
+            tabIndex={0}
             onClick={onSelect}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSelect();
+                }
+            }}
             className={cn(
-                "w-full group flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left transition-colors",
+                "w-full group flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left transition-colors cursor-pointer",
                 active ? "bg-primary/15 ring-1 ring-primary/30" : "hover:bg-accent/50"
             )}
         >
@@ -875,7 +905,7 @@ function EntryRow({
                     {entry.username || entry.url || '—'}
                 </div>
             </div>
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
                 <IconBtn
                     title="Copy username"
                     onClick={(e) => { e.stopPropagation(); onCopyUsername(); }}
@@ -897,7 +927,7 @@ function EntryRow({
                     {entry.isPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
                 </IconBtn>
             </div>
-        </button>
+        </div>
     );
 }
 
@@ -913,6 +943,7 @@ function IconBtn({
         <button
             onClick={onClick}
             title={title}
+            aria-label={title}
             className={cn(
                 "h-7 w-7 rounded-md flex items-center justify-center transition-colors",
                 flashing ? "bg-emerald-500/15" : "hover:bg-accent text-muted-foreground hover:text-foreground"

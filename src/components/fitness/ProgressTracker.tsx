@@ -8,20 +8,25 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceL
 import { parseTopSet } from '../../lib/fitnessParsing';
 import type { BodyMetric } from '../../types';
 
-const PEAK_BENCH = 280;
-const PEAK_SQUAT = 405;
-const PEAK_DEADLIFT = 495;
-const PEAK_WEIGHT = 180;
+// Brand red as a literal: recharts writes colors into SVG attributes, where
+// CSS var() doesn't resolve.
+const BRAND_RED = '#ef4444';
 
 export function ProgressTracker() {
     const bodyMetrics = useStore(s => s.bodyMetrics);
     const activeProgram = useStore(s => s.activeProgram);
     const upsertBodyMetric = useStore(s => s.upsertBodyMetric);
     const getCurrentWeek = useStore(s => s.getCurrentWeek);
+    const weightUnit = useStore(s => s.weightUnit);
+    // Lifetime bests are user data, not constants — unset peaks draw no line.
+    const personalPeaks = useStore(s => s.personalPeaks);
+    const setPersonalPeaks = useStore(s => s.setPersonalPeaks);
 
     const [editing, setEditing] = useState<string | null>(null);
     const [adding, setAdding] = useState(false);
     const [form, setForm] = useState<Partial<BodyMetric>>({});
+    const [editingPeaks, setEditingPeaks] = useState(false);
+    const [peaksForm, setPeaksForm] = useState({ bench: '', squat: '', deadlift: '', weight: '' });
     const currentWeek = getCurrentWeek();
 
     const sortedMetrics = [...bodyMetrics].sort((a, b) => a.date.localeCompare(b.date));
@@ -34,7 +39,7 @@ export function ProgressTracker() {
             week_number: form.week_number || currentWeek,
             date: form.date,
             body_weight: form.body_weight || null,
-            weight_unit: 'lb',
+            weight_unit: weightUnit,
             rhr: form.rhr || null,
             rope_minutes: form.rope_minutes || null,
             rope_pace: form.rope_pace || null,
@@ -59,7 +64,7 @@ export function ProgressTracker() {
         setForm({
             date: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`,
             week_number: currentWeek,
-            weight_unit: 'lb',
+            weight_unit: weightUnit,
         });
         setAdding(true);
         setEditing(null);
@@ -87,14 +92,82 @@ export function ProgressTracker() {
         value: parseTopSet(m.deadlift_top_set) || 0,
     }));
 
+    const startEditPeaks = () => {
+        setPeaksForm({
+            bench: personalPeaks.bench?.toString() ?? '',
+            squat: personalPeaks.squat?.toString() ?? '',
+            deadlift: personalPeaks.deadlift?.toString() ?? '',
+            weight: personalPeaks.weight?.toString() ?? '',
+        });
+        setEditingPeaks(true);
+    };
+
+    const savePeaks = () => {
+        const parse = (v: string) => {
+            const n = parseFloat(v);
+            return Number.isFinite(n) && n > 0 ? n : undefined;
+        };
+        setPersonalPeaks({
+            bench: parse(peaksForm.bench),
+            squat: parse(peaksForm.squat),
+            deadlift: parse(peaksForm.deadlift),
+            weight: parse(peaksForm.weight),
+        });
+        setEditingPeaks(false);
+    };
+
     return (
         <div className="p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto space-y-6">
             <div className="flex items-center justify-between">
                 <h2 className="text-lg font-bold">Progress Tracker</h2>
-                <Button size="sm" onClick={handleAdd} className="h-8">
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Log Week
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button size="sm" variant="ghost" onClick={startEditPeaks} className="h-8 text-xs text-muted-foreground">
+                        Set peaks
+                    </Button>
+                    <Button size="sm" onClick={handleAdd} className="h-8">
+                        <Plus className="h-3.5 w-3.5 mr-1" /> Log Week
+                    </Button>
+                </div>
             </div>
+
+            {/* Personal peaks editor — reference lines on the charts below */}
+            {editingPeaks && (
+                <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="border border-border rounded-xl p-4 space-y-3"
+                >
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold">Personal peaks</h3>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingPeaks(false)} aria-label="Close peaks editor" title="Close">
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Lifetime bests, drawn as dashed reference lines on the charts. Leave blank for no line.</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {([
+                            ['bench', 'Bench'],
+                            ['squat', 'Squat'],
+                            ['deadlift', 'Deadlift'],
+                            ['weight', `Bodyweight`],
+                        ] as const).map(([key, label]) => (
+                            <div key={key} className="space-y-1 min-w-0">
+                                <label className="text-[10px] text-muted-foreground font-medium leading-tight block">{label} ({weightUnit})</label>
+                                <Input
+                                    type="number"
+                                    inputMode="decimal"
+                                    value={peaksForm[key]}
+                                    onChange={e => setPeaksForm(f => ({ ...f, [key]: e.target.value }))}
+                                    className="h-9 text-sm w-full"
+                                />
+                            </div>
+                        ))}
+                    </div>
+                    <Button onClick={savePeaks} className="w-full h-9">
+                        <Save className="h-3.5 w-3.5 mr-1" /> Save peaks
+                    </Button>
+                </motion.div>
+            )}
 
             {/* Add/Edit form */}
             {adding && (
@@ -122,7 +195,7 @@ export function ProgressTracker() {
                                 <Input type="number" inputMode="numeric" enterKeyHint="next" value={form.week_number || ''} onChange={e => setForm({ ...form, week_number: parseInt(e.target.value) || 0 })} className="h-9 text-sm w-full" />
                             </div>
                             <div className="space-y-1 min-w-0">
-                                <label className="text-[10px] text-muted-foreground font-medium leading-tight block">Weight (lb)</label>
+                                <label className="text-[10px] text-muted-foreground font-medium leading-tight block">Weight ({weightUnit})</label>
                                 <Input type="number" inputMode="decimal" enterKeyHint="next" value={form.body_weight ?? ''} onChange={e => setForm({ ...form, body_weight: parseFloat(e.target.value) || null })} className="h-9 text-sm w-full" />
                             </div>
                             <div className="space-y-1 min-w-0">
@@ -167,8 +240,8 @@ export function ProgressTracker() {
                             className="w-full h-16 border border-border rounded-lg p-2 bg-transparent text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
                         />
                     </div>
-                    <Button onClick={handleSave} className="w-full h-9">
-                        <Save className="h-3.5 w-3.5 mr-1" /> Save
+                    <Button onClick={handleSave} disabled={!form.date} className="w-full h-9">
+                        <Save className="h-3.5 w-3.5 mr-1" /> {form.date ? 'Save' : 'Pick a date to save'}
                     </Button>
                 </motion.div>
             )}
@@ -191,7 +264,7 @@ export function ProgressTracker() {
                                     </span>
                                 </div>
                                 <div className="grid grid-cols-3 gap-x-3 gap-y-1 text-xs">
-                                    {m.body_weight && <span className="font-mono">{m.body_weight} lb</span>}
+                                    {m.body_weight && <span className="font-mono">{m.body_weight} {weightUnit}</span>}
                                     {m.rhr && <span className="font-mono">RHR {m.rhr}</span>}
                                     {m.rope_minutes && <span className="font-mono">Rope {m.rope_minutes}m</span>}
                                     {m.bench_top_set && <span className="font-mono">B: {m.bench_top_set}</span>}
@@ -243,13 +316,15 @@ export function ProgressTracker() {
                 </>
             )}
 
-            {/* Charts */}
+            {/* Charts — peak lines come from the user's saved bests, none by default.
+                BRAND_RED is a literal because recharts sets stroke as an SVG
+                attribute, where CSS var() doesn't resolve. */}
             {weightData.length > 1 && (
                 <div className="space-y-6">
-                    <ChartCard title="Body Weight (lb)" data={weightData} color="#3b82f6" peakLine={PEAK_WEIGHT} peakLabel="Peak (180)" />
-                    {benchData.length > 1 && <ChartCard title="Bench Top Set" data={benchData} color="#22c55e" peakLine={PEAK_BENCH} peakLabel="Peak (280)" />}
-                    {squatData.length > 1 && <ChartCard title="Squat Top Set" data={squatData} color="#eab308" peakLine={PEAK_SQUAT} peakLabel="Peak (405)" />}
-                    {deadliftData.length > 1 && <ChartCard title="Deadlift Top Set" data={deadliftData} color="#ef4444" peakLine={PEAK_DEADLIFT} peakLabel="Peak (495)" />}
+                    <ChartCard title={`Body Weight (${weightUnit})`} data={weightData} color={BRAND_RED} peakLine={personalPeaks.weight} peakLabel={personalPeaks.weight ? `Peak (${personalPeaks.weight})` : undefined} />
+                    {benchData.length > 1 && <ChartCard title="Bench Top Set" data={benchData} color="#22c55e" peakLine={personalPeaks.bench} peakLabel={personalPeaks.bench ? `Peak (${personalPeaks.bench})` : undefined} />}
+                    {squatData.length > 1 && <ChartCard title="Squat Top Set" data={squatData} color="#eab308" peakLine={personalPeaks.squat} peakLabel={personalPeaks.squat ? `Peak (${personalPeaks.squat})` : undefined} />}
+                    {deadliftData.length > 1 && <ChartCard title="Deadlift Top Set" data={deadliftData} color={BRAND_RED} peakLine={personalPeaks.deadlift} peakLabel={personalPeaks.deadlift ? `Peak (${personalPeaks.deadlift})` : undefined} />}
                 </div>
             )}
 

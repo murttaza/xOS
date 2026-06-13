@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
-import { cn } from '../lib/utils';
+import { cn, isDialogOpen } from '../lib/utils';
 import { Dumbbell } from 'lucide-react';
 import { Button } from './ui/button';
 import { ModeHeader } from './ModeHeader';
@@ -11,20 +11,18 @@ import { FitnessHome } from './fitness/FitnessHome';
 import { TodayWorkout } from './fitness/TodayWorkout';
 import { WeekView } from './fitness/WeekView';
 import { ProgramOverview } from './fitness/ProgramOverview';
-import { ProgressTracker } from './fitness/ProgressTracker';
-import { StatsView } from './fitness/StatsView';
-import { ExerciseHistory } from './fitness/ExerciseHistory';
+import { StatsHub } from './fitness/StatsHub';
 import { PrinciplesView } from './fitness/PrinciplesView';
 import { ProgramPicker } from './fitness/ProgramPicker';
 
+// Six tabs, not eight: Progress and History now live inside the Stats hub.
+// Six fits the mobile bottom bar without scrolling tabs off-screen.
 const TABS = [
     { id: 'home', label: 'Home' },
     { id: 'today', label: 'Today' },
     { id: 'week', label: 'Week' },
     { id: 'program', label: 'Program' },
     { id: 'stats', label: 'Stats' },
-    { id: 'progress', label: 'Progress' },
-    { id: 'history', label: 'History' },
     { id: 'principles', label: 'Principles' },
 ] as const;
 
@@ -51,13 +49,17 @@ export function FitnessMode() {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && isFitnessMode) {
-                toggleFitnessMode();
+            if (e.key !== 'Escape' || !isFitnessMode || e.defaultPrevented) return;
+            if (isDialogOpen()) return; // a dialog owns this Escape press
+            if (showProgramPicker && activeProgram) {
+                setShowProgramPicker(false); // close the picker layer, keep the mode
+                return;
             }
+            toggleFitnessMode();
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isFitnessMode, toggleFitnessMode]);
+    }, [isFitnessMode, toggleFitnessMode, showProgramPicker, activeProgram, setShowProgramPicker]);
 
     const renderContent = () => {
         if (modeLoading) return <ModeLoading label="Loading fitness…" />;
@@ -67,9 +69,10 @@ export function FitnessMode() {
             case 'today': return <TodayWorkout />;
             case 'week': return <WeekView />;
             case 'program': return <ProgramOverview />;
-            case 'stats': return <StatsView />;
-            case 'progress': return <ProgressTracker />;
-            case 'history': return <ExerciseHistory />;
+            case 'stats': return <StatsHub initialView="stats" />;
+            // Old deep links (home quick-links, history) land inside the hub.
+            case 'progress': return <StatsHub initialView="progress" />;
+            case 'history': return <StatsHub initialView="history" />;
             case 'principles': return <PrinciplesView />;
             default: return <FitnessHome />;
         }
@@ -86,6 +89,10 @@ export function FitnessMode() {
     };
 
     const canGoBack = showProgramPicker || fitnessTabHistory.length > 0;
+
+    // 'progress'/'history' render inside the Stats hub — highlight Stats for them.
+    const isTabActive = (tabId: string) =>
+        fitnessTab === tabId || (tabId === 'stats' && (fitnessTab === 'progress' || fitnessTab === 'history'));
 
     return (
         <AnimatePresence>
@@ -112,11 +119,11 @@ export function FitnessMode() {
                                 {TABS.map(tab => (
                                     <Button
                                         key={tab.id}
-                                        variant={fitnessTab === tab.id ? 'default' : 'ghost'}
+                                        variant={isTabActive(tab.id) ? 'default' : 'ghost'}
                                         size="sm"
                                         className={cn(
                                             "text-xs h-8 px-3",
-                                            fitnessTab === tab.id
+                                            isTabActive(tab.id)
                                                 ? "bg-primary text-primary-foreground"
                                                 : "text-muted-foreground hover:text-foreground"
                                         )}
@@ -145,8 +152,8 @@ export function FitnessMode() {
                                     <button
                                         key={tab.id}
                                         className={cn(
-                                            "flex-1 min-w-[64px] py-2.5 text-[10px] font-medium text-center transition-colors",
-                                            fitnessTab === tab.id
+                                            "flex-1 min-w-[52px] py-2.5 text-[10px] font-medium text-center transition-colors",
+                                            isTabActive(tab.id)
                                                 ? "text-primary border-t-2 border-primary -mt-px"
                                                 : "text-muted-foreground"
                                         )}

@@ -37,13 +37,12 @@ export const CompletedTasks = memo(function CompletedTasks({
                 </span>
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4 pt-2 space-y-2 opacity-60 grayscale hover:grayscale-0 transition-all duration-150">
-                <div className="max-h-[60vh] lg:max-h-[45vh] overscroll-contain overflow-y-auto lg:snap-y lg:snap-mandatory no-scrollbar space-y-2">
+                <div className="max-h-[60vh] lg:max-h-[45vh] overscroll-contain overflow-y-auto no-scrollbar space-y-2">
                     {displayTasks.map(task => (
-                        <div key={task.id} className="lg:snap-start">
+                        <div key={task.id} className="">
                             <TaskItem
                                 task={task}
                                 isActive={false}
-                                isTimerRunning={false}
                                 onToggleTimer={noop}
                                 onEdit={onEdit}
                                 onDelete={onDelete}

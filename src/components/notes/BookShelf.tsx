@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Plus } from 'lucide-react';
+import { isInLibrary, libraryOffset as libOffset } from '@/lib/library';
 import { Subject } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -16,23 +17,28 @@ const BookSpine = React.memo(({
 }) => {
     if (isPlaceholder) {
         return (
-            <div
+            <button
+                type="button"
                 onClick={onClick}
-                className="group relative h-64 w-10 sm:w-12 cursor-pointer transition-colors duration-150 no-drag border border-transparent rounded-sm opacity-20 hover:opacity-50"
+                aria-label="New book in this slot"
+                title="New book"
+                className="group relative h-64 w-10 sm:w-12 cursor-pointer transition-all duration-150 no-drag border border-transparent rounded-sm opacity-20 hover:opacity-50 focus-visible:opacity-60"
             >
                 <div className="absolute inset-0 rounded-sm border border-border bg-transparent group-hover:bg-muted transition-colors flex items-center justify-center">
                     <Plus className="text-muted-foreground w-4 h-4" />
                 </div>
-            </div>
+            </button>
         )
     }
 
     if (!subject) return null;
 
     return (
-        <div className="group relative h-64 w-10 sm:w-12 no-drag transition-transform duration-150 hover:-translate-y-1">
-            {/* Flat Spine container */}
-            <div
+        <div className="group relative h-64 w-10 sm:w-12 no-drag transition-transform duration-150 hover:-translate-y-1 focus-within:-translate-y-1">
+            {/* Flat Spine — a real button so the library is keyboard-reachable */}
+            <button
+                type="button"
+                aria-label={`Open book ${subject.title}`}
                 className={cn(
                     "absolute inset-0 rounded-sm border border-border group-hover:border-foreground/20 transition-colors overflow-hidden cursor-pointer z-10",
                     "bg-card shadow-sm"
@@ -54,7 +60,7 @@ const BookSpine = React.memo(({
                         {subject.title}
                     </h3>
                 </div>
-            </div>
+            </button>
         </div>
     );
 });
@@ -70,7 +76,6 @@ interface BookShelfProps {
     onNewLibrary: () => void;
 }
 
-const SPINES_PER_LIBRARY = 300;
 const PLACEHOLDER_PADDING = 6; // empty slots after last subject to fill the row + a few extra
 
 export const BookShelf = ({
@@ -80,14 +85,14 @@ export const BookShelf = ({
     onCreateSubjectAt,
     onNewLibrary,
 }: BookShelfProps) => {
-    const libraryOffset = currentLibraryIndex * SPINES_PER_LIBRARY;
+    const libraryOffset = libOffset(currentLibraryIndex);
 
     // Get subjects in this library, sorted by orderIndex
     const librarySubjects = useMemo(() =>
         subjects
-            .filter(s => s.orderIndex >= libraryOffset && s.orderIndex < libraryOffset + SPINES_PER_LIBRARY)
+            .filter(s => isInLibrary(s.orderIndex, currentLibraryIndex))
             .sort((a, b) => a.orderIndex - b.orderIndex),
-        [subjects, libraryOffset]
+        [subjects, currentLibraryIndex]
     );
 
     // Build a sparse list: real subjects at their positions + placeholder padding after the last one

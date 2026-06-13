@@ -3,6 +3,7 @@ import { Transaction, BudgetTarget } from '@/types';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { Progress } from '../ui/progress';
 import { toCents, centsToAmount, formatAmount } from '@/lib/money';
+import { useStore } from '@/store';
 
 interface BudgetDashboardProps {
     transactions: Transaction[];
@@ -57,6 +58,7 @@ export function BudgetDashboard({ transactions, budgetTargets }: BudgetDashboard
     }, [budgetTargets]);
 
     const fmt = formatAmount;
+    const currency = useStore(s => s.currencySymbol);
 
     return (
         <div className="space-y-4">
@@ -64,7 +66,7 @@ export function BudgetDashboard({ transactions, budgetTargets }: BudgetDashboard
             <div className="bg-secondary rounded-2xl p-4">
                 <p className="text-xs text-muted-foreground font-medium mb-1">Net Balance</p>
                 <p className={`text-3xl font-bold tabular-nums ${net >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {net >= 0 ? '+' : ''}{fmt(net)}
+                    {net >= 0 ? '+' : '−'}{currency}{fmt(Math.abs(net))}
                 </p>
 
                 {/* Income / Expense row */}
@@ -75,7 +77,7 @@ export function BudgetDashboard({ transactions, budgetTargets }: BudgetDashboard
                         </div>
                         <div>
                             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Income</p>
-                            <p className="text-sm font-semibold text-green-500 tabular-nums">${fmt(totalIncome)}</p>
+                            <p className="text-sm font-semibold text-green-500 tabular-nums">{currency}{fmt(totalIncome)}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -84,7 +86,7 @@ export function BudgetDashboard({ transactions, budgetTargets }: BudgetDashboard
                         </div>
                         <div>
                             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Expenses</p>
-                            <p className="text-sm font-semibold text-red-500 tabular-nums">${fmt(totalExpenses)}</p>
+                            <p className="text-sm font-semibold text-red-500 tabular-nums">{currency}{fmt(totalExpenses)}</p>
                         </div>
                     </div>
                 </div>
@@ -110,8 +112,8 @@ export function BudgetDashboard({ transactions, budgetTargets }: BudgetDashboard
                                             <span className="text-foreground">{cat.name}</span>
                                         </div>
                                         <span className={`font-medium ${isOverBudget ? 'text-red-500' : 'text-muted-foreground'}`}>
-                                            ${fmt(cat.spent)}
-                                            {limit && <span className="text-muted-foreground/60"> / ${fmt(limit)}</span>}
+                                            {currency}{fmt(cat.spent)}
+                                            {limit && <span className="text-muted-foreground/60"> / {currency}{fmt(limit)}</span>}
                                             {isOverBudget && <span className="text-red-500/70 text-[10px] ml-1">({Math.round(rawPercentage)}%)</span>}
                                         </span>
                                     </div>

@@ -47,7 +47,7 @@ const FEATURES = [
 ];
 
 /** First-run onboarding — shown once per account (gating lives in App.tsx). */
-export function WelcomeDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function WelcomeDialog({ open, onClose, onStartTask }: { open: boolean; onClose: () => void; onStartTask?: () => void }) {
     return (
         <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
             <DialogContent className="max-w-lg">
@@ -85,7 +85,7 @@ export function WelcomeDialog({ open, onClose }: { open: boolean; onClose: () =>
                         </p>
                     </div>
 
-                    <Button className="w-full" onClick={onClose}>
+                    <Button className="w-full" onClick={() => { onClose(); onStartTask?.(); }}>
                         Start by adding your first task
                     </Button>
                 </div>

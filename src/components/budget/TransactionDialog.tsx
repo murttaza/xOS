@@ -6,6 +6,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { getLocalDateString } from '@/lib/utils';
 import { useTheme } from '@/components/ThemeProvider';
+import { useStore } from '@/store';
 
 interface TransactionDialogProps {
     open: boolean;
@@ -24,6 +25,7 @@ const PAYMENT_METHODS = [
 ];
 
 export function TransactionDialog({ open, onOpenChange, categories, transaction, onSave }: TransactionDialogProps) {
+    const currency = useStore(s => s.currencySymbol);
     const { theme } = useTheme();
     const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     const [isIncome, setIsIncome] = useState(0);
@@ -32,7 +34,6 @@ export function TransactionDialog({ open, onOpenChange, categories, transaction,
     const [date, setDate] = useState(getLocalDateString());
     const [paymentMethod, setPaymentMethod] = useState('cash');
     const [notes, setNotes] = useState('');
-    const [isRecurring, setIsRecurring] = useState(0);
 
     useEffect(() => {
         if (transaction) {
@@ -42,7 +43,6 @@ export function TransactionDialog({ open, onOpenChange, categories, transaction,
             setDate(transaction.date);
             setPaymentMethod(transaction.paymentMethod || 'cash');
             setNotes(transaction.notes || '');
-            setIsRecurring(transaction.isRecurring);
         } else {
             setIsIncome(0);
             setAmount('');
@@ -50,7 +50,6 @@ export function TransactionDialog({ open, onOpenChange, categories, transaction,
             setDate(getLocalDateString());
             setPaymentMethod('cash');
             setNotes('');
-            setIsRecurring(0);
         }
     }, [transaction, open]);
 
@@ -68,7 +67,9 @@ export function TransactionDialog({ open, onOpenChange, categories, transaction,
             date,
             paymentMethod,
             notes,
-            isRecurring,
+            // The recurring feature was never built — the checkbox is gone, but
+            // existing rows keep whatever value they had.
+            isRecurring: transaction?.isRecurring ?? 0,
         } as Omit<Transaction, 'id'> | Transaction;
 
         onSave(data);
@@ -78,7 +79,9 @@ export function TransactionDialog({ open, onOpenChange, categories, transaction,
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-md max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:w-full max-sm:rounded-none max-sm:border-0 max-sm:p-0 flex flex-col">
-                <DialogHeader className="max-sm:px-4 max-sm:pb-2 shrink-0" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 28px)' }}>
+                {/* Safe-area top padding only on the mobile full-screen variant —
+                    on desktop it just added dead space inside a centered dialog */}
+                <DialogHeader className="max-sm:px-4 max-sm:pb-2 max-sm:pt-[max(env(safe-area-inset-top,0px),16px)] shrink-0">
                     <DialogTitle>{transaction ? 'Edit Transaction' : 'Add Transaction'}</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
@@ -105,7 +108,7 @@ export function TransactionDialog({ open, onOpenChange, categories, transaction,
                         <div className="space-y-1.5">
                             <Label htmlFor="amount" className="text-xs">Amount</Label>
                             <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{currency}</span>
                                 <Input
                                     id="amount"
                                     type="number"
@@ -114,8 +117,9 @@ export function TransactionDialog({ open, onOpenChange, categories, transaction,
                                     min="0"
                                     value={amount}
                                     onChange={e => setAmount(e.target.value)}
+                                    onWheel={e => (e.target as HTMLInputElement).blur()}
                                     placeholder="0.00"
-                                    className="pl-7 text-lg font-semibold h-12"
+                                    className="pl-8 text-lg font-semibold h-12"
                                     required
                                     autoFocus
                                 />
@@ -180,16 +184,6 @@ export function TransactionDialog({ open, onOpenChange, categories, transaction,
                             />
                         </div>
 
-                        {/* Recurring Toggle */}
-                        <label className="flex items-center gap-3 cursor-pointer py-1">
-                            <input
-                                type="checkbox"
-                                checked={!!isRecurring}
-                                onChange={e => setIsRecurring(e.target.checked ? 1 : 0)}
-                                className="rounded border-border h-5 w-5"
-                            />
-                            <span className="text-sm text-muted-foreground">Recurring transaction</span>
-                        </label>
                     </div>
 
                     <DialogFooter className="max-sm:px-4 max-sm:pb-4 max-sm:pt-3 shrink-0">

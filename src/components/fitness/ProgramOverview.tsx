@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronRight, Plus, X, Pencil, Trash2, ArrowUp, ArrowDown, CalendarDays, ListOrdered } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { showConfirm } from '../ui/confirm-dialog';
 import { cn } from '../../lib/utils';
 
 const DAY_NAMES: Record<number, string> = { 1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday', 7: 'Sunday' };
@@ -246,16 +247,17 @@ export function ProgramOverview() {
                         <button
                             type="button"
                             disabled={!editMode}
-                            onClick={() => {
+                            onClick={async () => {
                                 const next = program.scheduling_mode === 'sequential' ? 'weekly' : 'sequential';
                                 if (next === program.scheduling_mode) return;
-                                if (confirm(
-                                    next === 'sequential'
-                                        ? 'Switch to next-up mode? Sessions will be created one at a time as you complete them. Existing planned sessions will stay in the database but stop being shown on the calendar.'
-                                        : 'Switch to weekly mode? Sessions will be pre-spawned each week on their day_of_week.'
-                                )) {
-                                    updateProgram(program.id, { scheduling_mode: next });
-                                }
+                                const ok = await showConfirm({
+                                    title: next === 'sequential' ? 'Switch to next-up mode?' : 'Switch to weekly mode?',
+                                    message: next === 'sequential'
+                                        ? 'Sessions will be created one at a time as you complete them. Existing planned sessions stay in the database but stop showing on the calendar.'
+                                        : 'Sessions will be pre-spawned each week on their scheduled weekday.',
+                                    confirmLabel: 'Switch',
+                                });
+                                if (ok) updateProgram(program.id, { scheduling_mode: next });
                             }}
                             className={cn(
                                 "inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider px-2 py-1 rounded-full border transition-colors",
@@ -584,7 +586,17 @@ export function ProgramOverview() {
                                                                                                 variant="ghost"
                                                                                                 size="icon"
                                                                                                 className="h-6 w-6 text-destructive hover:text-destructive"
-                                                                                                onClick={() => deleteExercise(ex.id)}
+                                                                                                aria-label={`Remove ${ex.display_name}`}
+                                                                                                title="Remove exercise"
+                                                                                                onClick={async () => {
+                                                                                                    const ok = await showConfirm({
+                                                                                                        title: 'Remove exercise',
+                                                                                                        message: `Remove "${ex.display_name}" from this day? Past logs are kept, but the exercise leaves the plan.`,
+                                                                                                        confirmLabel: 'Remove',
+                                                                                                        destructive: true,
+                                                                                                    });
+                                                                                                    if (ok) deleteExercise(ex.id);
+                                                                                                }}
                                                                                             >
                                                                                                 <X className="h-3 w-3" />
                                                                                             </Button>

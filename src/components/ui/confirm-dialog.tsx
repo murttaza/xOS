@@ -51,13 +51,15 @@ export function ConfirmProvider() {
                 </DialogHeader>
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap">{pending?.message}</p>
                 <div className="flex justify-end gap-2 pt-2">
-                    <Button variant="ghost" onClick={() => close(false)}>
+                    {/* Destructive confirms focus Cancel so a reflexive Enter
+                        can't land on Delete. */}
+                    <Button variant="ghost" onClick={() => close(false)} autoFocus={pending?.destructive}>
                         {pending?.cancelLabel ?? 'Cancel'}
                     </Button>
                     <Button
                         variant={pending?.destructive ? 'destructive' : 'default'}
                         onClick={() => close(true)}
-                        autoFocus
+                        autoFocus={!pending?.destructive}
                     >
                         {pending?.confirmLabel ?? 'Confirm'}
                     </Button>

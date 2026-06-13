@@ -5,6 +5,11 @@ import { Input } from '../ui/input';
 import { Progress } from '../ui/progress';
 import { Plus, X, Check, Settings2 } from 'lucide-react';
 import { toCents, centsToAmount } from '@/lib/money';
+import { showConfirm } from '../ui/confirm-dialog';
+import { useStore } from '@/store';
+import { api } from '@/api';
+import { showErrorToast } from '../ui/toast';
+import { format, parse, subMonths } from 'date-fns';
 
 interface BudgetTargetsProps {
     categories: BudgetCategory[];
@@ -17,6 +22,7 @@ interface BudgetTargetsProps {
 }
 
 export function BudgetTargets({ categories, targets, transactions, selectedMonth, onSetTarget, onDeleteTarget, onOpenCategoryManager }: BudgetTargetsProps) {
+    const currency = useStore(s => s.currencySymbol);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [editAmount, setEditAmount] = useState('');
     const [addingCategoryId, setAddingCategoryId] = useState<number | null>(null);
@@ -75,7 +81,18 @@ export function BudgetTargets({ categories, targets, transactions, selectedMonth
                                     size="icon"
                                     variant="ghost"
                                     className="h-8 w-8 shrink-0"
-                                    onClick={() => target.id && onDeleteTarget(target.id)}
+                                    aria-label={`Remove budget target for ${cat.name}`}
+                                    title="Remove target"
+                                    onClick={async () => {
+                                        if (!target.id) return;
+                                        const ok = await showConfirm({
+                                            title: 'Remove budget target',
+                                            message: `Remove the monthly limit for ${cat.name}?`,
+                                            confirmLabel: 'Remove',
+                                            destructive: true,
+                                        });
+                                        if (ok) onDeleteTarget(target.id!);
+                                    }}
                                 >
                                     <X className="h-4 w-4 text-muted-foreground" />
                                 </Button>
@@ -83,7 +100,7 @@ export function BudgetTargets({ categories, targets, transactions, selectedMonth
 
                             {editingId === cat.id ? (
                                 <div className="flex items-center gap-2">
-                                    <span className="text-sm text-muted-foreground">$</span>
+                                    <span className="text-sm text-muted-foreground">{currency}</span>
                                     <Input
                                         type="number"
                                         step="0.01"
@@ -110,10 +127,10 @@ export function BudgetTargets({ categories, targets, transactions, selectedMonth
                                 >
                                     <div className="flex items-center justify-between text-xs mb-1.5">
                                         <span className={`font-medium ${isOver ? 'text-red-500' : 'text-muted-foreground'}`}>
-                                            ${spent.toFixed(2)} spent
+                                            {currency}{spent.toFixed(2)} spent
                                         </span>
                                         <span className="text-muted-foreground">
-                                            ${limit.toFixed(2)} limit
+                                            {currency}{limit.toFixed(2)} limit
                                         </span>
                                     </div>
                                     <Progress
@@ -127,10 +144,34 @@ export function BudgetTargets({ categories, targets, transactions, selectedMonth
                 })}
             </div>
 
-            {/* No targets empty state */}
+            {/* No targets empty state — offer last month's as a starting point,
+                since targets are per-month and used to restart empty every month */}
             {categoriesWithTargets.length === 0 && (
-                <div className="text-center py-6 text-muted-foreground text-sm">
-                    No budget targets set yet
+                <div className="text-center py-6 space-y-3">
+                    <p className="text-muted-foreground text-sm">No budget targets set for this month</p>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-9"
+                        onClick={async () => {
+                            try {
+                                const prevMonth = format(subMonths(parse(selectedMonth, 'yyyy-MM', new Date()), 1), 'yyyy-MM');
+                                const prev = await api.getBudgetTargets(prevMonth);
+                                if (!prev || prev.length === 0) {
+                                    showErrorToast('Last month had no targets to copy.');
+                                    return;
+                                }
+                                for (const t of prev) {
+                                    onSetTarget({ categoryId: t.categoryId, month: selectedMonth, limitAmount: t.limitAmount });
+                                }
+                            } catch (err) {
+                                console.error('Copy targets failed:', err);
+                                showErrorToast("Couldn't copy last month's targets.");
+                            }
+                        }}
+                    >
+                        Copy last month's targets
+                    </Button>
                 </div>
             )}
 
@@ -150,7 +191,7 @@ export function BudgetTargets({ categories, targets, transactions, selectedMonth
                             ))}
                         </select>
                         <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">$</span>
+                            <span className="text-sm text-muted-foreground">{currency}</span>
                             <Input
                                 type="number"
                                 step="0.01"

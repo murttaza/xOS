@@ -15,15 +15,30 @@ const recentlyStoppedTimers = new Set<number>();
 // before the initial push to Supabase has completed.
 const recentlyStartedTimers = new Set<number>();
 
+// Prayer toggles update the UI synchronously and persist through this shared
+// chain, one write at a time in tap order. Without it, rapid taps interleaved
+// their read-modify-write cycles and landed in whatever order the network
+// returned — toggles popped in late, out of order, or overwrote each other.
+let prayerWriteChain: Promise<void> = Promise.resolve();
+let pendingPrayerWrites = 0;
+let prayerReconcileNeeded = false;
+
 export interface SessionSlice {
     sessions: Session[];
+    /** The log for whatever date the calendar is viewing. */
     dailyLog: DailyLog | null;
+    /** Always today's log — header prayer pills read this, so browsing the
+     *  calendar can never hijack them. */
+    todayLog: DailyLog | null;
 
     // Timer state - Multi-tasking support (synced to Supabase for cross-device)
     activeTimers: Record<number, number>; // taskId -> duration in seconds (derived from startTimes)
     timerStartTimes: Record<number, string>; // taskId -> ISO start timestamp
     toggleTaskTimer: (taskId: number) => Promise<void>;
-    stopTaskTimer: (taskId: number) => Promise<void>;
+    /** Stop a timer and record the session. `discardSeconds` trims that much
+     *  off the end before recording (used by the idle-return prompt); if the
+     *  whole session was idle, nothing is recorded. */
+    stopTaskTimer: (taskId: number, opts?: { discardSeconds?: number }) => Promise<void>;
     incrementTimers: () => void;
     syncTimers: () => Promise<void>;
 
@@ -39,6 +54,8 @@ export interface SessionSlice {
     syncPomodoro: () => boolean;
 
     fetchDailyLog: (date: string) => Promise<void>;
+    /** Refresh today's log cache without changing which date the calendar views. */
+    fetchTodayLog: () => Promise<void>;
     fetchSessionsRange: (startDate: string, endDate: string) => Promise<void>;
     addSession: (session: Omit<Session, 'id'>) => Promise<void>;
     saveJournalEntry: (date: string, entry: string) => Promise<void>;
@@ -48,6 +65,7 @@ export interface SessionSlice {
 export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = (set, get) => ({
     sessions: [],
     dailyLog: null,
+    todayLog: null,
     activeTimers: {},
     timerStartTimes: {},
 
@@ -78,8 +96,29 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
     },
 
     fetchDailyLog: async (date) => {
+        // While prayer writes are in flight, a refetch of today would replace
+        // the optimistic toggles with stale server state. Skip — the chain's
+        // reconcile step refetches if anything actually failed.
+        if (pendingPrayerWrites > 0 && date === getLocalDateString()) return;
         const log = await api.getDailyLog(date);
-        set({ dailyLog: log || null });
+        if (pendingPrayerWrites > 0 && date === getLocalDateString()) return;
+        set({
+            dailyLog: log || null,
+            ...(date === getLocalDateString() ? { todayLog: log || null } : {}),
+        });
+    },
+
+    fetchTodayLog: async () => {
+        if (pendingPrayerWrites > 0) return;
+        const today = getLocalDateString();
+        const log = await api.getDailyLog(today);
+        if (pendingPrayerWrites > 0) return;
+        set((state) => ({
+            todayLog: log || null,
+            // Mirror into the viewed slot only when the calendar is on today —
+            // never yank the view away from a date the user is browsing.
+            ...(state.dailyLog?.date === today ? { dailyLog: log || null } : {}),
+        }));
     },
 
     fetchSessionsRange: async (startDate, endDate) => {
@@ -168,32 +207,50 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
     },
 
     togglePrayer: async (prayerName: string) => {
-        // Fetch fresh stats before computing prayer XP
-        await get().fetchStats();
-
-        const state = get();
         const today = getLocalDateString();
-        let log = state.dailyLog;
+        const state = get();
 
-        if (!log || log.date !== today) {
-            log = {
-                date: today,
-                journalEntry: "",
-                prayersCompleted: "{}"
-            };
-        }
+        // Prayers always target TODAY, regardless of which date the calendar
+        // is viewing — the dedicated todayLog slot makes that unambiguous.
+        const base = state.todayLog?.date === today
+            ? state.todayLog
+            : { date: today, journalEntry: "", prayersCompleted: "{}" };
 
-        const prayers = safeJSONParse<Record<string, boolean>>(log.prayersCompleted, {});
-        const wasCompleted = prayers[prayerName];
+        const prayers = safeJSONParse<Record<string, boolean>>(base.prayersCompleted, {});
+        const wasCompleted = !!prayers[prayerName];
         prayers[prayerName] = !wasCompleted;
+        const prayersJson = JSON.stringify(prayers);
+        const newLog = { ...base, prayersCompleted: prayersJson };
 
-        const newStats = [...state.stats];
+        // Optimistic: the pill flips on the tap itself, before any network.
+        // Each tap in a burst builds on the previous one's state synchronously,
+        // so the queued snapshots are cumulative and the last write wins whole.
+        set((s) => ({
+            todayLog: newLog,
+            ...(s.dailyLog?.date === today ? { dailyLog: newLog } : {}),
+        }));
 
-        // XP Logic for Prayer
-        if (!wasCompleted) {
-            const statIndex = newStats.findIndex(s => s.statName === "Religion");
-            if (statIndex !== -1) {
-                const stat = newStats[statIndex];
+        pendingPrayerWrites++;
+        prayerWriteChain = prayerWriteChain.then(async () => {
+            try {
+                await api.savePrayers(today, prayersJson);
+            } catch (err) {
+                console.error('togglePrayer: failed to save prayers', err);
+                showErrorToast(`Couldn't save ${prayerName} — check your connection.`);
+                prayerReconcileNeeded = true;
+                return; // no XP for a toggle that didn't persist
+            }
+
+            if (wasCompleted) return;
+
+            // XP is garnish — log failures but never disturb the saved toggle.
+            try {
+                await get().fetchStats(); // fresh stats so another device's XP isn't overwritten
+                const stats = get().stats;
+                const statIndex = stats.findIndex(s => s.statName === "Religion");
+                if (statIndex === -1) return;
+
+                const stat = stats[statIndex];
                 const prayerXP = calculatePrayerXP(stat.currentLevel);
                 const { newXP, newLevel } = calculateLevelFromXP(stat.currentXP + prayerXP, stat.currentLevel);
 
@@ -203,20 +260,23 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
                     currentLevel: newLevel
                 });
 
-                newStats[statIndex] = {
-                    ...stat,
-                    currentXP: newXP,
-                    currentLevel: newLevel
-                };
+                const newStats = [...get().stats];
+                newStats[statIndex] = { ...stat, currentXP: newXP, currentLevel: newLevel };
+                set({ stats: newStats });
+            } catch (err) {
+                console.error('togglePrayer: failed to award prayer XP', err);
             }
-        }
-
-        const newLog = { ...log, prayersCompleted: JSON.stringify(prayers) };
-        await api.saveDailyLog(newLog);
-        set({
-            dailyLog: newLog,
-            stats: newStats
+        }).finally(() => {
+            pendingPrayerWrites--;
+            // Last write in the burst settles the books: if anything failed,
+            // re-pull server truth so the pills don't show unsaved state.
+            if (pendingPrayerWrites === 0 && prayerReconcileNeeded) {
+                prayerReconcileNeeded = false;
+                get().fetchTodayLog().catch(() => {});
+            }
         });
+
+        await prayerWriteChain;
     },
 
     syncTimers: async () => {
@@ -283,7 +343,7 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
         }
     },
 
-    stopTaskTimer: async (taskId: number) => {
+    stopTaskTimer: async (taskId: number, opts?: { discardSeconds?: number }) => {
         const state = get();
         const startTimeStr = state.timerStartTimes[taskId];
 
@@ -305,7 +365,9 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
 
         const startTime = new Date(startTimeStr);
         const now = new Date();
-        const rawSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+        const discardSeconds = Math.max(0, opts?.discardSeconds ?? 0);
+        const rawSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000) - discardSeconds;
+        if (rawSeconds <= 0) return; // entire session was idle — record nothing
         const duration = Math.min(rawSeconds, MAX_TIMER_SECONDS);
         if (rawSeconds > MAX_TIMER_SECONDS) {
             // Most likely the laptop slept for a long stretch — capped silently before; surface it so the user knows.
@@ -314,6 +376,9 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
             showErrorToast(`Timer ran for ~${hours}h (likely while idle). Saved the maximum 24h — adjust manually if needed.`);
         }
         const durationMinutes = Math.floor(duration / 60);
+        // End the recorded session where work actually stopped, not where the
+        // idle prompt was answered.
+        const endTime = new Date(now.getTime() - discardSeconds * 1000);
 
         if (durationMinutes > 0) {
             // Prevent duplicate sessions when both devices stop the same timer
@@ -322,9 +387,9 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
                 await state.addSession({
                     taskId: taskId,
                     startTime: startTime.toISOString(),
-                    endTime: now.toISOString(),
+                    endTime: endTime.toISOString(),
                     duration_minutes: durationMinutes,
-                    dateLogged: getLocalDateString(now)
+                    dateLogged: getLocalDateString(endTime)
                 });
             }
         }

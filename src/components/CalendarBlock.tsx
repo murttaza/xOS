@@ -91,6 +91,25 @@ export function CalendarBlock() {
         prevDateRef.current = date;
     }, [date, saveJournalEntry]);
 
+    // Flush on unmount / page hide too — typing then closing the app within
+    // the debounce window must not lose the entry.
+    useEffect(() => {
+        const flush = () => {
+            if (pendingJournalRef.current) {
+                saveJournalEntry(pendingJournalRef.current.date, pendingJournalRef.current.text);
+                pendingJournalRef.current = null;
+            }
+        };
+        const onVisibility = () => { if (document.visibilityState === 'hidden') flush(); };
+        document.addEventListener('visibilitychange', onVisibility);
+        window.addEventListener('beforeunload', flush);
+        return () => {
+            document.removeEventListener('visibilitychange', onVisibility);
+            window.removeEventListener('beforeunload', flush);
+            flush();
+        };
+    }, [saveJournalEntry]);
+
     const nextMonth = () => setCurrentMonth(prev => addMonths(prev, 1));
     const prevMonth = () => setCurrentMonth(prev => subMonths(prev, 1));
 
@@ -142,6 +161,22 @@ export function CalendarBlock() {
         return set;
     }, [sessions, tasks]);
 
+    // Week recap gets its OWN session data — the global `sessions` slot holds
+    // whatever month the calendar is browsing, which made "This Week" go wrong
+    // the moment the user paged into history.
+    const [recapSessions, setRecapSessions] = useState<typeof sessions>([]);
+    useEffect(() => {
+        if (!showWeekRecap) return;
+        const now = new Date();
+        const lastWeekStart = getLocalDateString(startOfWeek(subWeeks(now, 1), { weekStartsOn: 0 }));
+        const thisWeekEnd = getLocalDateString(endOfWeek(now, { weekStartsOn: 0 }));
+        let cancelled = false;
+        import('@/api').then(({ api }) => api.getSessionsRange(lastWeekStart, thisWeekEnd))
+            .then(rows => { if (!cancelled) setRecapSessions(rows); })
+            .catch(err => console.error('Week recap fetch failed:', err));
+        return () => { cancelled = true; };
+    }, [showWeekRecap]);
+
     // Week recap computations
     const weekRecap = useMemo(() => {
         const now = new Date();
@@ -151,17 +186,17 @@ export function CalendarBlock() {
         const lastWeekEnd = getLocalDateString(endOfWeek(subWeeks(now, 1), { weekStartsOn: 0 }));
 
         // This week stats
-        const thisWeekSessions = sessions.filter(s => s.dateLogged >= thisWeekStart && s.dateLogged <= thisWeekEnd);
+        const thisWeekSessions = recapSessions.filter(s => s.dateLogged >= thisWeekStart && s.dateLogged <= thisWeekEnd);
         const thisWeekMinutes = thisWeekSessions.reduce((a, s) => a + s.duration_minutes, 0);
         const thisWeekCompleted = tasks.filter(t => t.isComplete && t.completedAt && getLocalDateString(new Date(t.completedAt)) >= thisWeekStart && getLocalDateString(new Date(t.completedAt)) <= thisWeekEnd);
         const thisWeekActiveDays = new Set(thisWeekSessions.map(s => s.dateLogged)).size;
 
         // Last week stats
-        const lastWeekSessions = sessions.filter(s => s.dateLogged >= lastWeekStart && s.dateLogged <= lastWeekEnd);
+        const lastWeekSessions = recapSessions.filter(s => s.dateLogged >= lastWeekStart && s.dateLogged <= lastWeekEnd);
         const lastWeekMinutes = lastWeekSessions.reduce((a, s) => a + s.duration_minutes, 0);
         const lastWeekCompleted = tasks.filter(t => t.isComplete && t.completedAt && getLocalDateString(new Date(t.completedAt)) >= lastWeekStart && getLocalDateString(new Date(t.completedAt)) <= lastWeekEnd);
 
-        // Top tasks worked on this week (by session count)
+        // Top tasks worked on this week (by minutes)
         const taskSessionCount = new Map<number, number>();
         thisWeekSessions.forEach(s => {
             taskSessionCount.set(s.taskId, (taskSessionCount.get(s.taskId) || 0) + s.duration_minutes);
@@ -179,7 +214,7 @@ export function CalendarBlock() {
             lastWeekCompletedCount: lastWeekCompleted.length,
             topTasks,
         };
-    }, [sessions, tasks, getTaskTitle]);
+    }, [recapSessions, tasks, getTaskTitle]);
 
     return (
         <div className="flex flex-col lg:h-full lg:overflow-hidden lg:bg-gradient-to-br lg:from-card lg:to-secondary/10">
@@ -187,6 +222,9 @@ export function CalendarBlock() {
             <div
                 className="flex items-center justify-between p-4 pb-2 shrink-0 cursor-pointer lg:cursor-default"
                 onClick={() => setIsMobileExpanded(prev => !prev)}
+                role="button"
+                aria-expanded={isMobileExpanded}
+                aria-label="Calendar"
             >
                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors hidden lg:flex" onClick={(e) => { e.stopPropagation(); prevMonth(); }} aria-label="Previous month" title="Previous month">
                     <ChevronLeft className="h-4 w-4" />
@@ -242,6 +280,8 @@ export function CalendarBlock() {
                                 <button
                                     key={idx}
                                     onClick={() => setDate(day)}
+                                    aria-label={`${format(day, 'MMMM d, yyyy')}${hasActivity ? ', has activity' : ''}${isSelected ? ', selected' : ''}`}
+                                    aria-pressed={isSelected}
                                     className={cn(
                                         "relative aspect-square flex flex-col items-center justify-center rounded-xl text-xs font-medium transition-[color,background-color,border-color,transform] duration-100 hover:scale-110 active:scale-95",
                                         !isCurrentMonth && "text-muted-foreground/30 opacity-50",
@@ -378,7 +418,7 @@ export function CalendarBlock() {
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, scale: 0.95 }}
-                                        transition={{ delay: i * 0.05 }}
+                                        transition={{ delay: Math.min(i, 8) * 0.05 }}
                                         className="flex items-center justify-between p-2.5 rounded-lg bg-background/50 border border-border/40 hover:bg-background/80 hover:border-primary/20 hover:shadow-sm transition-colors group"
                                     >
                                         <span className="text-xs font-medium truncate max-w-[70%] group-hover:text-primary transition-colors">
@@ -395,7 +435,7 @@ export function CalendarBlock() {
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, scale: 0.95 }}
-                                        transition={{ delay: (daySessions.length + i) * 0.05 }}
+                                        transition={{ delay: Math.min(daySessions.length + i, 8) * 0.05 }}
                                         className="flex items-center justify-between p-2.5 rounded-lg bg-background/50 border border-border/40 hover:bg-background/80 hover:border-primary/20 hover:shadow-sm transition-colors group"
                                     >
                                         <span className="text-xs font-medium truncate max-w-[70%] group-hover:text-primary transition-colors line-through opacity-70">

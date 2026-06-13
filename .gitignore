@@ -40,3 +40,4 @@ build_*.log
 eslint-output.txt
 report.json
 src_errors.txt
+.claude/scheduled_tasks.lock

@@ -35,14 +35,26 @@ export class ErrorBoundary extends Component<Props, State> {
           <p className="text-xs text-muted-foreground max-w-[200px]">
             {this.state.error?.message || "An unexpected error occurred"}
           </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs"
-            onClick={() => this.setState({ hasError: false, error: null })}
-          >
-            Try Again
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => this.setState({ hasError: false, error: null })}
+            >
+              Try Again
+            </Button>
+            {/* A failed lazy chunk can't recover via state reset — offer the
+                full reload that actually fixes it. */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-muted-foreground"
+              onClick={() => window.location.reload()}
+            >
+              Reload App
+            </Button>
+          </div>
         </div>
       );
     }

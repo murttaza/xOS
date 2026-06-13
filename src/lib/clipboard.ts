@@ -33,6 +33,22 @@ export async function writeClipboard(text: string): Promise<boolean> {
     }
 }
 
+// One pending auto-clear at a time: copying a new secret replaces the old
+// schedule, so a stale timer can never wipe a fresh copy. Module-level on
+// purpose — the clear must outlive whatever component initiated the copy,
+// otherwise closing the vault would leave the secret on the clipboard forever.
+let pendingClear: { handle: ReturnType<typeof setTimeout>; text: string } | null = null;
+
+/** Clears the clipboard after `ms` if it still holds `text` (default 30s). */
+export function scheduleClipboardClear(text: string, ms = 30_000): void {
+    if (pendingClear) clearTimeout(pendingClear.handle);
+    const handle = setTimeout(() => {
+        pendingClear = null;
+        clearClipboardIfMatch(text).catch(() => {});
+    }, ms);
+    pendingClear = { handle, text };
+}
+
 export async function clearClipboardIfMatch(text: string): Promise<void> {
     if (isElectron && window.ipcRenderer) {
         try {

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { ArrowLeft, BookOpen, ChevronRight, Library, X, FileText, Search, Link2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const TOTAL_SPINES = 300;
+import { libraryIndexOf, isInLibrary } from '@/lib/library';
 
 interface NoteLinkPickerProps {
     selectedNoteId: number | null;
@@ -60,7 +60,7 @@ export function NoteLinkPicker({ selectedNoteId, onSelectNote }: NoteLinkPickerP
 
     const libraries = useMemo(() => {
         const idx = new Set<number>();
-        subjects.forEach((s) => idx.add(Math.floor(s.orderIndex / TOTAL_SPINES)));
+        subjects.forEach((s) => idx.add(libraryIndexOf(s.orderIndex)));
         // Always include Library 0 when there are no subjects at all, so the
         // user sees something; otherwise derive strictly from populated libs.
         if (idx.size === 0) idx.add(0);
@@ -69,9 +69,8 @@ export function NoteLinkPicker({ selectedNoteId, onSelectNote }: NoteLinkPickerP
 
     const librariesWithCounts = useMemo(() => {
         return libraries.map((idx) => {
-            const offset = idx * TOTAL_SPINES;
             const count = subjects.filter(
-                (s) => s.orderIndex >= offset && s.orderIndex < offset + TOTAL_SPINES
+                (s) => isInLibrary(s.orderIndex, idx)
             ).length;
             return { idx, count };
         });
@@ -79,9 +78,8 @@ export function NoteLinkPicker({ selectedNoteId, onSelectNote }: NoteLinkPickerP
 
     const booksInLibrary = useMemo(() => {
         if (selectedLibraryIndex === null) return [];
-        const offset = selectedLibraryIndex * TOTAL_SPINES;
         const list = subjects
-            .filter((s) => s.orderIndex >= offset && s.orderIndex < offset + TOTAL_SPINES)
+            .filter((s) => isInLibrary(s.orderIndex, selectedLibraryIndex))
             .sort((a, b) => a.orderIndex - b.orderIndex);
         if (!bookSearch.trim()) return list;
         const q = bookSearch.toLowerCase();

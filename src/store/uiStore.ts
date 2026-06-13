@@ -35,6 +35,18 @@ export interface UiSlice {
     osPrefix: string;
     setOsPrefix: (prefix: string) => void;
 
+    // ── User preferences (persisted per device — see store/index.ts partialize) ──
+    /** Currency symbol shown across the budget suite (display only — amounts are unitless). */
+    currencySymbol: string;
+    setCurrencySymbol: (symbol: string) => void;
+    /** Unit new lift logs are tagged with and labels render in. Historical
+     *  values are not converted — it's a label, not a conversion. */
+    weightUnit: 'lb' | 'kg';
+    setWeightUnit: (unit: 'lb' | 'kg') => void;
+    /** Lifetime bests shown as reference lines on progress charts; unset = no lines. */
+    personalPeaks: { bench?: number; squat?: number; deadlift?: number; weight?: number };
+    setPersonalPeaks: (peaks: { bench?: number; squat?: number; deadlift?: number; weight?: number }) => void;
+
     devItems: DevItem[];
     fetchDevItems: () => Promise<void>;
     addDevItem: (text: string) => Promise<void>;
@@ -94,6 +106,13 @@ export const createUiSlice: StateCreator<AppState, [], [], UiSlice> = (set, get)
 
     osPrefix: 'm',
     setOsPrefix: (prefix) => set({ osPrefix: prefix }),
+
+    currencySymbol: '$',
+    setCurrencySymbol: (symbol) => set({ currencySymbol: symbol.slice(0, 4) || '$' }),
+    weightUnit: 'lb',
+    setWeightUnit: (weightUnit) => set({ weightUnit }),
+    personalPeaks: {},
+    setPersonalPeaks: (personalPeaks) => set({ personalPeaks }),
 
     devItems: [],
     fetchDevItems: async () => {
