@@ -3,6 +3,12 @@ name: Build & Release
 on:
   push:
     branches: [main]
+    # Docs-only commits must not trigger a release build — electron-builder
+    # refuses to republish an existing version tag.
+    paths-ignore:
+      - '**.md'
+      - 'Rebrand/**'
+      - 'docs/**'
 
 # Only allow one release build at a time
 concurrency:
