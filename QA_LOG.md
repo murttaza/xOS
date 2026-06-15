@@ -16,6 +16,48 @@ When an item ships, mark it `✅ done (cycle N)` — don't delete it (keeps the 
 
 ---
 
+## Implementation Pass — 2026-06-15 (branch `qa/implement-findings`, → v5.17.0)
+
+Implemented the ledger as a senior eng + design eng. Every change verified against
+`tsc` / `npm test` / `npm run lint` / `npm run build:renderer`. Final state: **tsc clean,
+72/72 tests, lint 0 errors** (78 `any` warnings tracked, see QA-004), build succeeds.
+
+**Implemented & committed:**
+- QA-012/013/014/015/016/017 — timer engine: `getActiveTimers` throws (dead guard
+  restored); `stopTaskTimer` records before teardown + toasts on failure; start-error
+  surfaced; `round` not `floor`; inserted-id captured; `elapsedSeconds()` helper extracted.
+- QA-007/008/009/010/027 — `console.log` dev-gated; `api.github.com` removed from CSP;
+  `strip-dev-csp` Vite plugin removes localhost from prod CSP; cache-disable gated to dev;
+  `streakAtRisk` uses live anchored days.
+- QA-026 — `notifyDataChanged()` broadcast on main-window mutations; streaks added to refetch.
+- QA-022/023/025/028 — `aria-expanded` on disclosures; per-set summary derived from top set;
+  touch fallbacks for hover-only actions; budget chart in/out legend.
+- QA-001/011 — semantic `--success/--warning/--info` tokens added; ~18 components migrated
+  off hardcoded green/yellow/blue; light-mode `--primary` returned to brand red (AA-dark).
+- QA-019/020 — `npm update` + `npm audit fix`: vulns 20 → 8 (rest = electron-builder chain).
+- QA-021 — `StatsHub` lazy-loaded: FitnessMode chunk 479 kB → 72 kB (recharts split out).
+- QA-002/004 — lint wired into release CI; `no-explicit-any` → tracked `warn`; `^_`/empty-catch
+  configured; safe `any`s removed (useFitnessStats). Non-`any` errors → 0.
+- QA-003 — auto-fixable lint errors fixed.
+
+**Verified already-resolved (no change needed — confirmed in code):**
+- QA-005 — `LinkedTasks` already calls `showErrorToast` on all handlers.
+- QA-006 — NotesList edit overlay is already Radix; NotesMode Escape already closes Quick
+  Notes as one layer via `isDialogOpen()` + `quickNotesSubjectId`. Added mount-focus to the
+  Quick Notes capture box; full focus-trap conversion left as low-ROI polish.
+- QA-016 — was already render-safe (verified c4); id-capture added anyway.
+- QA-024 — PasswordsMode already renders the detail in a Radix `Dialog` for narrow windows.
+
+**Deferred (with rationale):**
+- QA-018 — Electron 30 → 42 + electron-builder 24 → 26 is a 12-major jump with breaking
+  API/packaging changes that **must** be validated by launching the packaged app (not
+  possible in this headless env). Doing it blind would likely break startup/updates. Needs a
+  dedicated upgrade+smoke-test cycle. The shippable-vuln surface was already reduced (QA-019).
+
+---
+
+---
+
 ## Health Snapshot
 
 Re-run each cycle. Command set: `npx tsc --noEmit` · `npm test` · `npm run lint`.

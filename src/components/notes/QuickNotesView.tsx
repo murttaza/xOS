@@ -33,6 +33,12 @@ export function QuickNotesView({ subjectId, onClose }: { subjectId: number; onCl
     fetchNotes(subjectId)
   }, [subjectId, fetchNotes])
 
+  // Land keyboard focus in the capture box when the overlay opens, so it's
+  // immediately typable (Escape-to-close one layer is handled by NotesMode).
+  useEffect(() => {
+    newInputRef.current?.focus()
+  }, [])
+
   // Sort notes by creation date, newest first
   const sorted = [...notes].sort((a, b) =>
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
