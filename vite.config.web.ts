@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import path from 'node:path'
 import react from '@vitejs/plugin-react'
+import { stripDevCsp } from './vite.plugins'
 
 export default defineConfig({
   define: {
@@ -13,6 +14,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    stripDevCsp(),
   ],
   build: {
     outDir: 'dist-web',

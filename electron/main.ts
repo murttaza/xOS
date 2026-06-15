@@ -28,9 +28,13 @@ if (!gotTheLock) {
   });
 }
 
-// Stop Chromium from throwing 'Failing CreateMapBlock' and other cache-related errors on dev reload
-app.commandLine.appendSwitch('disable-http-cache');
-app.commandLine.appendSwitch('disk-cache-size', '0');
+// Dev-only: stop Chromium from throwing 'Failing CreateMapBlock' and other
+// cache-related errors on hot reload. In production we want the HTTP/disk cache
+// for performance, so only disable it when running unpackaged.
+if (!app.isPackaged) {
+  app.commandLine.appendSwitch('disable-http-cache');
+  app.commandLine.appendSwitch('disk-cache-size', '0');
+}
 
 // Force dark mode at the native level — transparent window looks broken in light mode
 nativeTheme.themeSource = 'dark';

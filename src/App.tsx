@@ -417,8 +417,10 @@ function App() {
       // Live anchored days, not the stale DB counter (which only updates on edit).
       const maxStreak = state.streaks.reduce((max, s) => Math.max(max, anchorStreakDays(s, new Date())), 0);
       const hasActiveTimer = Object.keys(state.timerStartTimes).length > 0;
+      // Use the same live anchored-days source as maxStreak above, not the
+      // stale currentStreak column, so the at-risk check stays consistent.
       const streakAtRisk = state.streaks.some(s =>
-        s.isPaused === 0 && s.currentStreak > 0 && s.lastUpdated < today
+        s.isPaused === 0 && anchorStreakDays(s, new Date()) > 0 && s.lastUpdated < today
       );
 
       window.ipcRenderer.invoke('app-state-response', {

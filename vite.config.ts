@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import path from 'node:path'
 import electron from 'vite-plugin-electron/simple'
 import react from '@vitejs/plugin-react'
+import { stripDevCsp } from './vite.plugins'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command }) => ({
@@ -33,6 +34,7 @@ export default defineConfig(({ command }) => ({
   } : {}),
   plugins: [
     react(),
+    stripDevCsp(),
     electron({
       main: {
         // Shortcut of `build.lib.entry`.
