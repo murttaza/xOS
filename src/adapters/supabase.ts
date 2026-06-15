@@ -1,4 +1,5 @@
 import type { ApiBackend } from './types';
+import type { Session } from '../types';
 import { supabase } from '../lib/supabase';
 
 function throwOnError<T>(result: { data: T; error: any }): T {
@@ -194,8 +195,12 @@ export const supabaseBackend: ApiBackend = {
             duration_minutes: session.duration_minutes,
             dateLogged: session.dateLogged,
         };
-        if (enqueueIfOffline({ kind: 'insert', table: 'sessions', payload })) return;
-        return withRetry(async () => throwOnError(await supabase.from('sessions').insert(payload)));
+        if (enqueueIfOffline({ kind: 'insert', table: 'sessions', payload })) return null;
+        // Return the inserted row so the store can use the real id optimistically.
+        return withRetry(async () => {
+            const row = throwOnError(await supabase.from('sessions').insert(payload).select().single());
+            return row as Session;
+        });
     },
 
     getSessionsByDate: async (date) => {
@@ -500,8 +505,11 @@ export const supabaseBackend: ApiBackend = {
 
     // ── Active Timers (cross-device sync) ────────────────────────
     getActiveTimers: async () => {
-        const { data } = await supabase.from('active_timers').select('taskId, startTime');
-        return (data || []) as { taskId: number; startTime: string }[];
+        // Throw on error (don't swallow to []) so syncTimers' catch can keep
+        // local timers as-is instead of wiping a running timer on a fetch blip.
+        return throwOnError(
+            await supabase.from('active_timers').select('taskId, startTime')
+        ) as { taskId: number; startTime: string }[];
     },
 
     setActiveTimer: async (taskId, startTime) => {

@@ -113,7 +113,7 @@ export function WidgetApp() {
       onMouseDown={(e) => {
         // Allow dragging the window
         if (e.button === 0) {
-          ;(e.target as HTMLElement).closest('[data-nodrag]') || ipc?.send?.('widget-drag')
+          (e.target as HTMLElement).closest('[data-nodrag]') || ipc?.send?.('widget-drag')
         }
       }}
     >

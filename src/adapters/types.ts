@@ -9,7 +9,9 @@ export interface ApiBackend {
     batchAddTasks: (tasks: Omit<Task, 'id'>[]) => Promise<unknown>;
 
     // Sessions
-    addSession: (session: Omit<Session, 'id'>) => Promise<unknown>;
+    /** Resolves to the inserted row (with id) when online, or null when the
+     *  write was queued offline. */
+    addSession: (session: Omit<Session, 'id'>) => Promise<Session | null>;
     getSessionsByDate: (date: string) => Promise<Session[]>;
     getSessionsRange: (startDate: string, endDate: string) => Promise<Session[]>;
     getSessionsByTask: (taskId: number) => Promise<Session[]>;

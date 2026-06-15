@@ -120,7 +120,7 @@ export const COMMANDS: CommandDef[] = [
     async execute(args) {
       if (!args.trim()) return { success: false, message: 'Provide note text' }
 
-      let { data: subjects } = await supabase.from('subjects').select('id').eq('title', 'Quick Notes').limit(1)
+      const { data: subjects } = await supabase.from('subjects').select('id').eq('title', 'Quick Notes').limit(1)
       let subjectId: number
 
       if (!subjects?.length) {

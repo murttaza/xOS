@@ -7,6 +7,13 @@ import type { AppState } from './index';
 
 const MAX_TIMER_SECONDS = 86400; // 24-hour cap
 
+/** Whole seconds elapsed since an ISO start timestamp. Single source of truth
+ *  for timer math (syncTimers / incrementTimers / stopTaskTimer) — so a future
+ *  pause feature only has to change this one formula, not three call sites. */
+function elapsedSeconds(startTimeISO: string, now: number = Date.now()): number {
+    return Math.floor((now - new Date(startTimeISO).getTime()) / 1000);
+}
+
 // Module-level set: tracks timers recently stopped locally so syncTimers
 // doesn't re-restore them from Supabase during the async removal window.
 const recentlyStoppedTimers = new Set<number>();
@@ -127,7 +134,9 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
     },
 
     addSession: async (session) => {
-        await api.addSession(session);
+        // Capture the inserted row (with its real id) so the optimistic push
+        // below isn't an id-less object. Null when queued offline.
+        const inserted = await api.addSession(session);
 
         // Fetch fresh stats from Supabase before computing XP to avoid
         // stale local state overwriting values updated by another device.
@@ -188,9 +197,10 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
             }
         }
 
-        // Optimistically update sessions and stats
+        // Optimistically update sessions and stats. Prefer the inserted row
+        // (carries the real id) over the id-less input when available.
         set((state) => ({
-            sessions: [...state.sessions, session as Session],
+            sessions: [...state.sessions, (inserted ?? session) as Session],
             stats: statsUpdated ? newStats : state.stats
         }));
     },
@@ -316,7 +326,7 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
         const now = Date.now();
         const timers: Record<number, number> = {};
         for (const [id, startTime] of Object.entries(merged)) {
-            timers[Number(id)] = Math.min(Math.floor((now - new Date(startTime).getTime()) / 1000), MAX_TIMER_SECONDS);
+            timers[Number(id)] = Math.min(elapsedSeconds(startTime, now), MAX_TIMER_SECONDS);
         }
         set({ timerStartTimes: merged, activeTimers: timers });
     },
@@ -338,8 +348,15 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
                 activeTimers: { ...state.activeTimers, [taskId]: 0 },
                 timerStartTimes: { ...state.timerStartTimes, [taskId]: now }
             }));
-            // Persist to Supabase for cross-device sync
-            try { await api.setActiveTimer(taskId, now); } catch {}
+            // Persist to Supabase for cross-device sync. Offline writes are
+            // queued by the adapter (no throw); a throw means an online failure,
+            // so surface it — the timer runs locally but may not have synced.
+            try {
+                await api.setActiveTimer(taskId, now);
+            } catch (err) {
+                console.error('toggleTaskTimer: failed to persist timer start', err);
+                showErrorToast("Timer started, but couldn't sync — it may not appear on your other devices.");
+            }
         }
     },
 
@@ -353,45 +370,60 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
         recentlyStoppedTimers.add(taskId);
         setTimeout(() => recentlyStoppedTimers.delete(taskId), 15000);
 
-        // Stop timer immediately in UI
+        // Stop timer immediately in UI for responsiveness
         const newTimers = { ...state.activeTimers };
         delete newTimers[taskId];
         const newStartTimes = { ...state.timerStartTimes };
         delete newStartTimes[taskId];
         set({ activeTimers: newTimers, timerStartTimes: newStartTimes });
 
-        // Remove from Supabase
-        await api.removeActiveTimer(taskId);
-
-        const startTime = new Date(startTimeStr);
-        const now = new Date();
+        const startISO = new Date(startTimeStr).toISOString();
+        const now = Date.now();
         const discardSeconds = Math.max(0, opts?.discardSeconds ?? 0);
-        const rawSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000) - discardSeconds;
-        if (rawSeconds <= 0) return; // entire session was idle — record nothing
+        const rawSeconds = elapsedSeconds(startTimeStr, now) - discardSeconds;
+
+        if (rawSeconds <= 0) {
+            // Entire session was idle — record nothing, just clear the server timer.
+            await api.removeActiveTimer(taskId).catch(err =>
+                console.error('stopTaskTimer: failed to clear idle timer', err));
+            return;
+        }
+
         const duration = Math.min(rawSeconds, MAX_TIMER_SECONDS);
         if (rawSeconds > MAX_TIMER_SECONDS) {
-            // Most likely the laptop slept for a long stretch — capped silently before; surface it so the user knows.
+            // Most likely the laptop slept for a long stretch — surface the cap.
             const hours = Math.round(rawSeconds / 3600);
             console.warn(`[timer] Capped session for task ${taskId}: ran ~${hours}h, saving ${MAX_TIMER_SECONDS / 3600}h.`);
             showErrorToast(`Timer ran for ~${hours}h (likely while idle). Saved the maximum 24h — adjust manually if needed.`);
         }
-        const durationMinutes = Math.floor(duration / 60);
+        // Round (not floor) so sessions aren't systematically under-counted by
+        // up to 59s each; a sub-30s session still records nothing.
+        const durationMinutes = Math.round(duration / 60);
         // End the recorded session where work actually stopped, not where the
         // idle prompt was answered.
-        const endTime = new Date(now.getTime() - discardSeconds * 1000);
+        const endTime = new Date(now - discardSeconds * 1000);
 
-        if (durationMinutes > 0) {
-            // Prevent duplicate sessions when both devices stop the same timer
-            const alreadyRecorded = await api.sessionExistsForTimer(taskId, startTime.toISOString());
-            if (!alreadyRecorded) {
-                await state.addSession({
-                    taskId: taskId,
-                    startTime: startTime.toISOString(),
-                    endTime: endTime.toISOString(),
-                    duration_minutes: durationMinutes,
-                    dateLogged: getLocalDateString(endTime)
-                });
+        // Record the session BEFORE removing the server-side timer, so an online
+        // write failure can't lose the work: the active_timer stays put and the
+        // next sync/stop recovers it. (addSession queues itself when offline.)
+        try {
+            if (durationMinutes > 0) {
+                // Prevent duplicate sessions when both devices stop the same timer
+                const alreadyRecorded = await api.sessionExistsForTimer(taskId, startISO);
+                if (!alreadyRecorded) {
+                    await state.addSession({
+                        taskId: taskId,
+                        startTime: startISO,
+                        endTime: endTime.toISOString(),
+                        duration_minutes: durationMinutes,
+                        dateLogged: getLocalDateString(endTime)
+                    });
+                }
             }
+            await api.removeActiveTimer(taskId);
+        } catch (err) {
+            console.error('stopTaskTimer: failed to record session or clear timer', err);
+            showErrorToast("Couldn't save that session — check your connection. Your timer is preserved; try stopping it again.");
         }
     },
 
@@ -402,8 +434,7 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
         const now = Date.now();
         const newTimers: Record<number, number> = {};
         for (const id in startTimes) {
-            const elapsed = Math.floor((now - new Date(startTimes[id]).getTime()) / 1000);
-            newTimers[Number(id)] = Math.min(elapsed, MAX_TIMER_SECONDS);
+            newTimers[Number(id)] = Math.min(elapsedSeconds(startTimes[id], now), MAX_TIMER_SECONDS);
         }
         return { activeTimers: newTimers };
     }),

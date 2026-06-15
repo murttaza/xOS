@@ -34,7 +34,7 @@ function toEditorHtml(raw: string | undefined): string {
     const escapeHtml = (s: string) =>
         s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-    let text = escapeHtml(raw);
+    const text = escapeHtml(raw);
 
     // Block-level conversions, line by line
     const lines = text.split('\n');
