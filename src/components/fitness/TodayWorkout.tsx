@@ -147,17 +147,38 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, weightUnit, onSave
         if (saving) return;
         setSaving(true);
         try {
+            // When per-set logging is used, derive the summary fields from the
+            // sets (top set drives weight/reps) so the collapsed header and next
+            // session's ghost text reflect what was actually logged — not a
+            // stale quick-input row the user may not have updated.
+            let summaryWeight = parseFloatSafe(weight);
+            let summaryReps = parseIntSafe(reps);
+            let summarySets = parseIntSafe(setsCount);
+            let summaryRir = parseIntSafe(rir);
+            if (showPerSet) {
+                const filled = sets
+                    .map(s => ({ w: parseFloatSafe(s.weight), r: parseIntSafe(s.reps), rir: parseIntSafe(s.rir) }))
+                    .filter(s => s.w != null || s.r != null);
+                if (filled.length > 0) {
+                    // Top set = heaviest weight; ties resolve to the first.
+                    const top = filled.reduce((a, b) => (b.w ?? -Infinity) > (a.w ?? -Infinity) ? b : a);
+                    summaryWeight = top.w ?? summaryWeight;
+                    summaryReps = top.r ?? summaryReps;
+                    summaryRir = top.rir ?? summaryRir;
+                    summarySets = filled.length;
+                }
+            }
             const result = await onSave({
                 id: log?.id,
                 session_id: sessionId,
                 program_exercise_id: exercise.id,
                 exercise_id: exercise.exercise_id,
                 substituted: false,
-                working_weight: parseFloatSafe(weight),
+                working_weight: summaryWeight,
                 weight_unit: weightUnit,
-                reps_hit: parseIntSafe(reps),
-                sets_completed: parseIntSafe(setsCount),
-                rir: parseIntSafe(rir),
+                reps_hit: summaryReps,
+                sets_completed: summarySets,
+                rir: summaryRir,
                 duration_seconds: null,
                 notes: null,
                 is_completed: true,
@@ -179,7 +200,8 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, weightUnit, onSave
         } finally {
             setSaving(false);
         }
-    }, [weight, reps, setsCount, rir, sets, showPerSet, log?.id, saving, weightUnit, onLogged]);
+    }, [weight, reps, setsCount, rir, sets, showPerSet, log?.id, saving, weightUnit, onLogged,
+        exercise.id, exercise.exercise_id, sessionId, onSave, onSaveSets]);
 
     // Non-loggable exercises (warmups, finishers, mobility)
     if (!exercise.is_loggable) {
@@ -236,6 +258,8 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, weightUnit, onSave
             <button
                 className="w-full flex items-center gap-3 p-3 text-left active:bg-muted/20"
                 onClick={() => setExpanded(!expanded)}
+                aria-expanded={expanded}
+                aria-label={`${exercise.display_name} — tap to ${expanded ? 'collapse' : 'log'}`}
             >
                 <div className={cn(
                     "h-8 w-8 rounded-md border-2 flex items-center justify-center shrink-0",
@@ -593,6 +617,7 @@ export function TodayWorkout() {
                     <button
                         className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
                         onClick={() => setShowNotes(!showNotes)}
+                        aria-expanded={showNotes}
                     >
                         <MessageSquare className="h-3.5 w-3.5" />
                         Notes & Effort

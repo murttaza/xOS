@@ -177,11 +177,12 @@ export function QuickNotesView({ subjectId, onClose }: { subjectId: number; onCl
                 <span className="text-[10px] text-muted-foreground">
                   {formatNoteDate(note.createdAt)}
                 </span>
-                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
                   <button
                     onClick={(e) => { e.stopPropagation(); handleCopy(note) }}
                     className="text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-muted transition-colors"
                     title="Copy to clipboard"
+                    aria-label="Copy note to clipboard"
                   >
                     {copiedId === note.id ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
                   </button>
@@ -189,6 +190,7 @@ export function QuickNotesView({ subjectId, onClose }: { subjectId: number; onCl
                     onClick={(e) => { e.stopPropagation(); handleDelete(note.id!) }}
                     className="text-muted-foreground hover:text-destructive p-1.5 rounded-md hover:bg-destructive/10 transition-colors"
                     title="Delete"
+                    aria-label="Delete note"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>

@@ -169,8 +169,9 @@ export function RepeatingTaskDialog({ open, onOpenChange, onSubmit, initialTask 
                                             type="button"
                                             variant="ghost"
                                             size="icon"
-                                            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-muted hover:text-red-400"
+                                            className="h-5 w-5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-muted hover:text-red-400"
                                             onClick={() => setSubtasks(subtasks.filter(s => s.id !== st.id))}
+                                            aria-label={`Remove subtask: ${st.text}`}
                                         >
                                             <X className="h-3 w-3" />
                                         </Button>

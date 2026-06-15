@@ -172,7 +172,14 @@ function DailySpendingChart({ transactions, currency }: { transactions: Transact
 
     return (
         <div className="space-y-2">
-            <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Daily Activity</h3>
+            <div className="flex items-center justify-between gap-2">
+                <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Daily Activity</h3>
+                {/* Legend so income/expense are readable without hovering (touch). */}
+                <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-green-500/60" />In</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-500/60" />Out</span>
+                </div>
+            </div>
             <div className="flex items-end gap-0.5 h-20">
                 {dailyData.map(d => (
                     <div key={d.day} className="flex-1 flex flex-col items-center gap-0.5 justify-end h-full min-w-0">
