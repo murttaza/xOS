@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { cn, isDialogOpen } from '../lib/utils';
@@ -11,7 +11,9 @@ import { FitnessHome } from './fitness/FitnessHome';
 import { TodayWorkout } from './fitness/TodayWorkout';
 import { WeekView } from './fitness/WeekView';
 import { ProgramOverview } from './fitness/ProgramOverview';
-import { StatsHub } from './fitness/StatsHub';
+// Lazy: StatsHub pulls in recharts (~the heaviest dep). Loading it only when the
+// Stats tab opens keeps the gym-logging path (Today) out of that weight. (QA-021)
+const StatsHub = lazy(() => import('./fitness/StatsHub').then(m => ({ default: m.StatsHub })));
 import { PrinciplesView } from './fitness/PrinciplesView';
 import { ProgramPicker } from './fitness/ProgramPicker';
 
@@ -139,7 +141,9 @@ export function FitnessMode() {
                     {/* Content — when the bottom tab bar isn't shown (program picker),
                         the content itself reaches the screen bottom and needs clearance */}
                     <div className={cn("flex-1 overflow-y-auto no-scrollbar", !activeProgram && "mobile-safe-bottom")}>
-                        {renderContent()}
+                        <Suspense fallback={<ModeLoading label="Loading stats…" />}>
+                            {renderContent()}
+                        </Suspense>
                     </div>
 
                     {/* Mobile bottom tabs */}
