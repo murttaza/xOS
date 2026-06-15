@@ -153,7 +153,7 @@ export function FitnessHome() {
                                     className={cn(
                                         "rounded-xl p-2.5 sm:p-3 flex flex-col items-center gap-1.5 transition-all border min-w-0",
                                         isNextUp && "ring-2 ring-primary ring-offset-2 ring-offset-background",
-                                        status === 'completed' && "border-green-500/30 dark:border-green-400/30 bg-green-500/10 dark:bg-green-500/15",
+                                        status === 'completed' && "border-success/30 dark:border-success/30 bg-success/10 dark:bg-success/15",
                                         status === 'skipped' && "border-red-500/30 dark:border-red-400/30 bg-red-500/10 dark:bg-red-500/15",
                                         status === 'in_progress' && "border-yellow-500/30 dark:border-yellow-400/30 bg-yellow-500/10 dark:bg-yellow-500/15",
                                         (status === 'planned' && !isVirtual) && "border-border bg-muted/30",
@@ -166,7 +166,7 @@ export function FitnessHome() {
                                 >
                                     <span className="text-[10px] font-medium text-muted-foreground">Day {i + 1}</span>
                                     {status === 'completed' ? (
-                                        <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                        <Check className="h-4 w-4 text-success dark:text-success" />
                                     ) : status === 'skipped' ? (
                                         <Minus className="h-4 w-4 text-red-600 dark:text-red-400" />
                                     ) : status === 'in_progress' ? (
@@ -204,7 +204,7 @@ export function FitnessHome() {
                                     className={cn(
                                         "rounded-xl p-2.5 sm:p-3 flex flex-col items-center gap-1.5 transition-all border",
                                         isToday && "ring-2 ring-primary ring-offset-2 ring-offset-background",
-                                        status === 'completed' && "border-green-500/30 dark:border-green-400/30 bg-green-500/10 dark:bg-green-500/15",
+                                        status === 'completed' && "border-success/30 dark:border-success/30 bg-success/10 dark:bg-success/15",
                                         status === 'skipped' && "border-red-500/30 dark:border-red-400/30 bg-red-500/10 dark:bg-red-500/15",
                                         status === 'in_progress' && "border-yellow-500/30 dark:border-yellow-400/30 bg-yellow-500/10 dark:bg-yellow-500/15",
                                         status === 'planned' && "border-border bg-muted/30",
@@ -219,7 +219,7 @@ export function FitnessHome() {
                                 >
                                     <span className="text-[10px] font-medium text-muted-foreground">{label}</span>
                                     {status === 'completed' ? (
-                                        <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                        <Check className="h-4 w-4 text-success dark:text-success" />
                                     ) : status === 'skipped' ? (
                                         <Minus className="h-4 w-4 text-red-600 dark:text-red-400" />
                                     ) : status === 'in_progress' ? (
@@ -322,8 +322,8 @@ export function FitnessHome() {
                                     setFitnessTab('today');
                                 }}
                             >
-                                <div className="h-8 w-8 rounded-lg bg-green-500/10 dark:bg-green-500/15 flex items-center justify-center shrink-0">
-                                    <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                <div className="h-8 w-8 rounded-lg bg-success/10 dark:bg-success/15 flex items-center justify-center shrink-0">
+                                    <Check className="h-4 w-4 text-success dark:text-success" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium truncate">{session.program_day?.name || 'Workout'}</p>

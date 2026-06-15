@@ -135,7 +135,7 @@ export function BudgetTargets({ categories, targets, transactions, selectedMonth
                                     </div>
                                     <Progress
                                         value={percentage}
-                                        className={`h-2 ${isOver ? '[&>div]:bg-red-500' : isNear ? '[&>div]:bg-yellow-500' : '[&>div]:bg-green-500'}`}
+                                        className={`h-2 ${isOver ? '[&>div]:bg-red-500' : isNear ? '[&>div]:bg-warning' : '[&>div]:bg-success'}`}
                                     />
                                 </button>
                             )}

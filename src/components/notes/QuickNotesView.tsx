@@ -184,7 +184,7 @@ export function QuickNotesView({ subjectId, onClose }: { subjectId: number; onCl
                     title="Copy to clipboard"
                     aria-label="Copy note to clipboard"
                   >
-                    {copiedId === note.id ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copiedId === note.id ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDelete(note.id!) }}

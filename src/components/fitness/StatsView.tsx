@@ -120,7 +120,7 @@ export function StatsView() {
                             <div className="flex items-center gap-2 shrink-0">
                                 <span className={cn(
                                     "text-2xl font-bold",
-                                    mostImproved.pctGain >= 0 ? "text-green-500 dark:text-green-400" : "text-red-500 dark:text-red-400"
+                                    mostImproved.pctGain >= 0 ? "text-success dark:text-success" : "text-red-500 dark:text-red-400"
                                 )}>
                                     {mostImproved.pctGain >= 0 ? '+' : ''}{mostImproved.pctGain}%
                                 </span>
@@ -324,7 +324,7 @@ function PRCard({ name, color, exerciseId }: { name: string; color: string; exer
                     {trend !== null && (
                         <div className={cn(
                             "flex items-center gap-1 text-xs font-medium",
-                            trend > 0 ? "text-green-500 dark:text-green-400" : trend < 0 ? "text-red-500 dark:text-red-400" : "text-muted-foreground"
+                            trend > 0 ? "text-success dark:text-success" : trend < 0 ? "text-red-500 dark:text-red-400" : "text-muted-foreground"
                         )}>
                             {trend > 0 ? <TrendingUp className="h-3 w-3" /> : trend < 0 ? <TrendingDown className="h-3 w-3" /> : null}
                             <span>{trend > 0 ? '+' : ''}{trend} {weightUnit} · 4w</span>

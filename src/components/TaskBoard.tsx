@@ -317,7 +317,7 @@ export function TaskBoard() {
                     >
                         Tasks
                         {completedTodayCount > 0 && !showRepeating && (
-                            <span className="text-[9px] bg-green-500/15 text-green-400 px-1.5 py-0.5 rounded-full font-medium">{completedTodayCount}</span>
+                            <span className="text-[9px] bg-success/15 text-success px-1.5 py-0.5 rounded-full font-medium">{completedTodayCount}</span>
                         )}
                     </button>
                     <button

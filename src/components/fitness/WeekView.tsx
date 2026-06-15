@@ -42,7 +42,7 @@ export function WeekView() {
 
     const statusIcon = (status: string) => {
         switch (status) {
-            case 'completed': return <Check className="h-4 w-4 text-green-600 dark:text-green-400" />;
+            case 'completed': return <Check className="h-4 w-4 text-success dark:text-success" />;
             case 'skipped': return <Minus className="h-4 w-4 text-red-600 dark:text-red-400" />;
             case 'in_progress': return <Play className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-400" />;
             default: return <Clock className="h-3.5 w-3.5 text-muted-foreground/50" />;
@@ -139,7 +139,7 @@ export function WeekView() {
                                 animate={{ opacity: 1, x: 0 }}
                                 className={cn(
                                     "w-full flex items-center gap-3 border rounded-xl p-3.5 hover:bg-muted/30 active:bg-muted/30 transition-all text-left",
-                                    session.status === 'completed' && "border-green-500/30 dark:border-green-400/30 bg-green-500/5 dark:bg-green-500/10",
+                                    session.status === 'completed' && "border-success/30 dark:border-success/30 bg-success/5 dark:bg-success/10",
                                     session.status === 'skipped' && "border-red-500/20 dark:border-red-400/20 bg-red-500/5 dark:bg-red-500/10 opacity-60",
                                     session.status === 'planned' && !isVirtual && "border-border",
                                     isVirtual && "border-dashed border-border/60",
@@ -149,7 +149,7 @@ export function WeekView() {
                             >
                                 <div className={cn(
                                     "h-10 w-10 rounded-xl flex items-center justify-center shrink-0",
-                                    session.status === 'completed' && "bg-green-500/10 dark:bg-green-500/15",
+                                    session.status === 'completed' && "bg-success/10 dark:bg-success/15",
                                     session.status === 'skipped' && "bg-red-500/10 dark:bg-red-500/15",
                                     session.status === 'planned' && "bg-muted",
                                     session.status === 'in_progress' && "bg-yellow-500/10 dark:bg-yellow-500/15",

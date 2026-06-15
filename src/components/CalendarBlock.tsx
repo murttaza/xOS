@@ -317,7 +317,7 @@ export function CalendarBlock() {
                                         <span className={cn(
                                             "text-[10px] font-medium px-2 py-0.5 rounded-full",
                                             weekRecap.thisWeekMinutes >= weekRecap.lastWeekMinutes
-                                                ? "bg-green-500/10 text-green-500"
+                                                ? "bg-success/10 text-success"
                                                 : "bg-orange-500/10 text-orange-500"
                                         )}>
                                             {weekRecap.thisWeekMinutes >= weekRecap.lastWeekMinutes ? '+' : ''}
@@ -441,7 +441,7 @@ export function CalendarBlock() {
                                         <span className="text-xs font-medium truncate max-w-[70%] group-hover:text-primary transition-colors line-through opacity-70">
                                             {task.title}
                                         </span>
-                                        <span className="text-[10px] font-mono font-medium text-green-500/70 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
+                                        <span className="text-[10px] font-mono font-medium text-success/70 bg-success/10 px-2 py-0.5 rounded-full border border-success/20">
                                             Completed
                                         </span>
                                     </motion.div>

@@ -65,19 +65,19 @@ export function BudgetDashboard({ transactions, budgetTargets }: BudgetDashboard
             {/* Net Balance Card */}
             <div className="bg-secondary rounded-2xl p-4">
                 <p className="text-xs text-muted-foreground font-medium mb-1">Net Balance</p>
-                <p className={`text-3xl font-bold tabular-nums ${net >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                <p className={`text-3xl font-bold tabular-nums ${net >= 0 ? 'text-success' : 'text-red-500'}`}>
                     {net >= 0 ? '+' : '−'}{currency}{fmt(Math.abs(net))}
                 </p>
 
                 {/* Income / Expense row */}
                 <div className="flex items-center gap-6 mt-3 pt-3 border-t border-border/50">
                     <div className="flex items-center gap-2">
-                        <div className="h-7 w-7 rounded-full bg-green-500/15 flex items-center justify-center">
-                            <ArrowUpRight className="h-3.5 w-3.5 text-green-500" />
+                        <div className="h-7 w-7 rounded-full bg-success/15 flex items-center justify-center">
+                            <ArrowUpRight className="h-3.5 w-3.5 text-success" />
                         </div>
                         <div>
                             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Income</p>
-                            <p className="text-sm font-semibold text-green-500 tabular-nums">{currency}{fmt(totalIncome)}</p>
+                            <p className="text-sm font-semibold text-success tabular-nums">{currency}{fmt(totalIncome)}</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -120,7 +120,7 @@ export function BudgetDashboard({ transactions, budgetTargets }: BudgetDashboard
                                     {limit && (
                                         <Progress
                                             value={percentage}
-                                            className={`h-1.5 ${isOverBudget ? '[&>div]:bg-red-500' : isNearBudget ? '[&>div]:bg-yellow-500' : '[&>div]:bg-green-500'}`}
+                                            className={`h-1.5 ${isOverBudget ? '[&>div]:bg-red-500' : isNearBudget ? '[&>div]:bg-warning' : '[&>div]:bg-success'}`}
                                         />
                                     )}
                                 </div>

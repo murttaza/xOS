@@ -66,10 +66,10 @@ function RestTimer({ endsAt, onDismiss, onExtend }: { endsAt: number; onDismiss:
     return (
         <div className={cn(
             "flex items-center gap-2 rounded-full border px-3 py-1.5 transition-colors",
-            done ? "border-green-500/40 bg-green-500/10" : "border-primary/30 bg-primary/5"
+            done ? "border-success/40 bg-success/10" : "border-primary/30 bg-primary/5"
         )}>
-            <Timer className={cn("h-3.5 w-3.5 shrink-0", done ? "text-green-600 dark:text-green-400" : "text-primary")} />
-            <span className={cn("text-sm font-mono font-semibold tabular-nums", done ? "text-green-600 dark:text-green-400" : "text-primary")}>
+            <Timer className={cn("h-3.5 w-3.5 shrink-0", done ? "text-success dark:text-success" : "text-primary")} />
+            <span className={cn("text-sm font-mono font-semibold tabular-nums", done ? "text-success dark:text-success" : "text-primary")}>
                 {done ? 'Rest done' : `${mm}:${String(ss).padStart(2, '0')}`}
             </span>
             {!done && (
@@ -208,13 +208,13 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, weightUnit, onSave
         return (
             <div className={cn(
                 "border border-border/50 rounded-xl p-3 flex items-center gap-3 transition-all",
-                completed && "bg-muted/30 border-green-500/20 dark:border-green-400/20"
+                completed && "bg-muted/30 border-success/20 dark:border-success/20"
             )}>
                 <button
                     className={cn(
                         "h-8 w-8 rounded-md border-2 flex items-center justify-center shrink-0 transition-all",
                         completed
-                            ? "bg-green-500 border-green-500 dark:bg-green-600 dark:border-green-600"
+                            ? "bg-success border-success dark:bg-success dark:border-success"
                             : "border-muted-foreground/30 hover:border-primary active:border-primary"
                     )}
                     aria-label={`${exercise.display_name} — ${completed ? 'done, tap to unmark' : 'tap to mark done'}`}
@@ -252,7 +252,7 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, weightUnit, onSave
     return (
         <div className={cn(
             "border rounded-xl transition-all overflow-hidden",
-            completed ? "border-green-500/30 dark:border-green-400/30 bg-green-500/5 dark:bg-green-500/10" : "border-border"
+            completed ? "border-success/30 dark:border-success/30 bg-success/5 dark:bg-success/10" : "border-border"
         )}>
             {/* Header - tap to expand */}
             <button
@@ -263,7 +263,7 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, weightUnit, onSave
             >
                 <div className={cn(
                     "h-8 w-8 rounded-md border-2 flex items-center justify-center shrink-0",
-                    completed ? "bg-green-500 border-green-500 dark:bg-green-600 dark:border-green-600" : "border-muted-foreground/30"
+                    completed ? "bg-success border-success dark:bg-success dark:border-success" : "border-muted-foreground/30"
                 )}>
                     {completed && <Check className="h-4 w-4 text-white" />}
                 </div>
@@ -275,7 +275,7 @@ function ExerciseRow({ exercise, log, previousLog, sessionId, weightUnit, onSave
                     </p>
                 </div>
                 {completed && weight && (
-                    <span className="text-xs font-mono text-green-600 dark:text-green-400 shrink-0">
+                    <span className="text-xs font-mono text-success dark:text-success shrink-0">
                         {weight}{weightUnit} &times; {reps}
                     </span>
                 )}
@@ -578,7 +578,7 @@ export function TodayWorkout() {
                     &middot; {new Date(session.scheduled_date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
                 </p>
                 {isCompleted && (
-                    <div className="mt-1 flex items-center gap-1 text-green-600 dark:text-green-400">
+                    <div className="mt-1 flex items-center gap-1 text-success dark:text-success">
                         <Check className="h-3.5 w-3.5" />
                         <span className="text-xs font-medium">Completed</span>
                     </div>

@@ -131,7 +131,7 @@ export function LinkedTasks({ note }: LinkedTasksProps) {
                             )}
                         >
                             {t.isComplete ? (
-                                <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
+                                <CheckCircle2 className="h-3 w-3 text-success shrink-0" />
                             ) : (
                                 <Circle className="h-3 w-3 text-muted-foreground shrink-0" />
                             )}

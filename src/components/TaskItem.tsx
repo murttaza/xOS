@@ -152,7 +152,7 @@ export const TaskItem = memo(function TaskItem({ task, isActive, onToggleTimer, 
 
                     <div className="flex items-center gap-0.5 sm:gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-150 lg:translate-x-2 lg:group-hover:translate-x-0 relative z-10 lg:bg-muted/50 px-0.5 sm:px-1 py-1 rounded-lg lg:backdrop-blur-md shrink-0">
                         {task.noteId && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-7 lg:w-7 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300" onClick={handleOpenNote} title="Open Linked Note" aria-label="Open linked note">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-7 lg:w-7 text-info hover:bg-info/20 hover:text-info" onClick={handleOpenNote} title="Open Linked Note" aria-label="Open linked note">
                                 <BookOpen className="h-3.5 w-3.5 lg:h-3.5 lg:w-3.5" />
                             </Button>
                         )}
@@ -164,7 +164,7 @@ export const TaskItem = memo(function TaskItem({ task, isActive, onToggleTimer, 
                                 {isActive ? <Square className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 ml-0.5" />}
                             </Button>
                         )}
-                        <Button variant="ghost" size="icon" className={cn("h-8 w-8 lg:h-7 lg:w-7 transition-colors", task.isComplete ? "text-green-500 hover:bg-green-500/20" : "text-muted-foreground/70 hover:bg-green-500/20 hover:text-green-400")} onClick={(e) => { e.stopPropagation(); onComplete(task); }} title={task.isComplete ? "Mark incomplete" : "Complete task"} aria-label={task.isComplete ? `Mark ${task.title} incomplete` : `Complete ${task.title}`}>
+                        <Button variant="ghost" size="icon" className={cn("h-8 w-8 lg:h-7 lg:w-7 transition-colors", task.isComplete ? "text-success hover:bg-success/20" : "text-muted-foreground/70 hover:bg-success/20 hover:text-success")} onClick={(e) => { e.stopPropagation(); onComplete(task); }} title={task.isComplete ? "Mark incomplete" : "Complete task"} aria-label={task.isComplete ? `Mark ${task.title} incomplete` : `Complete ${task.title}`}>
                             <CheckCircle2 className="h-3.5 w-3.5" />
                         </Button>
                     </div>
@@ -176,7 +176,7 @@ export const TaskItem = memo(function TaskItem({ task, isActive, onToggleTimer, 
                         <div className={cn("w-2 h-6 rounded-full shrink-0", statColor.bg, pulse.className)} style={pulse.style} />
                         <span className="truncate">{task.title}</span>
                         {task.noteId && (
-                            <Button variant="outline" size="sm" onClick={handleOpenNote} className="ml-auto bg-blue-500/10 border-blue-500/20 text-blue-400 hover:bg-blue-500/20 hover:text-blue-300 text-xs px-2 h-7 group shrink-0">
+                            <Button variant="outline" size="sm" onClick={handleOpenNote} className="ml-auto bg-info/10 border-info/20 text-info hover:bg-info/20 hover:text-info text-xs px-2 h-7 group shrink-0">
                                 <BookOpen className="w-3 h-3 mr-1.5 group-hover:scale-110 transition-transform" /> Open Note
                             </Button>
                         )}
@@ -211,7 +211,7 @@ export const TaskItem = memo(function TaskItem({ task, isActive, onToggleTimer, 
                             </div>
                             <div className="bg-muted/50 rounded-lg p-3 sm:p-4 border border-border/50 space-y-1">
                                 <div className="flex items-center gap-2 text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground/60 mb-2">
-                                    <Clock className="w-3 h-3 text-blue-400" /> Total Time
+                                    <Clock className="w-3 h-3 text-info" /> Total Time
                                 </div>
                                 <div className="text-xl sm:text-2xl font-light text-foreground/90">
                                     {Math.floor(totalMinutes / 60)}<span className="text-sm text-muted-foreground/60 ml-0.5 mr-2 font-mono">h</span>
@@ -257,7 +257,7 @@ export const TaskItem = memo(function TaskItem({ task, isActive, onToggleTimer, 
                                     {sessions.slice(0, 5).map(session => (
                                         <div key={session.id} className="flex justify-between text-xs text-muted-foreground bg-muted/50 p-2.5 sm:p-2 rounded hover:bg-muted transition-colors border border-border/50">
                                             <span>{new Date(session.startTime).toLocaleDateString()} {new Date(session.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                            <span className="font-mono text-blue-400">{session.duration_minutes}m</span>
+                                            <span className="font-mono text-info">{session.duration_minutes}m</span>
                                         </div>
                                     ))}
                                 </div>

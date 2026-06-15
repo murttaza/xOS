@@ -135,7 +135,7 @@ export const RepeatingTaskItem = memo(function RepeatingTaskItem({ task, onEdit,
                                 </span>
                             )}
                             {isDoneToday && task.repeatType === 'daily' && (
-                                <span className="text-[11px] bg-green-500/20 text-green-500 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1">
+                                <span className="text-[11px] bg-success/20 text-success px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1">
                                     <CheckCircle2 className="w-3 h-3" /> Done
                                 </span>
                             )}

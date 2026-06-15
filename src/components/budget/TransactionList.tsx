@@ -105,7 +105,7 @@ export function TransactionList({ transactions, categories, filter, onFilterChan
                             <div key={date}>
                                 <h4 className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-2 flex items-center justify-between pr-2">
                                     <span>{dateLabel}</span>
-                                    <span className={`font-mono tabular-nums normal-case tracking-normal ${netCents >= 0 ? 'text-green-500/70' : 'text-muted-foreground'}`}>
+                                    <span className={`font-mono tabular-nums normal-case tracking-normal ${netCents >= 0 ? 'text-success/70' : 'text-muted-foreground'}`}>
                                         {netCents >= 0 ? '+' : '−'}{currency}{formatAmount(Math.abs(centsToAmount(netCents)))}
                                     </span>
                                 </h4>
@@ -133,7 +133,7 @@ export function TransactionList({ transactions, categories, filter, onFilterChan
                                                 )}
                                             </div>
 
-                                            <span className={`text-sm font-semibold tabular-nums shrink-0 ${tx.isIncome ? 'text-green-500' : 'text-red-500'}`}>
+                                            <span className={`text-sm font-semibold tabular-nums shrink-0 ${tx.isIncome ? 'text-success' : 'text-red-500'}`}>
                                                 {tx.isIncome ? '+' : '−'}{currency}{formatAmount(Number(tx.amount))}
                                             </span>
 

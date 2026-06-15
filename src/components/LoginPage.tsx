@@ -160,7 +160,7 @@ export function LoginPage({ onLogin }: { onLogin: () => void }) {
                     )}
 
                     {success && (
-                        <div className="text-sm text-green-400 bg-green-400/10 rounded-lg px-3 py-2">
+                        <div className="text-sm text-success bg-success/10 rounded-lg px-3 py-2">
                             {success}
                         </div>
                     )}

@@ -98,7 +98,7 @@ export function TransactionDialog({ open, onOpenChange, categories, transaction,
                             <button
                                 type="button"
                                 onClick={() => { setIsIncome(1); setCategoryId(''); }}
-                                className={`flex-1 px-3 py-2.5 text-sm rounded-md transition-colors ${isIncome ? 'bg-green-500/20 text-green-500 font-medium' : 'text-muted-foreground'}`}
+                                className={`flex-1 px-3 py-2.5 text-sm rounded-md transition-colors ${isIncome ? 'bg-success/20 text-success font-medium' : 'text-muted-foreground'}`}
                             >
                                 Income
                             </button>

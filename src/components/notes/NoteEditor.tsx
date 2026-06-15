@@ -426,11 +426,11 @@ export const NoteEditor = ({
                             </button>
                         </div>
                         {isSaving ? (
-                            <span className="text-yellow-500 flex items-center gap-2">
+                            <span className="text-warning flex items-center gap-2">
                                 <Loader2 className="h-3 w-3 animate-spin" /> Saving...
                             </span>
                         ) : (
-                            <span className="text-green-500 opacity-0 transition-opacity duration-150" style={{ opacity: Object.keys(editingNote).length > 0 ? 0 : 1 }}>
+                            <span className="text-success opacity-0 transition-opacity duration-150" style={{ opacity: Object.keys(editingNote).length > 0 ? 0 : 1 }}>
                                 Saved
                             </span>
                         )}

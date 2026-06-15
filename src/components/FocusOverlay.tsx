@@ -126,7 +126,7 @@ export function FocusOverlay() {
                                         <Button
                                             size="icon"
                                             variant="secondary"
-                                            className="h-8 w-8 rounded-full bg-green-500/10 hover:bg-green-500/20 text-green-500 hover:text-green-400 border border-green-500/20"
+                                            className="h-8 w-8 rounded-full bg-success/10 hover:bg-success/20 text-success hover:text-success border border-success/20"
                                             onClick={(e) => { e.stopPropagation(); updateTask({ ...activeTask, isComplete: 1 }); if (activeTaskId) stopTaskTimer(activeTaskId); }}
                                             title="Complete Task"
                                         >
