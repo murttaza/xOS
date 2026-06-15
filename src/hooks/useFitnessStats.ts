@@ -49,7 +49,7 @@ export function useLoggedExercises(): LoggedExerciseSummary[] {
         for (const log of allLogs) {
             if (!isLoggedAndCompleted(log)) continue;
             const key = (log.exercise_id || log.program_exercise_id) as string;
-            const date = logDate(log as any, sessById);
+            const date = logDate(log, sessById);
             const existing = map.get(key);
             if (existing) {
                 existing.count++;
@@ -58,7 +58,7 @@ export function useLoggedExercises(): LoggedExerciseSummary[] {
                 map.set(key, {
                     exerciseId: log.exercise_id,
                     programExerciseId: log.program_exercise_id,
-                    name: nameForLog(log as any, peById),
+                    name: nameForLog(log, peById),
                     count: 1,
                     lastDate: date,
                 });
@@ -92,7 +92,7 @@ export function useExerciseHistory(key: string | null, range: '4w' | '12w' | 'al
             const w = Number(log.working_weight);
             const r = Number(log.reps_hit);
             if (!Number.isFinite(w) || w <= 0) continue;
-            const date = logDate(log as any, sessById);
+            const date = logDate(log, sessById);
             if (cutoff && date < cutoff) continue;
             points.push({ date, weight: w, reps: r || 0, e1rm: epley(w, r || 0) });
         }
@@ -119,8 +119,8 @@ export function useMostImprovedLift(): ImprovedLift | null {
             const w = Number(log.working_weight);
             if (!Number.isFinite(w) || w <= 0) continue;
             const key = (log.exercise_id || log.program_exercise_id) as string;
-            const date = logDate(log as any, sessById);
-            const name = nameForLog(log as any, peById);
+            const date = logDate(log, sessById);
+            const name = nameForLog(log, peById);
             const g = groups.get(key) || { name, rows: [] };
             g.rows.push({ date, weight: w });
             groups.set(key, g);
@@ -169,7 +169,7 @@ export function useFavouriteLifts(limit = 3): FavouriteLift[] {
         for (const log of allLogs) {
             if (!isLoggedAndCompleted(log)) continue;
             const key = (log.exercise_id || log.program_exercise_id) as string;
-            const name = nameForLog(log as any, peById);
+            const name = nameForLog(log, peById);
             const existing = counts.get(key);
             if (existing) existing.count++;
             else counts.set(key, { exerciseId: key, name, count: 1 });
@@ -246,7 +246,7 @@ export function useVolumePerWeek(range: '4w' | '12w' | 'all' = '12w'): VolumeWee
             const s = Number(log.sets_completed) || 0;
             const vol = w * r * s;
             if (vol <= 0) continue;
-            const date = logDate(log as any, sessById);
+            const date = logDate(log, sessById);
             if (cutoff && date < cutoff) continue;
             // Bucket by ISO week start (Monday).
             const d = new Date(date + 'T00:00:00');

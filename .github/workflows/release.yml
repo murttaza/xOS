@@ -47,6 +47,9 @@ jobs:
           $version = (Get-Content package.json | ConvertFrom-Json).version
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
 
+      - name: Lint
+        run: npm run lint
+
       - name: Test
         run: npm test
 
