@@ -336,7 +336,8 @@ function App() {
     fetchTasks();
     fetchStats();
     fetchTodayLog();
-  }, [isWindowFocused, syncTimers, fetchTasks, fetchStats, fetchTodayLog]);
+    fetchStreaks();
+  }, [isWindowFocused, syncTimers, fetchTasks, fetchStats, fetchTodayLog, fetchStreaks]);
 
   // Periodic timer sync while window is focused (cross-device, 30s interval)
   useEffect(() => {
@@ -434,6 +435,7 @@ function App() {
       fetchStats();
       syncTimers();
       fetchTodayLog();
+      fetchStreaks();
     });
 
     // Tray "toggle timer" — toggle the most recent task's timer
@@ -469,7 +471,7 @@ function App() {
       removeIdlePaused();
       removeIdleReturn();
     };
-  }, [fetchTasks, fetchStats, syncTimers, fetchTodayLog]);
+  }, [fetchTasks, fetchStats, syncTimers, fetchTodayLog, fetchStreaks]);
 
   useEffect(() => {
     if (!isElectron) return;

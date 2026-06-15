@@ -4,6 +4,7 @@ import { Task, RepeatingTask, Subtask } from '@/types';
 import { api } from '@/api';
 import { safeJSONParse, getLocalDateString } from '@/lib/utils';
 import { showErrorToast } from '@/components/ui/toast';
+import { notifyDataChanged } from '@/lib/platform';
 import type { AppState } from './index';
 
 // Raw types from DB before parsing JSON fields
@@ -87,6 +88,7 @@ export const createTaskSlice: StateCreator<AppState, [], [], TaskSlice> = (set, 
         try {
             await api.addTask(task);
             get().fetchTasks();
+            notifyDataChanged();
         } catch (error) {
             console.error('Failed to add task:', error);
             showErrorToast('Failed to save task.');
@@ -122,13 +124,14 @@ export const createTaskSlice: StateCreator<AppState, [], [], TaskSlice> = (set, 
                 }
             } else if (task.isComplete === 0 && originalTask.isComplete) {
                 // Task being uncompleted — clear completedAt
-                task.completedAt = undefined as any;
+                task.completedAt = undefined;
             }
         }
 
         try {
             await api.updateTask(task);
             get().fetchTasks();
+            notifyDataChanged();
         } catch (err) {
             console.error('Failed to update task:', err);
             showErrorToast('Failed to save changes. Your data may be out of sync.');
@@ -163,6 +166,7 @@ export const createTaskSlice: StateCreator<AppState, [], [], TaskSlice> = (set, 
         try {
             await api.deleteTask(id);
             get().fetchTasks();
+            notifyDataChanged();
         } catch (err) {
             console.error('Failed to delete task:', err);
             showErrorToast('Failed to delete task.');

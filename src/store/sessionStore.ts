@@ -3,6 +3,7 @@ import { Session, DailyLog } from '@/types';
 import { api } from '@/api';
 import { safeJSONParse, calculateSessionXP, calculateLevelFromXP, calculatePrayerXP, getLocalDateString } from '@/lib/utils';
 import { showErrorToast } from '@/components/ui/toast';
+import { notifyDataChanged } from '@/lib/platform';
 import type { AppState } from './index';
 
 const MAX_TIMER_SECONDS = 86400; // 24-hour cap
@@ -244,6 +245,7 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
         prayerWriteChain = prayerWriteChain.then(async () => {
             try {
                 await api.savePrayers(today, prayersJson);
+                notifyDataChanged(); // prayer XP/log changed — refresh other windows
             } catch (err) {
                 console.error('togglePrayer: failed to save prayers', err);
                 showErrorToast(`Couldn't save ${prayerName} — check your connection.`);
@@ -357,6 +359,7 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
                 console.error('toggleTaskTimer: failed to persist timer start', err);
                 showErrorToast("Timer started, but couldn't sync — it may not appear on your other devices.");
             }
+            notifyDataChanged(); // let the widget/tray show the running timer now
         }
     },
 
@@ -425,6 +428,7 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
             console.error('stopTaskTimer: failed to record session or clear timer', err);
             showErrorToast("Couldn't save that session — check your connection. Your timer is preserved; try stopping it again.");
         }
+        notifyDataChanged(); // timer stopped + session/XP changed — refresh other windows
     },
 
     incrementTimers: () => set((state) => {
